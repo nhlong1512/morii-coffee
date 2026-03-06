@@ -1,0 +1,6 @@
+@MoriiCoffee.Presentation_HostAddress = http://localhost:5020
+
+GET {{MoriiCoffee.Presentation_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

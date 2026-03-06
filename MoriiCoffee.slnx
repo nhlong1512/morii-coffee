@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/source/">
+    <Project Path="source/MoriiCoffee.Application/MoriiCoffee.Application.csproj" />
+    <Project Path="source/MoriiCoffee.Domain.Shared/MoriiCoffee.Domain.Shared.csproj" />
+    <Project Path="source/MoriiCoffee.Domain/MoriiCoffee.Domain.csproj" />
+    <Project Path="source/MoriiCoffee.Infrastructure.Persistence/MoriiCoffee.Infrastructure.Persistence.csproj" />
+    <Project Path="source/MoriiCoffee.Infrastructure/MoriiCoffee.Infrastructure.csproj" />
+    <Project Path="source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj" />
+  </Folder>
+</Solution>
