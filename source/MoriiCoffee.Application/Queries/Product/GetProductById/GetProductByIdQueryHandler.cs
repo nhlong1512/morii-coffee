@@ -22,7 +22,7 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Pro
     {
         var product = await _unitOfWork.Products.GetByIdAsync(
             request.ProductId,
-            p => p.Category!,
+            p => p.ProductCategories.Select(pc => pc.Category),
             p => p.Variants,
             p => p.Images)
             ?? throw new NotFoundException("Product", request.ProductId);

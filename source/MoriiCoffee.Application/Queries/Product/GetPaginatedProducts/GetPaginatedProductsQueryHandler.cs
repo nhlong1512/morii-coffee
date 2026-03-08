@@ -22,12 +22,12 @@ public class GetPaginatedProductsQueryHandler : IQueryHandler<GetPaginatedProduc
         CancellationToken cancellationToken)
     {
         var query = _unitOfWork.Products
-            .FindAll(false, p => p.Category!);
+            .FindAll(false, p => p.ProductCategories.Select(pc => pc.Category));
 
         // Apply optional filters
         if (request.Filter.CategoryId.HasValue)
         {
-            query = query.Where(p => p.CategoryId == request.Filter.CategoryId.Value);
+            query = query.Where(p => p.ProductCategories.Any(pc => pc.CategoryId == request.Filter.CategoryId.Value));
         }
 
         if (request.Filter.IsFeatured.HasValue)

@@ -19,8 +19,8 @@ public class CreateProductCommandValidator : AbstractValidator<CreateProductComm
         RuleFor(x => x.BasePrice)
             .GreaterThanOrEqualTo(0).WithMessage("Base price must be a non-negative value.");
 
-        RuleFor(x => x.CategoryId)
-            .NotEmpty().WithMessage("Category ID is required.");
+        RuleFor(x => x.CategoryIds)
+            .NotEmpty().WithMessage("At least one category is required.");
 
         RuleFor(x => x.DisplayOrder)
             .GreaterThanOrEqualTo(0).WithMessage("Display order must be a non-negative number.");

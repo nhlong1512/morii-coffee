@@ -14,7 +14,7 @@ public class UpdateProductCommand : ICommand<ProductDto>
         Slug = dto.Slug;
         Description = dto.Description;
         BasePrice = dto.BasePrice;
-        CategoryId = dto.CategoryId;
+        CategoryIds = dto.CategoryIds;
         ThumbnailUrl = dto.ThumbnailUrl;
         Status = dto.Status;
         IsFeatured = dto.IsFeatured;
@@ -26,7 +26,7 @@ public class UpdateProductCommand : ICommand<ProductDto>
     public string? Slug { get; }
     public string? Description { get; }
     public decimal BasePrice { get; }
-    public Guid CategoryId { get; }
+    public List<Guid> CategoryIds { get; }
     public string? ThumbnailUrl { get; }
     public EProductStatus Status { get; }
     public bool IsFeatured { get; }

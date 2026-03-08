@@ -36,7 +36,8 @@ From the **project root directory** (where `MoriiCoffee.slnx` is located), run:
 dotnet ef migrations add InitialCreate `
   --project source/MoriiCoffee.Infrastructure.Persistence/MoriiCoffee.Infrastructure.Persistence.csproj `
   --startup-project source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj `
-  --output-dir Migrations
+  --output-dir Migrations `
+  --connection "Server=localhost\SQLEXPRESS;Database=MoriiCoffeeDb;Trusted_Connection=true;TrustServerCertificate=true;"
 ```
 
 **Explanation**:
@@ -105,15 +106,24 @@ public class NewEntityConfiguration : IEntityTypeConfiguration<NewEntity>
 dotnet ef migrations add AddNewEntity `
   --project source/MoriiCoffee.Infrastructure.Persistence/MoriiCoffee.Infrastructure.Persistence.csproj `
   --startup-project source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj `
-  --output-dir Migrations
+  --output-dir Migrations `
+  --connection "Server=localhost\SQLEXPRESS;Database=MoriiCoffeeDb;Trusted_Connection=true;TrustServerCertificate=true;"
 ```
 
+**Step 2**: Update a new migration
+```powershell
+dotnet ef database update `
+  --project source/MoriiCoffee.Infrastructure.Persistence/MoriiCoffee.Infrastructure.Persistence.csproj `
+  --startup-project source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj
+
+```
 **Step 3**: Apply the migration
 
 ```powershell
 dotnet ef database update `
   --project source/MoriiCoffee.Infrastructure.Persistence/MoriiCoffee.Infrastructure.Persistence.csproj `
-  --startup-project source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj
+  --startup-project source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj `
+  --connection "Server=localhost\SQLEXPRESS;Database=MoriiCoffeeDb;Trusted_Connection=true;TrustServerCertificate=true;"
 ```
 
 ### Check Pending Migrations
@@ -183,7 +193,7 @@ The connection string is taken from `appsettings.json`:
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnectionString": "Server=.;Database=MoriiCoffee;Trusted_Connection=true;TrustServerCertificate=true;"
+    "DefaultConnectionString": "Server=localhost\SQLEXPRESS;Database=MoriiCoffeeDb;Trusted_Connection=true;TrustServerCertificate=true;"
   }
 }
 ```

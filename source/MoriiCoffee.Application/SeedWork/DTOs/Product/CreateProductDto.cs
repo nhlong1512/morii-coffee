@@ -26,9 +26,9 @@ public class CreateProductDto
     [Range(0, double.MaxValue)]
     public decimal BasePrice { get; set; }
 
-    /// <summary>ID of the category this product belongs to.</summary>
+    /// <summary>IDs of the categories this product belongs to.</summary>
     [Required]
-    public Guid CategoryId { get; set; }
+    public List<Guid> CategoryIds { get; set; } = new();
 
     /// <summary>URL of the main product thumbnail.</summary>
     [MaxLength(500)]

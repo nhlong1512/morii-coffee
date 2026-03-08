@@ -12,7 +12,7 @@ public class CreateProductCommand : ICommand<ProductDto>
         Slug = dto.Slug;
         Description = dto.Description;
         BasePrice = dto.BasePrice;
-        CategoryId = dto.CategoryId;
+        CategoryIds = dto.CategoryIds;
         ThumbnailUrl = dto.ThumbnailUrl;
         IsFeatured = dto.IsFeatured;
         DisplayOrder = dto.DisplayOrder;
@@ -22,7 +22,7 @@ public class CreateProductCommand : ICommand<ProductDto>
     public string? Slug { get; }
     public string? Description { get; }
     public decimal BasePrice { get; }
-    public Guid CategoryId { get; }
+    public List<Guid> CategoryIds { get; }
     public string? ThumbnailUrl { get; }
     public bool IsFeatured { get; }
     public int DisplayOrder { get; }

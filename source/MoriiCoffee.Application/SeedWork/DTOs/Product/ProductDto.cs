@@ -12,8 +12,7 @@ public class ProductDto
     public string Slug { get; set; } = null!;
     public string? Description { get; set; }
     public decimal BasePrice { get; set; }
-    public Guid CategoryId { get; set; }
-    public CategoryDto? Category { get; set; }
+    public List<CategoryDto> Categories { get; set; } = new();
     public string? ThumbnailUrl { get; set; }
     public EProductStatus Status { get; set; }
     public bool IsFeatured { get; set; }

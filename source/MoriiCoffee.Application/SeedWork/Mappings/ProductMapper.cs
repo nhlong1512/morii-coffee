@@ -11,10 +11,11 @@ public class ProductMapper : Profile
     public ProductMapper()
     {
         CreateMap<Product, ProductDto>()
-            .ForMember(dest => dest.Variants, opt => opt.MapFrom(src => src.Variants));
+            .ForMember(dest => dest.Variants, opt => opt.MapFrom(src => src.Variants))
+            .ForMember(dest => dest.Categories, opt => opt.MapFrom(src => src.ProductCategories.Select(pc => pc.Category)));
 
         CreateMap<Product, ProductSummaryDto>()
-            .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : null));
+            .ForMember(dest => dest.CategoryNames, opt => opt.MapFrom(src => src.ProductCategories.Select(pc => pc.Category.Name)));
 
         CreateMap<ProductVariant, ProductVariantDto>()
             .ForMember(dest => dest.TotalPrice, opt => opt.Ignore());

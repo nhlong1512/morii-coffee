@@ -21,7 +21,7 @@ public class UpdateProductDto
     public decimal BasePrice { get; set; }
 
     [Required]
-    public Guid CategoryId { get; set; }
+    public List<Guid> CategoryIds { get; set; } = new();
 
     [MaxLength(500)]
     public string? ThumbnailUrl { get; set; }

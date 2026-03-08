@@ -4,6 +4,8 @@ using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Enums.Product;
+using CategoryEntity = MoriiCoffee.Domain.Aggregates.CategoryAggregate.Category;
+using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
 using ProductEntity = MoriiCoffee.Domain.Aggregates.ProductAggregate.Product;
 
 namespace MoriiCoffee.Application.Commands.Product.CreateProduct;
@@ -25,9 +27,14 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
 
     public async Task<ProductDto> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
-        // Validate that the referenced category exists
-        var category = await _unitOfWork.Categories.GetByIdAsync(request.CategoryId)
-            ?? throw new NotFoundException("Category", request.CategoryId);
+        // Validate that the referenced categories exist
+        var categories = new List<CategoryEntity>();
+        foreach (var categoryId in request.CategoryIds)
+        {
+            var category = await _unitOfWork.Categories.GetByIdAsync(categoryId)
+                ?? throw new NotFoundException("Category", categoryId);
+            categories.Add(category);
+        }
 
         // Generate or validate slug
         string slug = string.IsNullOrWhiteSpace(request.Slug)
@@ -48,18 +55,24 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             Slug = slug,
             Description = request.Description,
             BasePrice = request.BasePrice,
-            CategoryId = request.CategoryId,
             ThumbnailUrl = request.ThumbnailUrl,
             Status = EProductStatus.Active,
             IsFeatured = request.IsFeatured,
             DisplayOrder = request.DisplayOrder
         };
 
+        // Add product categories
+        foreach (var category in categories)
+        {
+            product.ProductCategories.Add(new ProductCategory
+            {
+                CategoryId = category.Id,
+                ProductId = product.Id
+            });
+        }
+
         await _unitOfWork.Products.CreateAsync(product);
         await _unitOfWork.CommitAsync();
-
-        // Reload with category for DTO mapping
-        product.Category = category;
 
         return _mapper.Map<ProductDto>(product);
     }

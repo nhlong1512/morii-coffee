@@ -18,10 +18,11 @@ public class ProductsRepository : RepositoryBase<Product>, IProductsRepository
     public async Task<Product?> GetBySlugAsync(string slug)
     {
         return await _context.Products
-            .Include(p => p.Category)
-            .Include(p => p.Variants.Where(v => !v.IsDeleted))
-            .Where(p => !p.IsDeleted)
-            .FirstOrDefaultAsync(p => p.Slug == slug.ToLowerInvariant());
+                .Include(p => p.ProductCategories)
+                    .ThenInclude(pc => pc.Category)
+                .Include(p => p.Variants.Where(v => !v.IsDeleted))
+                .Where(p => !p.IsDeleted)
+                .FirstOrDefaultAsync(p => p.Slug == slug.ToLowerInvariant());
     }
 
     public async Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null)

@@ -1,7 +1,8 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
+using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
 
 namespace MoriiCoffee.Infrastructure.Persistence.Data;
 
@@ -28,6 +29,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Product> Products { get; set; }
     public DbSet<ProductVariant> ProductVariants { get; set; }
     public DbSet<ProductImage> ProductImages { get; set; }
+    public DbSet<ProductCategory> ProductCategories { get; set; }
 
     #endregion
 

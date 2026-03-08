@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
+using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
 using MoriiCoffee.Domain.Shared.Enums.Product;
 
 namespace MoriiCoffee.Infrastructure.Persistence.Data;
@@ -41,6 +42,10 @@ public class ApplicationDbContextSeed
         await _context.Products.AddRangeAsync(products);
         await _context.SaveChangesAsync();
 
+        var productCategories = GetSeedProductCategories(products, categories);
+        await _context.ProductCategories.AddRangeAsync(productCategories);
+        await _context.SaveChangesAsync();
+
         _logger.LogInformation("Database seeded successfully.");
     }
 
@@ -71,7 +76,6 @@ public class ApplicationDbContextSeed
                 Slug = "caramel-macchiato",
                 Description = "Espresso with vanilla-flavored syrup, milk, and caramel drizzle.",
                 BasePrice = 45_000m,
-                CategoryId = espresso.Id,
                 Status = EProductStatus.Active,
                 IsFeatured = true,
                 DisplayOrder = 1,
@@ -84,7 +88,6 @@ public class ApplicationDbContextSeed
                 Slug = "classic-cold-brew",
                 Description = "24-hour cold-steeped coffee for a smooth, low-acidity taste.",
                 BasePrice = 55_000m,
-                CategoryId = coldBrew.Id,
                 Status = EProductStatus.Active,
                 IsFeatured = true,
                 DisplayOrder = 1,
@@ -104,5 +107,21 @@ public class ApplicationDbContextSeed
         }
 
         return products;
+    }
+
+    private static List<ProductCategory> GetSeedProductCategories(List<Product> products, List<Category> categories)
+    {
+        DateTime now = DateTime.UtcNow;
+        var espresso = categories.First(c => c.Name == "Espresso Drinks");
+        var coldBrew = categories.First(c => c.Name == "Cold Brew");
+
+        var caramelMacchiato = products.First(p => p.Slug == "caramel-macchiato");
+        var classicColdBrew = products.First(p => p.Slug == "classic-cold-brew");
+
+        return new List<ProductCategory>
+        {
+            new() { CategoryId = espresso.Id, ProductId = caramelMacchiato.Id, CreatedAt = now },
+            new() { CategoryId = coldBrew.Id, ProductId = classicColdBrew.Id, CreatedAt = now }
+        };
     }
 }
