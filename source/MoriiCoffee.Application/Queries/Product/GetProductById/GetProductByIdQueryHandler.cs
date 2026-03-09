@@ -1,7 +1,7 @@
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Application.SeedWork.Exceptions;
-using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.SeedWork.Query;
 
@@ -20,11 +20,13 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Pro
 
     public async Task<ProductDto> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
-        var product = await _unitOfWork.Products.GetByIdAsync(
-            request.ProductId,
-            p => p.ProductCategories.Select(pc => pc.Category),
-            p => p.Variants,
-            p => p.Images)
+        var product = await _unitOfWork.Products
+            .FindByCondition(p => p.Id == request.ProductId)
+            .Include(p => p.ProductCategories)
+                .ThenInclude(pc => pc.Category)
+            .Include(p => p.Variants)
+            .Include(p => p.Images)
+            .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Product", request.ProductId);
 
         var dto = _mapper.Map<ProductDto>(product);

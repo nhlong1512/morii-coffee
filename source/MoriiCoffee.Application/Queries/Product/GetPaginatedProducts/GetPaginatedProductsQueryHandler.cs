@@ -1,9 +1,11 @@
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.SeedWork.Query;
 using MoriiCoffee.Domain.Shared.Helpers;
 using MoriiCoffee.Domain.Shared.SeedWork;
+using ProductEntity = MoriiCoffee.Domain.Aggregates.ProductAggregate.Product;
 
 namespace MoriiCoffee.Application.Queries.Product.GetPaginatedProducts;
 
@@ -21,8 +23,10 @@ public class GetPaginatedProductsQueryHandler : IQueryHandler<GetPaginatedProduc
     public Task<Pagination<ProductSummaryDto>> Handle(GetPaginatedProductsQuery request,
         CancellationToken cancellationToken)
     {
-        var query = _unitOfWork.Products
-            .FindAll(false, p => p.ProductCategories.Select(pc => pc.Category));
+        IQueryable<ProductEntity> query = _unitOfWork.Products
+            .FindAll(false)
+            .Include(p => p.ProductCategories)
+                .ThenInclude(pc => pc.Category);
 
         // Apply optional filters
         if (request.Filter.CategoryId.HasValue)

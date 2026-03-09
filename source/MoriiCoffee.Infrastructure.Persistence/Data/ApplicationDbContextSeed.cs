@@ -1,4 +1,3 @@
-using Bogus;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
@@ -38,7 +37,7 @@ public class ApplicationDbContextSeed
         await _context.Categories.AddRangeAsync(categories);
         await _context.SaveChangesAsync();
 
-        var products = GetSeedProducts(categories);
+        var products = GetSeedProducts();
         await _context.Products.AddRangeAsync(products);
         await _context.SaveChangesAsync();
 
@@ -61,12 +60,9 @@ public class ApplicationDbContextSeed
         };
     }
 
-    private static List<Product> GetSeedProducts(List<Category> categories)
+    private static List<Product> GetSeedProducts()
     {
         DateTime now = DateTime.UtcNow;
-        var espresso = categories.First(c => c.Name == "Espresso");
-        var coldBrew = categories.First(c => c.Name == "Cold Brew");
-
         var products = new List<Product>
         {
             new()
@@ -112,7 +108,7 @@ public class ApplicationDbContextSeed
     private static List<ProductCategory> GetSeedProductCategories(List<Product> products, List<Category> categories)
     {
         DateTime now = DateTime.UtcNow;
-        var espresso = categories.First(c => c.Name == "Espresso Drinks");
+        var espresso = categories.First(c => c.Name == "Espresso");
         var coldBrew = categories.First(c => c.Name == "Cold Brew");
 
         var caramelMacchiato = products.First(p => p.Slug == "caramel-macchiato");

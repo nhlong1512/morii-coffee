@@ -19,7 +19,10 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
 
     public async Task<ProductDto> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
-        var product = await _unitOfWork.Products.GetByIdAsync(request.Id)
+        // Load product WITH its existing ProductCategories so EF Core tracks the collection
+        // and can delete removed rows when Clear() is called.
+        var product = await _unitOfWork.Products.GetByIdAsync(request.Id,
+            p => p.ProductCategories)
             ?? throw new NotFoundException("Product", request.Id);
 
         // Validate that each referenced category exists

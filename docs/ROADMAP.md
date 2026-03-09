@@ -25,6 +25,16 @@ Phase 1 (core catalog CRUD) is complete. All subsequent phases are planned.
 - [x] Category CRUD (`/api/v1/categories`)
 - [x] Product CRUD with pagination and filters (`/api/v1/products`)
 - [x] ProductVariant CRUD with size/price management (`/api/v1/variants`)
+- [x] `ProductCategory` join table — many-to-many relationship between `Product` and `Category`
+  - `ProductCategories` table with composite PK `(CategoryId, ProductId)`, inherits `EntityBase` (soft-delete, date tracking)
+  - `ProductCategoryConfiguration` — EF Core Fluent API configures both FK relationships with cascade delete
+  - `Product.ProductCategories` and `Category.ProductCategories` navigation collections
+  - `CreateProduct` / `UpdateProduct` commands accept `List<Guid> CategoryIds`; handlers validate each ID and write `ProductCategory` rows
+  - `UpdateProduct` loads product **with** `ProductCategories` included so EF Core's change tracker deletes removed rows on `Clear()`
+  - `GET /api/v1/products` — supports `?categoryId=` filter via `ProductCategories.Any(pc => pc.CategoryId == ...)`
+  - `GET /api/v1/products/{id}` — eager-loads `ProductCategories → Category`; response includes `Categories: List<CategoryDto>`
+  - `ProductSummaryDto.CategoryNames: List<string>` — projected from `ProductCategories.Select(pc => pc.Category.Name)` for lightweight list responses
+  - Validators enforce `CategoryIds.NotEmpty()` — at least one category required on create and update
 
 ---
 

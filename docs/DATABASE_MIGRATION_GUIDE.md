@@ -126,6 +126,18 @@ dotnet ef database update `
   --connection "Server=localhost\SQLEXPRESS;Database=MoriiCoffeeDb;Trusted_Connection=true;TrustServerCertificate=true;"
 ```
 
+
+### Drop & Recreate Database 
+dotnet ef database drop `
+  --project source/MoriiCoffee.Infrastructure.Persistence/MoriiCoffee.Infrastructure.Persistence.csproj `
+  --startup-project source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj `
+  --force
+
+
+dotnet ef database update `
+  --project source/MoriiCoffee.Infrastructure.Persistence/MoriiCoffee.Infrastructure.Persistence.csproj `
+  --startup-project source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj
+
 ### Check Pending Migrations
 
 To see if there are any migrations not yet applied:
