@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Infrastructure.Clock;
 using MoriiCoffee.Infrastructure.Configurations;
 using MoriiCoffee.Infrastructure.Persistence;
+using MoriiCoffee.Infrastructure.Services;
 
 namespace MoriiCoffee.Infrastructure;
 
@@ -17,9 +19,12 @@ public static class DependencyInjection
         IConfiguration configuration,
         string appCors)
     {
+        services.ConfigureSettings(configuration);
         services.ConfigureControllers();
         services.ConfigureCors(appCors);
         services.ConfigureApplicationDbContext(configuration);
+        services.ConfigureIdentity();
+        services.ConfigureAuthentication();
         services.ConfigureMediatR();
         services.ConfigureMapper();
         services.ConfigureValidation();
@@ -33,6 +38,9 @@ public static class DependencyInjection
     public static IServiceCollection ConfigureDependencyInjection(this IServiceCollection services)
     {
         services.AddTransient<IDateTimeProvider, DateTimeProvider>();
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IFileService, FileService>();
         return services;
     }
 }

@@ -137,6 +137,7 @@ _TeamCity*
 .dotnet/
 
 docs/templates/
+docs/
 
 # AxoCover is a Code Coverage Tool
 .axoCover/*

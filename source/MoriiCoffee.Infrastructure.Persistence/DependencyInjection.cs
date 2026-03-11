@@ -8,6 +8,7 @@ using UnitOfWorkImpl = MoriiCoffee.Infrastructure.Persistence.SeedWork.UnitOfWor
 
 namespace MoriiCoffee.Infrastructure.Persistence;
 
+/// <summary>Registers persistence-layer services: UnitOfWork, all repositories, and the database seeder.</summary>
 public static class DependencyInjection
 {
 

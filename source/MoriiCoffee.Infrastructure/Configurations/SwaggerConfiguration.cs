@@ -30,14 +30,14 @@ public static class SwaggerConfiguration
             options.EnableAnnotations();
             options.UseInlineDefinitionsForEnums();
 
-            // JWT Bearer support (for future auth phases)
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Name = "Authorization",
-                Description = "Enter: Bearer {your-jwt-token}",
+                Description = "Enter your JWT token. The 'Bearer ' prefix is added automatically.",
                 In = ParameterLocation.Header,
-                Type = SecuritySchemeType.ApiKey,
-                Scheme = "Bearer"
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT"
             });
 
             options.AddSecurityRequirement(new OpenApiSecurityRequirement

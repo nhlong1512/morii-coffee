@@ -1,37 +1,146 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
+using MoriiCoffee.Domain.Aggregates.UserAggregate;
+using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
 using MoriiCoffee.Domain.Shared.Enums.Product;
+using MoriiCoffee.Domain.Shared.Enums.User;
 
 namespace MoriiCoffee.Infrastructure.Persistence.Data;
 
 /// <summary>
-/// Seeds the database with realistic sample data for development and testing.
-/// Only runs when the database is empty.
+/// Seeds the database with roles, an admin user, and sample catalog data.
 /// </summary>
 public class ApplicationDbContextSeed
 {
     private readonly ApplicationDbContext _context;
+    private readonly RoleManager<Role> _roleManager;
+    private readonly UserManager<User> _userManager;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<ApplicationDbContextSeed> _logger;
 
-    public ApplicationDbContextSeed(ApplicationDbContext context, ILogger<ApplicationDbContextSeed> logger)
+    public ApplicationDbContextSeed(
+        ApplicationDbContext context,
+        RoleManager<Role> roleManager,
+        UserManager<User> userManager,
+        IConfiguration configuration,
+        ILogger<ApplicationDbContextSeed> logger)
     {
         _context = context;
+        _roleManager = roleManager;
+        _userManager = userManager;
+        _configuration = configuration;
         _logger = logger;
     }
 
     public async Task SeedAsync()
     {
+        await SeedRolesAsync();
+        await SeedAdminUserAsync();
+        await SeedSampleUsersAsync();
+        await SeedCatalogAsync();
+    }
+
+    private async Task SeedRolesAsync()
+    {
+        string[] roles = Enum.GetNames<ERole>();
+        foreach (var roleName in roles)
+        {
+            if (!await _roleManager.RoleExistsAsync(roleName))
+            {
+                await _roleManager.CreateAsync(new Role(roleName));
+                _logger.LogInformation("Created role: {Role}", roleName);
+            }
+        }
+    }
+
+    private async Task SeedAdminUserAsync()
+    {
+        var email = _configuration["AdminSeed:Email"] ?? "admin@moriicoffee.com";
+        var password = _configuration["AdminSeed:Password"] ?? "Admin@123456";
+
+        if (await _userManager.FindByEmailAsync(email) is not null)
+            return;
+
+        var now = DateTime.UtcNow;
+        var admin = new User
+        {
+            Id = Guid.NewGuid(),
+            UserName = "admin",
+            Email = email,
+            FullName = "MoriiCoffee Admin",
+            Status = EUserStatus.Active,
+            CreatedAt = now,
+            UpdatedAt = now,
+            EmailConfirmed = true
+        };
+
+        var result = await _userManager.CreateAsync(admin, password);
+        if (result.Succeeded)
+        {
+            await _userManager.AddToRoleAsync(admin, nameof(ERole.ADMIN));
+            _logger.LogInformation("Seeded admin user: {Email}", email);
+        }
+        else
+        {
+            _logger.LogWarning("Failed to seed admin user: {Errors}",
+                string.Join(", ", result.Errors.Select(e => e.Description)));
+        }
+    }
+
+    private async Task SeedSampleUsersAsync()
+    {
+        var sampleUsers = new[]
+        {
+            new { Email = "staff@moriicoffee.com", UserName = "staff", FullName = "MoriiCoffee Staff", Role = nameof(ERole.STAFF) },
+            new { Email = "customer1@gmail.com",   UserName = "customer1", FullName = "Nguyen Van A",    Role = nameof(ERole.CUSTOMER) },
+            new { Email = "customer2@gmail.com",   UserName = "customer2", FullName = "Tran Thi B",      Role = nameof(ERole.CUSTOMER) },
+        };
+
+        var seedCredential = _configuration["AdminSeed:Password"] ?? "Sample@123456";
+
+        foreach (var sample in sampleUsers)
+        {
+            if (await _userManager.FindByEmailAsync(sample.Email) is not null)
+                continue;
+
+            var user = new User
+            {
+                UserName = sample.UserName,
+                Email = sample.Email,
+                FullName = sample.FullName,
+                Status = EUserStatus.Active,
+                EmailConfirmed = true
+            };
+
+            var result = await _userManager.CreateAsync(user, seedCredential);
+            if (result.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(user, sample.Role);
+                _logger.LogInformation("Seeded user: {Email} ({Role})", sample.Email, sample.Role);
+            }
+            else
+            {
+                _logger.LogWarning("Failed to seed user {Email}: {Errors}", sample.Email,
+                    string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
+        }
+    }
+
+    private async Task SeedCatalogAsync()
+    {
         if (await _context.Categories.AnyAsync())
         {
-            _logger.LogInformation("Database already seeded. Skipping.");
+            _logger.LogInformation("Catalog already seeded. Skipping.");
             return;
         }
 
-        _logger.LogInformation("Seeding database with sample data...");
+        _logger.LogInformation("Seeding catalog data...");
 
         var categories = GetSeedCategories();
         await _context.Categories.AddRangeAsync(categories);
@@ -45,7 +154,7 @@ public class ApplicationDbContextSeed
         await _context.ProductCategories.AddRangeAsync(productCategories);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Database seeded successfully.");
+        _logger.LogInformation("Catalog seeded successfully.");
     }
 
     private static List<Category> GetSeedCategories()
@@ -91,7 +200,6 @@ public class ApplicationDbContextSeed
             }
         };
 
-        // Add variants to each product
         foreach (var product in products)
         {
             product.Variants = new List<ProductVariant>

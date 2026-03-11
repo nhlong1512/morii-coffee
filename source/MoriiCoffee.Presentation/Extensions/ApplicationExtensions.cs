@@ -6,6 +6,7 @@ using MoriiCoffee.Presentation.Middlewares;
 
 namespace MoriiCoffee.Presentation.Extensions;
 
+/// <summary>Configures the HTTP request pipeline: Swagger, error handling, CORS, authentication, authorization, controllers, and database migration/seeding.</summary>
 internal static class ApplicationExtensions
 {
     public static void UseInfrastructure(this WebApplication app, string appCors)
@@ -25,7 +26,8 @@ internal static class ApplicationExtensions
         // 4. CORS
         app.UseCors(appCors);
 
-        // 5. Auth (placeholder for Phase 2)
+        // 5. Authentication + Authorization (JWT)
+        app.UseAuthentication();
         app.UseAuthorization();
 
         // 6. Root redirect to Swagger

@@ -3,6 +3,7 @@ using MoriiCoffee.Application.SeedWork.Mappings;
 
 namespace MoriiCoffee.Infrastructure.Configurations;
 
+/// <summary>Registers all AutoMapper profiles (Category, Product, User) with the DI container.</summary>
 public static class MapperConfiguration
 {
     public static IServiceCollection ConfigureMapper(this IServiceCollection services)
@@ -11,6 +12,7 @@ public static class MapperConfiguration
         {
             config.AddProfile<CategoryMapper>();
             config.AddProfile<ProductMapper>();
+            config.AddProfile<UserMapper>();
         });
 
         return services;
