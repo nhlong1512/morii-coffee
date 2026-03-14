@@ -57,7 +57,9 @@ public class AuthController : ControllerBase
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto dto)
     {
-        var accessToken = Request.Headers.Authorization.ToString().Replace("Bearer ", string.Empty);
+        var accessToken = Request.Headers.Authorization.ToString()
+            .Replace("Bearer ", string.Empty, StringComparison.OrdinalIgnoreCase);
+
         var result = await _mediator.Send(new RefreshTokenCommand
         {
             AccessToken = accessToken,

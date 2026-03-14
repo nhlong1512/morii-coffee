@@ -11,7 +11,7 @@ public static class AuthenticationConfiguration
 {
     public static IServiceCollection ConfigureAuthentication(this IServiceCollection services)
     {
-        var jwtOptions = services.BuildServiceProvider().GetRequiredService<JwtOptions>();
+        var jwtOptions = services.GetOptions<JwtOptions>(nameof(JwtOptions));
 
         services
             .AddAuthentication(options =>

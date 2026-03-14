@@ -97,7 +97,7 @@ public class UsersController : ControllerBase
 
     /// <summary>Get a paginated list of users.</summary>
     [HttpGet]
-    [Authorize(Roles = "ADMIN,STAFF")]
+    [Authorize(Roles = $"{nameof(ERole.ADMIN)},{nameof(ERole.STAFF)}")]
     [SwaggerOperation(Summary = "Get paginated users")]
     [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(Pagination<UserSummaryDto>))]
     public async Task<IActionResult> GetPaginatedUsers(
@@ -111,7 +111,7 @@ public class UsersController : ControllerBase
 
     /// <summary>Get a user by ID.</summary>
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = "ADMIN,STAFF")]
+    [Authorize(Roles = $"{nameof(ERole.ADMIN)},{nameof(ERole.STAFF)}")]
     [SwaggerOperation(Summary = "Get user by ID")]
     [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(UserDto))]
     [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
@@ -138,7 +138,11 @@ public class UsersController : ControllerBase
 
     private Guid GetCurrentUserId()
     {
-        var jti = User.FindFirstValue(JwtRegisteredClaimNames.Jti);
-        return Guid.Parse(jti!);
+        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(sub, out var userId))
+        {
+             throw new UnauthorizedAccessException();
+        }
+        return userId;
     }
 }
