@@ -1,0 +1,23 @@
+services:
+  moriicoffee.api:
+    image: moriicoffee.api
+    container_name: moriicoffee.api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+    depends_on:
+      moriicoffee.database:
+        condition: service_healthy
+      moriicoffee.minio:
+        condition: service_started
+    ports:
+      - "8002:80"
+    build:
+      context: ..
+      dockerfile: source/MoriiCoffee.Presentation/Dockerfile
+    restart: on-failure
+
+networks:
+  default:
+    name: moriicoffee_network
+    driver: bridge
