@@ -1,8 +1,10 @@
 using AutoMapper;
+using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
+using MoriiCoffee.Domain.Shared.Constants;
 using MoriiCoffee.Domain.Shared.Enums.Product;
 using CategoryEntity = MoriiCoffee.Domain.Aggregates.CategoryAggregate.Category;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
@@ -12,16 +14,19 @@ namespace MoriiCoffee.Application.Commands.Product.CreateProduct;
 
 /// <summary>
 /// Handles the creation of a new product.
+/// If a thumbnail file is provided, it is uploaded to MinIO before the DB commit.
 /// Generates a unique slug from the product name if one is not provided.
 /// </summary>
 public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand, ProductDto>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IFileService _fileService;
     private readonly IMapper _mapper;
 
-    public CreateProductCommandHandler(IUnitOfWork unitOfWork, IMapper mapper)
+    public CreateProductCommandHandler(IUnitOfWork unitOfWork, IFileService fileService, IMapper mapper)
     {
         _unitOfWork = unitOfWork;
+        _fileService = fileService;
         _mapper = mapper;
     }
 
@@ -48,6 +53,16 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             slug = $"{slug}-{Guid.NewGuid().ToString("N")[..6]}";
         }
 
+        // Upload thumbnail to MinIO if provided
+        string? thumbnailUrl = null;
+        string? thumbnailFileName = null;
+        if (request.Thumbnail != null)
+        {
+            var uploadResult = await _fileService.UploadAsync(request.Thumbnail, FileContainers.PRODUCTS);
+            thumbnailUrl = uploadResult.Blob.Uri;
+            thumbnailFileName = uploadResult.Blob.Name;
+        }
+
         var product = new ProductEntity
         {
             Id = Guid.NewGuid(),
@@ -55,7 +70,8 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             Slug = slug,
             Description = request.Description,
             BasePrice = request.BasePrice,
-            ThumbnailUrl = request.ThumbnailUrl,
+            ThumbnailUrl = thumbnailUrl,
+            ThumbnailFileName = thumbnailFileName,
             Status = EProductStatus.Active,
             IsFeatured = request.IsFeatured,
             DisplayOrder = request.DisplayOrder

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Domain.SeedWork.Command;
 
@@ -13,7 +14,7 @@ public class CreateProductCommand : ICommand<ProductDto>
         Description = dto.Description;
         BasePrice = dto.BasePrice;
         CategoryIds = dto.CategoryIds;
-        ThumbnailUrl = dto.ThumbnailUrl;
+        Thumbnail = dto.Thumbnail;
         IsFeatured = dto.IsFeatured;
         DisplayOrder = dto.DisplayOrder;
     }
@@ -23,7 +24,10 @@ public class CreateProductCommand : ICommand<ProductDto>
     public string? Description { get; }
     public decimal BasePrice { get; }
     public List<Guid> CategoryIds { get; }
-    public string? ThumbnailUrl { get; }
+
+    /// <summary>Optional thumbnail file to upload to MinIO on creation.</summary>
+    public IFormFile? Thumbnail { get; }
+
     public bool IsFeatured { get; }
     public int DisplayOrder { get; }
 }

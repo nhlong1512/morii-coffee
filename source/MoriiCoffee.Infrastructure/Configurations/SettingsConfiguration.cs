@@ -12,8 +12,10 @@ public static class SettingsConfiguration
         IConfiguration configuration)
     {
         var jwtOptions = configuration.GetSection(nameof(JwtOptions)).Get<JwtOptions>();
-
         services.AddSingleton<JwtOptions>(jwtOptions!);
+
+        var minioSettings = configuration.GetSection(nameof(MinioSettings)).Get<MinioSettings>();
+        services.AddSingleton<MinioSettings>(minioSettings!);
 
         return services;
     }

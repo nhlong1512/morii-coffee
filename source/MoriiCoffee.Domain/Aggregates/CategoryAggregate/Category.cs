@@ -31,6 +31,11 @@ public class Category : AggregateRoot
     [Column(TypeName = "nvarchar(500)")]
     public string? IconUrl { get; set; }
 
+    /// <summary>Internal MinIO object name (GUID) for the icon. Used to delete or refresh the URL.</summary>
+    [MaxLength(500)]
+    [Column(TypeName = "nvarchar(500)")]
+    public string? IconFileName { get; set; }
+
     /// <summary>Sort order for displaying categories in the catalog.</summary>
     public int DisplayOrder { get; set; }
 

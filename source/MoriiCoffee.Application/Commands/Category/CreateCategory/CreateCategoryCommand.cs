@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using MoriiCoffee.Application.SeedWork.DTOs.Category;
 using MoriiCoffee.Domain.SeedWork.Command;
 
@@ -10,12 +11,15 @@ public class CreateCategoryCommand : ICommand<CategoryDto>
     {
         Name = dto.Name;
         Description = dto.Description;
-        IconUrl = dto.IconUrl;
+        Icon = dto.Icon;
         DisplayOrder = dto.DisplayOrder;
     }
 
     public string Name { get; }
     public string? Description { get; }
-    public string? IconUrl { get; }
+
+    /// <summary>Optional icon file to upload to MinIO on creation.</summary>
+    public IFormFile? Icon { get; }
+
     public int DisplayOrder { get; }
 }
