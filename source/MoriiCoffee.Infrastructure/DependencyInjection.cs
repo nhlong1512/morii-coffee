@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.ConfigureMapper();
         services.ConfigureValidation();
         services.ConfigureSwagger();
+        services.ConfigureStorage();
         services.ConfigurePersistenceServices();
         services.ConfigureDependencyInjection();
 
@@ -40,7 +41,7 @@ public static class DependencyInjection
         services.AddTransient<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IEmailService, EmailService>();
-        services.AddScoped<IFileService, FileService>();
+        services.AddScoped<IFileService, MinioFileService>();
         return services;
     }
 }

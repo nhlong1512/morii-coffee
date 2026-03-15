@@ -1,9 +1,13 @@
-using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 using MoriiCoffee.Domain.Shared.Enums.Product;
+using System.ComponentModel.DataAnnotations;
 
 namespace MoriiCoffee.Application.SeedWork.DTOs.Product;
 
-/// <summary>Payload for updating an existing product.</summary>
+/// <summary>
+/// Multipart/form-data payload for updating an existing product.
+/// When a new Thumbnail file is provided, the old image is deleted from MinIO and replaced.
+/// </summary>
 public class UpdateProductDto
 {
     [Required]
@@ -23,8 +27,11 @@ public class UpdateProductDto
     [Required]
     public List<Guid> CategoryIds { get; set; } = new();
 
-    [MaxLength(500)]
-    public string? ThumbnailUrl { get; set; }
+    /// <summary>
+    /// Optional new thumbnail file. When provided, the existing thumbnail is deleted from MinIO
+    /// and replaced with this file. When omitted, the current thumbnail is kept unchanged.
+    /// </summary>
+    public IFormFile? Thumbnail { get; set; }
 
     public EProductStatus Status { get; set; }
 

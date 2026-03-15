@@ -32,12 +32,11 @@ public class ChangeAvatarCommandHandler : ICommandHandler<ChangeAvatarCommand, U
             ?? throw new NotFoundException("User", request.UserId);
 
         if (!string.IsNullOrEmpty(user.AvatarFileName))
-            await _fileService.DeleteAsync(user.AvatarFileName, FileContainers.USERS);
+            await _fileService.DeleteAsync(FileContainers.USERS, user.AvatarFileName);
 
-        var url = await _fileService.UploadAsync(request.Avatar, FileContainers.USERS);
-        var fileName = Path.GetFileName(url);
+        var result = await _fileService.UploadAsync(request.Avatar, FileContainers.USERS);
 
-        user.SetAvatar(url, fileName);
+        user.SetAvatar(result.Blob.Uri, result.Blob.Name);
         await _userManager.UpdateAsync(user);
 
         var roles = await _userManager.GetRolesAsync(user);

@@ -36,17 +36,13 @@ public class ProductsController : ControllerBase
     [HttpPost]
     [SwaggerOperation(
         Summary = "Create a product",
-        Description = """
-            Creates a new product in the catalog.
-            If no slug is provided, one will be auto-generated from the product name.
-            Slugs must be unique across all products.
-            """)]
+        Description = "Creates a new product in the catalog. If no slug is provided, one will be auto-generated from the product name. Slugs must be unique across all products.")]
     [SwaggerResponse(201, SwaggerResponseMessages.CreatedSuccessfully, typeof(ProductDto))]
     [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
     [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
     [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
-    public async Task<IActionResult> CreateProduct([FromBody] CreateProductDto request)
+    public async Task<IActionResult> CreateProduct([FromForm] CreateProductDto request)
     {
         _logger.LogInformation("POST /api/v1/products - Creating product: {Name}", request.Name);
         var result = await _mediator.Send(new CreateProductCommand(request));
@@ -57,11 +53,7 @@ public class ProductsController : ControllerBase
     [HttpGet]
     [SwaggerOperation(
         Summary = "Get paginated products",
-        Description = """
-            Returns a paginated list of products.
-            Supports filtering by categoryId and isFeatured.
-            Results are ordered by displayOrder then name.
-            """)]
+        Description = "Returns a paginated list of products. Supports filtering by categoryId and isFeatured. Results are ordered by displayOrder then name.")]
     [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(ProductDto))]
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
     [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
@@ -99,7 +91,7 @@ public class ProductsController : ControllerBase
     [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
     [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
     [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
-    public async Task<IActionResult> UpdateProduct([FromRoute] Guid id, [FromBody] UpdateProductDto request)
+    public async Task<IActionResult> UpdateProduct([FromRoute] Guid id, [FromForm] UpdateProductDto request)
     {
         var result = await _mediator.Send(new UpdateProductCommand(id, request));
         return Ok(new ApiOkResponse(result));

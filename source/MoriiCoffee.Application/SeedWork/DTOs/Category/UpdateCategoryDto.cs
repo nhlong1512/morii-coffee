@@ -1,8 +1,12 @@
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 
 namespace MoriiCoffee.Application.SeedWork.DTOs.Category;
 
-/// <summary>Payload for updating an existing product category.</summary>
+/// <summary>
+/// Multipart/form-data payload for updating an existing product category.
+/// When a new Icon file is provided, the old icon is deleted from MinIO and replaced.
+/// </summary>
 public class UpdateCategoryDto
 {
     [Required]
@@ -12,8 +16,11 @@ public class UpdateCategoryDto
     [MaxLength(500)]
     public string? Description { get; set; }
 
-    [MaxLength(500)]
-    public string? IconUrl { get; set; }
+    /// <summary>
+    /// Optional new icon file. When provided, the existing icon is deleted from MinIO
+    /// and replaced with this file. When omitted, the current icon is kept unchanged.
+    /// </summary>
+    public IFormFile? Icon { get; set; }
 
     public int DisplayOrder { get; set; }
 

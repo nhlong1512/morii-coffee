@@ -1,8 +1,12 @@
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 
 namespace MoriiCoffee.Application.SeedWork.DTOs.Product;
 
-/// <summary>Payload for creating a new product in the catalog.</summary>
+/// <summary>
+/// Multipart/form-data payload for creating a new product.
+/// Thumbnail image is uploaded as a file — the URL is generated server-side by MinIO.
+/// </summary>
 public class CreateProductDto
 {
     /// <summary>Display name of the product (e.g., "Iced Caramel Macchiato").</summary>
@@ -26,13 +30,12 @@ public class CreateProductDto
     [Range(0, double.MaxValue)]
     public decimal BasePrice { get; set; }
 
-    /// <summary>IDs of the categories this product belongs to.</summary>
+    /// <summary>IDs of the categories this product belongs to (comma-separated or repeated field in form-data).</summary>
     [Required]
     public List<Guid> CategoryIds { get; set; } = new();
 
-    /// <summary>URL of the main product thumbnail.</summary>
-    [MaxLength(500)]
-    public string? ThumbnailUrl { get; set; }
+    /// <summary>Optional thumbnail image file. Uploaded to MinIO; the resulting URL is stored on the product.</summary>
+    public IFormFile? Thumbnail { get; set; }
 
     /// <summary>Whether this product should appear in the featured section.</summary>
     public bool IsFeatured { get; set; }

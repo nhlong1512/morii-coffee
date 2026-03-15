@@ -41,7 +41,7 @@ public class CategoriesController : ControllerBase
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
     [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
     [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
-    public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryDto request)
+    public async Task<IActionResult> CreateCategory([FromForm] CreateCategoryDto request)
     {
         _logger.LogInformation("POST /api/v1/categories - Creating category: {Name}", request.Name);
         var result = await _mediator.Send(new CreateCategoryCommand(request));
@@ -90,7 +90,7 @@ public class CategoriesController : ControllerBase
     [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
     [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
     [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
-    public async Task<IActionResult> UpdateCategory([FromRoute] Guid id, [FromBody] UpdateCategoryDto request)
+    public async Task<IActionResult> UpdateCategory([FromRoute] Guid id, [FromForm] UpdateCategoryDto request)
     {
         var result = await _mediator.Send(new UpdateCategoryCommand(id, request));
         return Ok(new ApiOkResponse(result));

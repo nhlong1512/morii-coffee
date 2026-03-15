@@ -1,19 +1,28 @@
 using AutoMapper;
+using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
+using MoriiCoffee.Domain.Shared.Constants;
 
 namespace MoriiCoffee.Application.Commands.Product.UpdateProduct;
 
+/// <summary>
+/// Handles updating an existing product.
+/// When a new thumbnail file is provided, the old MinIO object is deleted first,
+/// then the new file is uploaded before the DB commit.
+/// </summary>
 public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand, ProductDto>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IFileService _fileService;
     private readonly IMapper _mapper;
 
-    public UpdateProductCommandHandler(IUnitOfWork unitOfWork, IMapper mapper)
+    public UpdateProductCommandHandler(IUnitOfWork unitOfWork, IFileService fileService, IMapper mapper)
     {
         _unitOfWork = unitOfWork;
+        _fileService = fileService;
         _mapper = mapper;
     }
 
@@ -46,12 +55,22 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
             throw new BadRequestException($"The slug '{slug}' is already in use by another product.");
         }
 
+        // Replace thumbnail: delete old from MinIO, upload new
+        if (request.Thumbnail != null)
+        {
+            if (!string.IsNullOrEmpty(product.ThumbnailFileName))
+                await _fileService.DeleteAsync(FileContainers.PRODUCTS, product.ThumbnailFileName);
+
+            var uploadResult = await _fileService.UploadAsync(request.Thumbnail, FileContainers.PRODUCTS);
+            product.ThumbnailUrl = uploadResult.Blob.Uri;
+            product.ThumbnailFileName = uploadResult.Blob.Name;
+        }
+
         // Update scalar fields
         product.Name = request.Name;
         product.Slug = slug;
         product.Description = request.Description;
         product.BasePrice = request.BasePrice;
-        product.ThumbnailUrl = request.ThumbnailUrl;
         product.Status = request.Status;
         product.IsFeatured = request.IsFeatured;
         product.DisplayOrder = request.DisplayOrder;

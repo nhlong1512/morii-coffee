@@ -56,6 +56,11 @@ public class Product : AggregateRoot
     [Column(TypeName = "nvarchar(500)")]
     public string? ThumbnailUrl { get; set; }
 
+    /// <summary>Internal MinIO object name (GUID) for the thumbnail. Used to delete or refresh the URL.</summary>
+    [MaxLength(500)]
+    [Column(TypeName = "nvarchar(500)")]
+    public string? ThumbnailFileName { get; set; }
+
     /// <summary>Availability and visibility status of the product.</summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public EProductStatus Status { get; set; } = EProductStatus.Active;

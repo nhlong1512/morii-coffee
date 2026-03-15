@@ -409,3 +409,116 @@ MoriiCoffee.Presentation        → Controllers, Middleware, ApplicationExtensio
 
 Flow: **Presentation → Application → Domain ← Infrastructure.Persistence**
 Dependencies always point inward. The Domain layer knows nothing about EF Core or ASP.NET.
+
+---
+
+## Running the Project
+
+Two compose files — infrastructure is always separate from the API:
+- `docker-compose.yml` — SQL Server + MinIO only
+- `docker-compose.development.yml` — API service only
+
+### Option 1 — Docker: infrastructure + API
+
+```bash
+cd deploy
+
+# First time (build image)
+docker compose -f docker-compose.yml -f docker-compose.development.yml up --build
+
+# Subsequent runs
+docker compose -f docker-compose.yml -f docker-compose.development.yml up -d
+
+# Stop
+docker compose -f docker-compose.yml -f docker-compose.development.yml down
+```
+
+### Option 2 — Local dotnet watch (recommended for active development)
+
+```bash
+cd deploy
+
+# Start infrastructure only
+docker compose up -d
+
+# Run API locally with hot reload (from project root)
+cd ..
+dotnet watch --project source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj
+```
+
+> When running locally, `appsettings.Development.json` uses `moriicoffee.database` as the server name.
+> Override via dotnet user-secrets if you need `localhost` instead.
+
+---
+
+## Local Port Reference
+
+| Service | URL | Notes |
+|---|---|---|
+| API (Docker) | http://localhost:8002 | via docker-compose.development.yml |
+| API (local) | http://localhost:5100 | via dotnet watch |
+| Swagger | http://localhost:8002/swagger or http://localhost:5100/swagger | |
+| MinIO API | http://localhost:9000 | S3-compatible endpoint |
+| MinIO Console | http://localhost:9001 | login: `minioadmin` / `minioadmin` |
+| SQL Server | `localhost,1433` | User: `sa` / `MoriiCoffee@123~` |
+
+---
+
+## Daily Development Workflow
+
+### Start of day
+
+```bash
+open -a Docker   # open Docker Desktop if not auto-started
+
+cd deploy
+docker compose up -d   # start infrastructure (DB + MinIO)
+```
+
+### After adding new code — rebuild API container
+
+```bash
+cd deploy
+docker compose -f docker-compose.yml -f docker-compose.development.yml up -d --build moriicoffee.api
+```
+
+### Create a new migration
+
+```bash
+# Run from project root
+dotnet ef migrations add <MigrationName> \
+  --project source/MoriiCoffee.Infrastructure.Persistence/MoriiCoffee.Infrastructure.Persistence.csproj \
+  --startup-project source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj \
+  --output-dir Migrations
+```
+
+### Apply migrations to the database
+
+```bash
+# Run from project root — connects to SQL Server container via localhost
+dotnet ef database update \
+  --project source/MoriiCoffee.Infrastructure.Persistence/MoriiCoffee.Infrastructure.Persistence.csproj \
+  --startup-project source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj \
+  --connection "Server=localhost,1433;Database=MoriiCoffeeDb;User Id=sa;Password=MoriiCoffee@123~;TrustServerCertificate=true;"
+```
+
+> The API applies pending migrations automatically on startup via `MigrateAsync()`.
+> Run `database update` manually only when applying migrations outside of app startup.
+
+### End of day
+
+```bash
+cd deploy
+docker compose down   # stops containers, data is preserved in volumes
+```
+
+### Quick reference
+
+| Situation | Command (from `deploy/`) |
+|---|---|
+| Start infrastructure | `docker compose up -d` |
+| Start infrastructure + API | `docker compose -f docker-compose.yml -f docker-compose.development.yml up -d` |
+| Rebuild API container | `docker compose -f docker-compose.yml -f docker-compose.development.yml up -d --build moriicoffee.api` |
+| Create migration | `dotnet ef migrations add <Name> ...` (project root) |
+| Apply migration | `dotnet ef database update ...` (project root) |
+| Stop all | `docker compose down` |

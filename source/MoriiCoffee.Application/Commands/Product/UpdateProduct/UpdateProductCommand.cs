@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.Shared.Enums.Product;
@@ -15,7 +16,7 @@ public class UpdateProductCommand : ICommand<ProductDto>
         Description = dto.Description;
         BasePrice = dto.BasePrice;
         CategoryIds = dto.CategoryIds;
-        ThumbnailUrl = dto.ThumbnailUrl;
+        Thumbnail = dto.Thumbnail;
         Status = dto.Status;
         IsFeatured = dto.IsFeatured;
         DisplayOrder = dto.DisplayOrder;
@@ -27,7 +28,13 @@ public class UpdateProductCommand : ICommand<ProductDto>
     public string? Description { get; }
     public decimal BasePrice { get; }
     public List<Guid> CategoryIds { get; }
-    public string? ThumbnailUrl { get; }
+
+    /// <summary>
+    /// Optional new thumbnail file. When set, the old thumbnail is deleted from MinIO
+    /// and replaced with this file.
+    /// </summary>
+    public IFormFile? Thumbnail { get; }
+
     public EProductStatus Status { get; }
     public bool IsFeatured { get; }
     public int DisplayOrder { get; }
