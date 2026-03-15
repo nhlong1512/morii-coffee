@@ -1,0 +1,10 @@
+<Project>
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <!-- AutoMapper has an unpatched vulnerability (GHSA-rvv3-g6hj-g44x) across all versions. Suppressed temporarily. -->
+        <NoWarn>$(NoWarn);NU1903</NoWarn>
+    </PropertyGroup>
+</Project>
