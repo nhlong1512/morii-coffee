@@ -17,6 +17,9 @@ public static class SettingsConfiguration
         var minioSettings = configuration.GetSection(nameof(MinioSettings)).Get<MinioSettings>();
         services.AddSingleton<MinioSettings>(minioSettings!);
 
+        var awsS3Settings = configuration.GetSection(nameof(AwsS3Settings)).Get<AwsS3Settings>();
+        services.AddSingleton<AwsS3Settings>(awsS3Settings!);
+
         return services;
     }
 }

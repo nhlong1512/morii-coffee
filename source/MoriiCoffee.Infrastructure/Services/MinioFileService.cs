@@ -141,6 +141,25 @@ public class MinioFileService : IFileService
     }
 
     /// <summary>
+    /// Generates a presigned PUT URL for direct client-to-MinIO upload.
+    /// A new GUID object name is generated server-side and returned alongside the URL.
+    /// </summary>
+    public async Task<(string presignedUrl, string objectName)> GetPresignedUploadUrlAsync(
+        string bucketName,
+        int expirySeconds = 300)
+    {
+        var objectName = Guid.NewGuid().ToString("N");
+
+        string presignedUrl = await _minioClient.PresignedPutObjectAsync(
+            new PresignedPutObjectArgs()
+                .WithBucket(bucketName)
+                .WithObject(objectName)
+                .WithExpiry(expirySeconds));
+
+        return (presignedUrl, objectName);
+    }
+
+    /// <summary>
     /// Removes the object identified by <paramref name="objectName"/> from <paramref name="bucketName"/>.
     /// Swallows errors so a missing file does not fail the business operation.
     /// </summary>
