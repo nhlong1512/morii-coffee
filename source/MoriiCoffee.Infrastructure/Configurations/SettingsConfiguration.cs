@@ -20,6 +20,9 @@ public static class SettingsConfiguration
         var emailSettings = configuration.GetSection(nameof(EmailSettings)).Get<EmailSettings>();
         services.AddSingleton<EmailSettings>(emailSettings!);
 
+        var stripeSettings = configuration.GetSection(nameof(StripeSettings)).Get<StripeSettings>();
+        services.AddSingleton<StripeSettings>(stripeSettings!);
+
         return services;
     }
 }

@@ -18,6 +18,9 @@ public class UnitOfWork : IUnitOfWork
     private CategoriesRepository? _categories;
     private ProductsRepository? _products;
     private ProductVariantsRepository? _productVariants;
+    private BannersRepository? _banners;
+    private NotificationsRepository? _notifications;
+    private PaymentsRepository? _payments;
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -33,13 +36,22 @@ public class UnitOfWork : IUnitOfWork
     public IProductVariantsRepository ProductVariants =>
         _productVariants ??= new ProductVariantsRepository(_context);
 
+    public IBannersRepository Banners =>
+        _banners ??= new BannersRepository(_context);
+
+    public INotificationsRepository Notifications =>
+        _notifications ??= new NotificationsRepository(_context);
+
+    public IPaymentsRepository Payments =>
+        _payments ??= new PaymentsRepository(_context);
+
     public async Task<int> CommitAsync() =>
         await _context.SaveChangesAsync();
 
     public async Task BeginTransactionAsync() =>
         await _context.Database.BeginTransactionAsync();
 
-    public async Task EndTransactionAsync() 
+    public async Task EndTransactionAsync()
     {
         await CommitAsync();
         await _context.Database.CommitTransactionAsync();

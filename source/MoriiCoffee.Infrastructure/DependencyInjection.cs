@@ -4,6 +4,7 @@ using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Domain.Shared.Settings;
 using MoriiCoffee.Infrastructure.Clock;
 using MoriiCoffee.Infrastructure.Configurations;
+using MoriiCoffee.Infrastructure.Hubs;
 using MoriiCoffee.Infrastructure.Persistence;
 using MoriiCoffee.Infrastructure.Services;
 using MoriiCoffee.Infrastructure.Services.Email;
@@ -40,6 +41,8 @@ public static class DependencyInjection
 
     public static IServiceCollection ConfigureDependencyInjection(this IServiceCollection services)
     {
+        services.AddSignalR();
+
         services.AddTransient<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IEmailService>(sp =>
@@ -52,6 +55,9 @@ public static class DependencyInjection
             };
         });
         services.AddScoped<IFileService, MinioFileService>();
+        services.AddScoped<IStripeService, StripeService>();
+        services.AddScoped<INotificationHubService, NotificationHubService>();
+
         return services;
     }
 }

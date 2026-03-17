@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using MoriiCoffee.Domain.Aggregates.BannerAggregate;
 using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
+using MoriiCoffee.Domain.Aggregates.NotificationAggregate;
+using MoriiCoffee.Domain.Aggregates.PaymentAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
@@ -42,6 +45,24 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
     public DbSet<ProductVariant> ProductVariants { get; set; }
     public DbSet<ProductImage> ProductImages { get; set; }
     public DbSet<ProductCategory> ProductCategories { get; set; }
+
+    #endregion
+
+    #region BannerAggregate
+
+    public DbSet<Banner> Banners { get; set; }
+
+    #endregion
+
+    #region NotificationAggregate
+
+    public DbSet<Notification> Notifications { get; set; }
+
+    #endregion
+
+    #region PaymentAggregate
+
+    public DbSet<Payment> Payments { get; set; }
 
     #endregion
 

@@ -31,5 +31,14 @@ public interface IUnitOfWork : IDisposable
     /// <summary>Repository for managing product variants (sizes/options).</summary>
     IProductVariantsRepository ProductVariants { get; }
 
+    /// <summary>Repository for managing promotional banners.</summary>
+    IBannersRepository Banners { get; }
+
+    /// <summary>Repository for managing user notifications.</summary>
+    INotificationsRepository Notifications { get; }
+
+    /// <summary>Repository for managing Stripe payment records.</summary>
+    IPaymentsRepository Payments { get; }
+
     #endregion
 }

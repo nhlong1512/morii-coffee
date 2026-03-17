@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MoriiCoffee.Infrastructure;
 using MoriiCoffee.Infrastructure.Configurations;
+using MoriiCoffee.Infrastructure.Hubs;
 using MoriiCoffee.Infrastructure.Persistence.Data;
 using MoriiCoffee.Presentation.Middlewares;
 
@@ -39,6 +40,9 @@ internal static class ApplicationExtensions
 
         // 7. Controller endpoints
         app.MapControllers();
+
+        // 8. SignalR hubs
+        app.MapHub<NotificationHub>("/hubs/notifications");
 
         // 8. Auto-migrate and seed
         using var scope = app.Services.CreateScope();
