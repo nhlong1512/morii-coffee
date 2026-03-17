@@ -41,7 +41,7 @@ public static class DependencyInjection
         services.AddTransient<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IEmailService, EmailService>();
-        services.AddScoped<IFileService, MinioFileService>();
+        services.AddScoped<IFileService, AwsS3FileService>();
         return services;
     }
 }

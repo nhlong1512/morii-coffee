@@ -56,4 +56,18 @@ public interface IFileService
     /// The file is removed from the specified bucketName. The response details include information about the deleted file.
     /// </remarks>
     Task<BlobResponseDto> DeleteAsync(string bucketName, string objectName);
+
+    /// <summary>
+    /// Generates a presigned PUT URL for direct client-to-storage upload without routing through the server.
+    /// Intended for private containers only — public containers should use <see cref="UploadAsync"/> instead.
+    /// </summary>
+    /// <param name="bucketName">Logical container name (e.g., <c>FileContainers.USERS</c>).</param>
+    /// <param name="expirySeconds">Presigned URL lifetime in seconds (default: 300 = 5 min).</param>
+    /// <returns>
+    /// A tuple of the presigned PUT URL and the server-generated object name (GUID).
+    /// Store the object name alongside your entity — it is required for deletion and URL refresh.
+    /// </returns>
+    Task<(string presignedUrl, string objectName)> GetPresignedUploadUrlAsync(
+        string bucketName,
+        int expirySeconds = 300);
 }
