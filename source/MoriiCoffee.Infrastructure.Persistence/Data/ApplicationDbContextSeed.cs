@@ -162,70 +162,228 @@ public class ApplicationDbContextSeed
         DateTime now = DateTime.UtcNow;
         return new List<Category>
         {
-            new() { Id = Guid.NewGuid(), Name = "Espresso", Description = "Classic espresso-based drinks", DisplayOrder = 1, IsActive = true, CreatedAt = now },
-            new() { Id = Guid.NewGuid(), Name = "Cold Brew", Description = "Smooth cold-steeped coffee", DisplayOrder = 2, IsActive = true, CreatedAt = now },
-            new() { Id = Guid.NewGuid(), Name = "Tea", Description = "Premium loose-leaf and specialty teas", DisplayOrder = 3, IsActive = true, CreatedAt = now },
-            new() { Id = Guid.NewGuid(), Name = "Pastries", Description = "Freshly baked pastries and snacks", DisplayOrder = 4, IsActive = true, CreatedAt = now },
+            new() { Id = Guid.NewGuid(), Name = "Espresso",     Description = "Classic espresso-based drinks",          DisplayOrder = 1, IsActive = true, CreatedAt = now },
+            new() { Id = Guid.NewGuid(), Name = "Cold Brew",    Description = "Smooth cold-steeped coffee",             DisplayOrder = 2, IsActive = true, CreatedAt = now },
+            new() { Id = Guid.NewGuid(), Name = "Latte",        Description = "Creamy espresso-based lattes",           DisplayOrder = 3, IsActive = true, CreatedAt = now },
+            new() { Id = Guid.NewGuid(), Name = "Pastry",       Description = "Freshly baked pastries and snacks",      DisplayOrder = 4, IsActive = true, CreatedAt = now },
+            new() { Id = Guid.NewGuid(), Name = "Merchandise",  Description = "Morii Coffee branded merchandise",       DisplayOrder = 5, IsActive = true, CreatedAt = now },
         };
     }
 
     private static List<Product> GetSeedProducts()
     {
         DateTime now = DateTime.UtcNow;
-        var products = new List<Product>
+
+        // ── Espresso ──────────────────────────────────────────────────────────
+        var classicEspresso = MakeProduct("Classic Espresso", "classic-espresso",
+            "A rich, full-bodied espresso made from our signature blend of single-origin Arabica beans. Bold, smooth, and perfectly balanced with notes of dark chocolate and caramel.",
+            85_000m, featured: true, order: 1, now);
+        classicEspresso.Variants = BuildVariants(classicEspresso.Id, new[] { EProductSize.Small, EProductSize.Medium }, now);
+
+        var doubleShotEspresso = MakeProduct("Double Shot Espresso", "double-shot-espresso",
+            "Twice the intensity, twice the flavor. Our double shot espresso delivers a powerful caffeine kick with a velvety crema and deep roasted aroma.",
+            115_000m, featured: false, order: 2, now);
+        doubleShotEspresso.Variants = BuildVariants(doubleShotEspresso.Id, new[] { EProductSize.Small, EProductSize.Medium }, now);
+
+        // ── Cold Brew ─────────────────────────────────────────────────────────
+        var vanillaColdBrew = MakeProduct("Vanilla Cold Brew", "vanilla-cold-brew",
+            "Slow-steeped for 20 hours, our cold brew is naturally sweet and incredibly smooth. Infused with real Madagascar vanilla for a creamy, refreshing finish.",
+            125_000m, featured: true, order: 1, now);
+        vanillaColdBrew.Variants = BuildVariants(vanillaColdBrew.Id, new[] { EProductSize.Medium, EProductSize.Large, EProductSize.ExtraLarge }, now);
+
+        var nitroColdBrew = MakeProduct("Nitro Cold Brew", "nitro-cold-brew",
+            "Our signature cold brew infused with nitrogen for a cascading, creamy texture. Silky smooth with a naturally sweet taste and no added sugar.",
+            135_000m, featured: false, order: 2, now);
+        nitroColdBrew.Variants = BuildVariants(nitroColdBrew.Id, new[] { EProductSize.Medium, EProductSize.Large }, now);
+
+        var mochaColdBrew = MakeProduct("Mocha Cold Brew", "mocha-cold-brew",
+            "Rich cold brew coffee blended with dark chocolate and a touch of vanilla. Served over ice for the ultimate chocolate-coffee indulgence.",
+            135_000m, featured: true, order: 3, now);
+        mochaColdBrew.Variants = BuildVariants(mochaColdBrew.Id, new[] { EProductSize.Medium, EProductSize.Large, EProductSize.ExtraLarge }, now);
+
+        // ── Latte ─────────────────────────────────────────────────────────────
+        var caramelLatte = MakeProduct("Caramel Latte", "caramel-latte",
+            "Espresso meets steamed milk and our house-made caramel sauce. A sweet, indulgent treat topped with a drizzle of caramel and a sprinkle of sea salt.",
+            135_000m, featured: true, order: 1, now);
+        caramelLatte.Variants = BuildVariants(caramelLatte.Id, new[] { EProductSize.Small, EProductSize.Medium, EProductSize.Large }, now);
+
+        var matchaLatte = MakeProduct("Matcha Latte", "matcha-latte",
+            "Ceremonial-grade Japanese matcha whisked with steamed oat milk. Earthy, creamy, and energizing with a vibrant green hue.",
+            150_000m, featured: true, order: 2, now);
+        matchaLatte.Variants = BuildVariants(matchaLatte.Id, new[] { EProductSize.Small, EProductSize.Medium, EProductSize.Large }, now);
+
+        var oatMilkLatte = MakeProduct("Oat Milk Latte", "oat-milk-latte",
+            "Our smooth espresso paired with creamy oat milk. A plant-based delight that is rich, satisfying, and naturally sweet.",
+            125_000m, featured: true, order: 3, now);
+        oatMilkLatte.Variants = BuildVariants(oatMilkLatte.Id, new[] { EProductSize.Small, EProductSize.Medium, EProductSize.Large }, now);
+
+        var honeyLavenderLatte = MakeProduct("Honey Lavender Latte", "honey-lavender-latte",
+            "A floral twist on the classic latte. Local honey and French lavender blended with espresso and steamed milk for a calming, aromatic experience.",
+            165_000m, featured: true, order: 4, now);
+        honeyLavenderLatte.Variants = BuildVariants(honeyLavenderLatte.Id, new[] { EProductSize.Small, EProductSize.Medium, EProductSize.Large }, now);
+
+        // ── Pastry ────────────────────────────────────────────────────────────
+        var butterCroissant = MakeProduct("Butter Croissant", "butter-croissant",
+            "Flaky, golden, and made with French butter. Our croissants are baked fresh every morning for the perfect coffee companion.",
+            85_000m, featured: true, order: 1, now);
+        butterCroissant.Variants = BuildStandardVariant(butterCroissant.Id, now);
+
+        var cinnamonRoll = MakeProduct("Cinnamon Roll", "cinnamon-roll",
+            "A warm, soft cinnamon roll drizzled with cream cheese frosting. Baked with layers of cinnamon sugar and a hint of cardamom.",
+            100_000m, featured: false, order: 2, now);
+        cinnamonRoll.Variants = BuildStandardVariant(cinnamonRoll.Id, now);
+
+        var blueberryMuffin = MakeProduct("Blueberry Muffin", "blueberry-muffin",
+            "Loaded with fresh blueberries and topped with a golden streusel crumble. Moist, tender, and bursting with fruity flavor.",
+            75_000m, featured: false, order: 3, now, status: EProductStatus.OutOfStock);
+        blueberryMuffin.Variants = BuildStandardVariant(blueberryMuffin.Id, now, isAvailable: false);
+
+        // ── Merchandise ───────────────────────────────────────────────────────
+        var moriiMug = MakeProduct("Morii Coffee Mug", "morii-coffee-mug",
+            "A handcrafted ceramic mug featuring the Morii Coffee logo. 12oz capacity, microwave and dishwasher safe. Available in matte black.",
+            450_000m, featured: false, order: 1, now);
+        moriiMug.Variants = BuildStandardVariant(moriiMug.Id, now);
+
+        var moriiToteBag = MakeProduct("Morii Tote Bag", "morii-tote-bag",
+            "An organic cotton tote bag with our signature Morii Coffee print. Sturdy, eco-friendly, and perfect for carrying your daily essentials.",
+            600_000m, featured: false, order: 2, now);
+        moriiToteBag.Variants = BuildStandardVariant(moriiToteBag.Id, now);
+
+        return new List<Product>
         {
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Name = "Caramel Macchiato",
-                Slug = "caramel-macchiato",
-                Description = "Espresso with vanilla-flavored syrup, milk, and caramel drizzle.",
-                BasePrice = 45_000m,
-                Status = EProductStatus.Active,
-                IsFeatured = true,
-                DisplayOrder = 1,
-                CreatedAt = now
-            },
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Name = "Classic Cold Brew",
-                Slug = "classic-cold-brew",
-                Description = "24-hour cold-steeped coffee for a smooth, low-acidity taste.",
-                BasePrice = 55_000m,
-                Status = EProductStatus.Active,
-                IsFeatured = true,
-                DisplayOrder = 1,
-                CreatedAt = now
-            }
+            classicEspresso, doubleShotEspresso,
+            vanillaColdBrew, nitroColdBrew, mochaColdBrew,
+            caramelLatte, matchaLatte, oatMilkLatte, honeyLavenderLatte,
+            butterCroissant, cinnamonRoll, blueberryMuffin,
+            moriiMug, moriiToteBag,
         };
-
-        foreach (var product in products)
-        {
-            product.Variants = new List<ProductVariant>
-            {
-                new() { Id = Guid.NewGuid(), ProductId = product.Id, Name = "Small (8 oz)", Size = EProductSize.Small, AdditionalPrice = 0, IsDefault = true, IsAvailable = true, StockQuantity = -1, CreatedAt = now },
-                new() { Id = Guid.NewGuid(), ProductId = product.Id, Name = "Medium (12 oz)", Size = EProductSize.Medium, AdditionalPrice = 10_000m, IsDefault = false, IsAvailable = true, StockQuantity = -1, CreatedAt = now },
-                new() { Id = Guid.NewGuid(), ProductId = product.Id, Name = "Large (16 oz)", Size = EProductSize.Large, AdditionalPrice = 20_000m, IsDefault = false, IsAvailable = true, StockQuantity = -1, CreatedAt = now },
-            };
-        }
-
-        return products;
     }
 
-    private static List<ProductCategory> GetSeedProductCategories(List<Product> products, List<Category> categories)
+    /// <summary>Creates a Product entity with common defaults.</summary>
+    private static Product MakeProduct(
+        string name, string slug, string description, decimal basePrice,
+        bool featured, int order, DateTime now,
+        EProductStatus status = EProductStatus.Active)
+    {
+        return new Product
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Slug = slug,
+            Description = description,
+            BasePrice = basePrice,
+            Status = status,
+            IsFeatured = featured,
+            DisplayOrder = order,
+            CreatedAt = now,
+        };
+    }
+
+    /// <summary>
+    /// Builds size variants for a product. The first size in the array is marked as default.
+    /// Additional price follows standard VND tier: Small=0, Medium=+10k, Large=+20k, ExtraLarge=+30k.
+    /// </summary>
+    private static List<ProductVariant> BuildVariants(
+        Guid productId, EProductSize[] sizes, DateTime now)
+    {
+        var sizeNames = new Dictionary<EProductSize, string>
+        {
+            { EProductSize.Small,      "Small (8 oz)"        },
+            { EProductSize.Medium,     "Medium (12 oz)"      },
+            { EProductSize.Large,      "Large (16 oz)"       },
+            { EProductSize.ExtraLarge, "Extra Large (20 oz)" },
+        };
+
+        var sizePrices = new Dictionary<EProductSize, decimal>
+        {
+            { EProductSize.Small,      0m        },
+            { EProductSize.Medium,     10_000m   },
+            { EProductSize.Large,      20_000m   },
+            { EProductSize.ExtraLarge, 30_000m   },
+        };
+
+        return sizes.Select((size, idx) => new ProductVariant
+        {
+            Id              = Guid.NewGuid(),
+            ProductId       = productId,
+            Name            = sizeNames[size],
+            Size            = size,
+            AdditionalPrice = sizePrices[size],
+            IsDefault       = idx == 0,
+            IsAvailable     = true,
+            StockQuantity   = -1,
+            CreatedAt       = now,
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Builds a single "Standard" variant for products that have no size options
+    /// (e.g., pastries and merchandise).
+    /// </summary>
+    private static List<ProductVariant> BuildStandardVariant(
+        Guid productId, DateTime now, bool isAvailable = true)
+    {
+        return new List<ProductVariant>
+        {
+            new()
+            {
+                Id              = Guid.NewGuid(),
+                ProductId       = productId,
+                Name            = "Standard",
+                Size            = EProductSize.Small,
+                AdditionalPrice = 0m,
+                IsDefault       = true,
+                IsAvailable     = isAvailable,
+                StockQuantity   = -1,
+                CreatedAt       = now,
+            }
+        };
+    }
+
+    private static List<ProductCategory> GetSeedProductCategories(
+        List<Product> products, List<Category> categories)
     {
         DateTime now = DateTime.UtcNow;
-        var espresso = categories.First(c => c.Name == "Espresso");
-        var coldBrew = categories.First(c => c.Name == "Cold Brew");
 
-        var caramelMacchiato = products.First(p => p.Slug == "caramel-macchiato");
-        var classicColdBrew = products.First(p => p.Slug == "classic-cold-brew");
+        // Build a lookup by category name for readability.
+        var catByName = categories.ToDictionary(c => c.Name);
 
-        return new List<ProductCategory>
+        // Map each product slug to the category it belongs to.
+        var slugToCategory = new Dictionary<string, string>
         {
-            new() { CategoryId = espresso.Id, ProductId = caramelMacchiato.Id, CreatedAt = now },
-            new() { CategoryId = coldBrew.Id, ProductId = classicColdBrew.Id, CreatedAt = now }
+            { "classic-espresso",      "Espresso"     },
+            { "double-shot-espresso",  "Espresso"     },
+            { "vanilla-cold-brew",     "Cold Brew"    },
+            { "nitro-cold-brew",       "Cold Brew"    },
+            { "mocha-cold-brew",       "Cold Brew"    },
+            { "caramel-latte",         "Latte"        },
+            { "matcha-latte",          "Latte"        },
+            { "oat-milk-latte",        "Latte"        },
+            { "honey-lavender-latte",  "Latte"        },
+            { "butter-croissant",      "Pastry"       },
+            { "cinnamon-roll",         "Pastry"       },
+            { "blueberry-muffin",      "Pastry"       },
+            { "morii-coffee-mug",      "Merchandise"  },
+            { "morii-tote-bag",        "Merchandise"  },
         };
+
+        var result = new List<ProductCategory>();
+        foreach (var product in products)
+        {
+            if (!slugToCategory.TryGetValue(product.Slug, out var catName))
+                continue;
+
+            if (!catByName.TryGetValue(catName, out var category))
+                continue;
+
+            result.Add(new ProductCategory
+            {
+                CategoryId = category.Id,
+                ProductId  = product.Id,
+                CreatedAt  = now,
+            });
+        }
+
+        return result;
     }
 }
