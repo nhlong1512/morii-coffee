@@ -17,6 +17,9 @@ public static class SettingsConfiguration
         var minioSettings = configuration.GetSection(nameof(MinioSettings)).Get<MinioSettings>();
         services.AddSingleton<MinioSettings>(minioSettings!);
 
+        var emailSettings = configuration.GetSection(nameof(EmailSettings)).Get<EmailSettings>();
+        services.AddSingleton<EmailSettings>(emailSettings!);
+
         return services;
     }
 }
