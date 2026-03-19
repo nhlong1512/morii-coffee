@@ -20,6 +20,12 @@ public interface IUnitOfWork : IDisposable
     /// <summary>Rolls back the current database transaction.</summary>
     Task RollbackTransactionAsync();
 
+    /// <summary>
+    /// Executes <paramref name="operation"/> inside a retriable transaction that is compatible
+    /// with <c>SqlServerRetryingExecutionStrategy</c>. Commits on success, rolls back on failure.
+    /// </summary>
+    Task ExecuteInTransactionAsync(Func<Task> operation);
+
     #region Repositories
 
     /// <summary>Repository for managing product categories.</summary>
@@ -30,6 +36,9 @@ public interface IUnitOfWork : IDisposable
 
     /// <summary>Repository for managing product variants (sizes/options).</summary>
     IProductVariantsRepository ProductVariants { get; }
+
+    /// <summary>Repository for managing product gallery images.</summary>
+    IProductImagesRepository ProductImages { get; }
 
     #endregion
 }

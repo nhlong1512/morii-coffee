@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Infrastructure.Persistence.Data;
@@ -18,6 +19,7 @@ public class UnitOfWork : IUnitOfWork
     private CategoriesRepository? _categories;
     private ProductsRepository? _products;
     private ProductVariantsRepository? _productVariants;
+    private ProductImagesRepository? _productImages;
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -33,13 +35,16 @@ public class UnitOfWork : IUnitOfWork
     public IProductVariantsRepository ProductVariants =>
         _productVariants ??= new ProductVariantsRepository(_context);
 
+    public IProductImagesRepository ProductImages =>
+        _productImages ??= new ProductImagesRepository(_context);
+
     public async Task<int> CommitAsync() =>
         await _context.SaveChangesAsync();
 
     public async Task BeginTransactionAsync() =>
         await _context.Database.BeginTransactionAsync();
 
-    public async Task EndTransactionAsync() 
+    public async Task EndTransactionAsync()
     {
         await CommitAsync();
         await _context.Database.CommitTransactionAsync();
@@ -47,6 +52,26 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task RollbackTransactionAsync() =>
         await _context.Database.RollbackTransactionAsync();
+
+    public async Task ExecuteInTransactionAsync(Func<Task> operation)
+    {
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                await operation();
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        });
+    }
 
     public void Dispose()
     {

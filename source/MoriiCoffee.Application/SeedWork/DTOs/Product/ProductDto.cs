@@ -1,4 +1,5 @@
 using MoriiCoffee.Application.SeedWork.DTOs.Category;
+using MoriiCoffee.Application.SeedWork.DTOs.ProductImage;
 using MoriiCoffee.Application.SeedWork.DTOs.ProductVariant;
 using MoriiCoffee.Domain.Shared.Enums.Product;
 
@@ -20,4 +21,5 @@ public class ProductDto
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public List<ProductVariantDto> Variants { get; set; } = new();
+    public List<ProductImageDto> Images { get; set; } = new();
 }

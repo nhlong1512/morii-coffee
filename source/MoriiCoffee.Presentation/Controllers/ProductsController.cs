@@ -2,10 +2,15 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using MoriiCoffee.Application.Commands.Product.CreateProduct;
 using MoriiCoffee.Application.Commands.Product.DeleteProduct;
+using MoriiCoffee.Application.Commands.Product.DeleteProductImage;
+using MoriiCoffee.Application.Commands.Product.ReorderProductImages;
+using MoriiCoffee.Application.Commands.Product.SetProductImageThumbnail;
 using MoriiCoffee.Application.Commands.Product.UpdateProduct;
+using MoriiCoffee.Application.Commands.Product.UploadProductImages;
 using MoriiCoffee.Application.Queries.Product.GetPaginatedProducts;
 using MoriiCoffee.Application.Queries.Product.GetProductById;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
+using MoriiCoffee.Application.SeedWork.DTOs.ProductImage;
 using MoriiCoffee.Domain.Shared.Constants;
 using MoriiCoffee.Domain.Shared.HttpResponses;
 using MoriiCoffee.Domain.Shared.SeedWork;
@@ -32,6 +37,7 @@ public class ProductsController : ControllerBase
         _logger = logger;
     }
 
+    #region Product Management
     /// <summary>Create a new product.</summary>
     [HttpPost]
     [SwaggerOperation(
@@ -112,4 +118,105 @@ public class ProductsController : ControllerBase
         await _mediator.Send(new DeleteProductCommand(id));
         return NoContent();
     }
+
+    #endregion
+
+    #region Image Management
+    // ─── Image Management ────────────────────────────────────────────────────────
+
+    /// <summary>Upload one or more gallery images for a product.</summary>
+    [HttpPost("{productId:guid}/images")]
+    [SwaggerOperation(
+        Summary = "Upload product images",
+        Description = "Uploads one or more gallery images to the public S3 bucket (moriicoffee-public). Images are stored at products/{productId}/{timestamp}-{filename} and served via CloudFront CDN. The first image uploaded to an empty product is automatically set as the thumbnail. Supported types: jpg, jpeg, png, webp. Max size: 5 MB each. Max images per product: 10.")]
+    [SwaggerResponse(201, SwaggerResponseMessages.CreatedSuccessfully, typeof(List<ProductImageDto>))]
+    [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
+    public async Task<IActionResult> UploadProductImages(
+        [FromRoute] Guid productId,
+        [FromForm] UploadProductImagesDto request)
+    {
+        _logger.LogInformation(
+            "POST /api/v1/products/{ProductId}/images - Uploading {Count} image(s)",
+            productId, request.Files.Count);
+
+        var result = await _mediator.Send(new UploadProductImagesCommand(productId, request.Files));
+        return StatusCode(201, new ApiCreatedResponse(result));
+    }
+
+    /// <summary>Delete a product gallery image.</summary>
+    [HttpDelete("{productId:guid}/images/{imageId:guid}")]
+    [SwaggerOperation(
+        Summary = "Delete a product image",
+        Description = "Permanently deletes the image record from the database and the file from S3. " +
+                      "If the deleted image was the thumbnail, the next image by display order is automatically promoted.")]
+    [SwaggerResponse(204, SwaggerResponseMessages.DeletedSuccessfully)]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
+    public async Task<IActionResult> DeleteProductImage(
+        [FromRoute] Guid productId,
+        [FromRoute] Guid imageId)
+    {
+        _logger.LogInformation(
+            "DELETE /api/v1/products/{ProductId}/images/{ImageId}",
+            productId, imageId);
+
+        await _mediator.Send(new DeleteProductImageCommand(productId, imageId));
+        return NoContent();
+    }
+
+    /// <summary>Set an image as the product thumbnail.</summary>
+    [HttpPatch("{productId:guid}/images/{imageId:guid}/set-thumbnail")]
+    [SwaggerOperation(
+        Summary = "Set product thumbnail",
+        Description = "Promotes the specified image as the product thumbnail. " +
+                      "The previous thumbnail is automatically demoted. " +
+                      "Product.ThumbnailUrl is updated to point to the new thumbnail.")]
+    [SwaggerResponse(200, SwaggerResponseMessages.UpdatedSuccessfully, typeof(ProductImageDto))]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
+    public async Task<IActionResult> SetProductImageThumbnail(
+        [FromRoute] Guid productId,
+        [FromRoute] Guid imageId)
+    {
+        _logger.LogInformation(
+            "PATCH /api/v1/products/{ProductId}/images/{ImageId}/set-thumbnail",
+            productId, imageId);
+
+        var result = await _mediator.Send(new SetProductImageThumbnailCommand(productId, imageId));
+        return Ok(new ApiOkResponse(result));
+    }
+
+    /// <summary>Reorder product gallery images.</summary>
+    [HttpPatch("{productId:guid}/images/reorder")]
+    [SwaggerOperation(
+        Summary = "Reorder product images",
+        Description = "Assigns new DisplayOrder values to all gallery images for a product based on the " +
+                      "supplied list. Every image for the product must be included. " +
+                      "The first ID in the list becomes order 1, the second order 2, etc.")]
+    [SwaggerResponse(200, SwaggerResponseMessages.UpdatedSuccessfully, typeof(List<ProductImageDto>))]
+    [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
+    public async Task<IActionResult> ReorderProductImages(
+        [FromRoute] Guid productId,
+        [FromBody] ReorderProductImagesDto request)
+    {
+        _logger.LogInformation(
+            "PATCH /api/v1/products/{ProductId}/images/reorder",
+            productId);
+
+        var result = await _mediator.Send(new ReorderProductImagesCommand(productId, request.ImageIds));
+        return Ok(new ApiOkResponse(result));
+    }
+    #endregion
 }

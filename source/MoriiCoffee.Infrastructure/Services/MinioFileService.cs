@@ -99,6 +99,51 @@ public class MinioFileService : IFileService
     }
 
     /// <summary>
+    /// Uploads <paramref name="blob"/> to <paramref name="bucketName"/> using a caller-supplied
+    /// <paramref name="customObjectName"/> instead of an auto-generated GUID.
+    /// Use this when the storage path must follow a specific naming convention
+    /// (e.g., <c>products/{productId}/{timestamp}-{filename}</c>).
+    /// </summary>
+    public async Task<BlobResponseDto> UploadAsync(IFormFile blob, string bucketName, string customObjectName)
+    {
+        bucketName = bucketName.ToLowerInvariant();
+
+        bool bucketExists = await _minioClient.BucketExistsAsync(
+            new BucketExistsArgs().WithBucket(bucketName));
+
+        if (!bucketExists)
+        {
+            await _minioClient.MakeBucketAsync(
+                new MakeBucketArgs().WithBucket(bucketName));
+
+            _logger.LogInformation("[MinioFileService] Created bucket '{Bucket}'", bucketName);
+        }
+
+        using (var stream = blob.OpenReadStream())
+        {
+            await _minioClient.PutObjectAsync(new PutObjectArgs()
+                .WithBucket(bucketName)
+                .WithObject(customObjectName)
+                .WithStreamData(stream)
+                .WithObjectSize(blob.Length)
+                .WithContentType(blob.ContentType ?? "application/octet-stream"));
+        }
+
+        _logger.LogInformation(
+            "[MinioFileService] Uploaded '{OriginalName}' → '{Object}' in bucket '{Bucket}'",
+            blob.FileName, customObjectName, bucketName);
+
+        Uri presignedUri = await GetUriByFileNameAsync(bucketName, customObjectName);
+
+        var response = new BlobResponseDto { Status = "File uploaded successfully." };
+        response.Blob.Uri = presignedUri.ToString();
+        response.Blob.Name = customObjectName;
+        response.Blob.ContentType = blob.ContentType;
+        response.Blob.Size = blob.Length;
+        return response;
+    }
+
+    /// <summary>
     /// Streams the object identified by <paramref name="objectName"/> from <paramref name="bucketName"/>.
     /// Returns null if the object does not exist.
     /// </summary>

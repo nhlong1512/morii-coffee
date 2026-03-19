@@ -162,11 +162,11 @@ public class ApplicationDbContextSeed
         DateTime now = DateTime.UtcNow;
         return new List<Category>
         {
-            new() { Id = Guid.NewGuid(), Name = "Espresso",     Description = "Classic espresso-based drinks",          DisplayOrder = 1, IsActive = true, CreatedAt = now },
-            new() { Id = Guid.NewGuid(), Name = "Cold Brew",    Description = "Smooth cold-steeped coffee",             DisplayOrder = 2, IsActive = true, CreatedAt = now },
-            new() { Id = Guid.NewGuid(), Name = "Latte",        Description = "Creamy espresso-based lattes",           DisplayOrder = 3, IsActive = true, CreatedAt = now },
-            new() { Id = Guid.NewGuid(), Name = "Pastry",       Description = "Freshly baked pastries and snacks",      DisplayOrder = 4, IsActive = true, CreatedAt = now },
-            new() { Id = Guid.NewGuid(), Name = "Merchandise",  Description = "Morii Coffee branded merchandise",       DisplayOrder = 5, IsActive = true, CreatedAt = now },
+            new() { Id = Guid.NewGuid(), Name = "espresso",     Description = "Classic espresso-based drinks",          DisplayOrder = 1, IsActive = true, CreatedAt = now },
+            new() { Id = Guid.NewGuid(), Name = "cold-brew",   Description = "Smooth cold-steeped coffee",             DisplayOrder = 2, IsActive = true, CreatedAt = now },
+            new() { Id = Guid.NewGuid(), Name = "latte",       Description = "Creamy espresso-based lattes",           DisplayOrder = 3, IsActive = true, CreatedAt = now },
+            new() { Id = Guid.NewGuid(), Name = "pastry",      Description = "Freshly baked pastries and snacks",      DisplayOrder = 4, IsActive = true, CreatedAt = now },
+            new() { Id = Guid.NewGuid(), Name = "merchandise", Description = "Morii Coffee branded merchandise",       DisplayOrder = 5, IsActive = true, CreatedAt = now },
         };
     }
 
@@ -351,20 +351,20 @@ public class ApplicationDbContextSeed
         // Map each product slug to the category it belongs to.
         var slugToCategory = new Dictionary<string, string>
         {
-            { "classic-espresso",      "Espresso"     },
-            { "double-shot-espresso",  "Espresso"     },
-            { "vanilla-cold-brew",     "Cold Brew"    },
-            { "nitro-cold-brew",       "Cold Brew"    },
-            { "mocha-cold-brew",       "Cold Brew"    },
-            { "caramel-latte",         "Latte"        },
-            { "matcha-latte",          "Latte"        },
-            { "oat-milk-latte",        "Latte"        },
-            { "honey-lavender-latte",  "Latte"        },
-            { "butter-croissant",      "Pastry"       },
-            { "cinnamon-roll",         "Pastry"       },
-            { "blueberry-muffin",      "Pastry"       },
-            { "morii-coffee-mug",      "Merchandise"  },
-            { "morii-tote-bag",        "Merchandise"  },
+            { "classic-espresso",      "espresso"     },
+            { "double-shot-espresso",  "espresso"     },
+            { "vanilla-cold-brew",     "cold-brew"    },
+            { "nitro-cold-brew",       "cold-brew"    },
+            { "mocha-cold-brew",       "cold-brew"    },
+            { "caramel-latte",         "latte"        },
+            { "matcha-latte",          "latte"        },
+            { "oat-milk-latte",        "latte"        },
+            { "honey-lavender-latte",  "latte"        },
+            { "butter-croissant",      "pastry"       },
+            { "cinnamon-roll",         "pastry"       },
+            { "blueberry-muffin",      "pastry"       },
+            { "morii-coffee-mug",      "merchandise"  },
+            { "morii-tote-bag",        "merchandise"  },
         };
 
         var result = new List<ProductCategory>();

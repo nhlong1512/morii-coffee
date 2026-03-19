@@ -105,6 +105,43 @@ public class AwsS3FileService : IFileService
     }
 
     /// <summary>
+    /// Uploads <paramref name="blob"/> to the bucket using a caller-supplied <paramref name="customObjectName"/>
+    /// instead of an auto-generated GUID. Use this when the storage path must follow a specific naming
+    /// convention (e.g., <c>products/{productId}/{timestamp}-{filename}</c>).
+    /// </summary>
+    public async Task<BlobResponseDto> UploadAsync(IFormFile blob, string bucketName, string customObjectName)
+    {
+        bool isPublic = FileContainers.IsPublicContainer(bucketName);
+        var s3Client = isPublic ? _publicS3 : _privateS3;
+        var actualBucket = isPublic ? _settings.PublicBucket : _settings.PrivateBucket;
+
+        var s3Key = BuildS3Key(bucketName, customObjectName);
+
+        using var stream = blob.OpenReadStream();
+        await s3Client.PutObjectAsync(new PutObjectRequest
+        {
+            BucketName = actualBucket,
+            Key = s3Key,
+            InputStream = stream,
+            ContentType = blob.ContentType ?? "application/octet-stream",
+            AutoCloseStream = false
+        });
+
+        _logger.LogInformation(
+            "[AwsS3FileService] Uploaded '{OriginalName}' → '{Key}' in bucket '{Bucket}'",
+            blob.FileName, s3Key, actualBucket);
+
+        var uri = isPublic ? BuildCdnUrl(s3Key) : BuildPresignedGetUrl(s3Key);
+
+        var response = new BlobResponseDto { Status = "File uploaded successfully." };
+        response.Blob.Uri = uri;
+        response.Blob.Name = customObjectName;
+        response.Blob.ContentType = blob.ContentType;
+        response.Blob.Size = blob.Length;
+        return response;
+    }
+
+    /// <summary>
     /// Streams the object from the appropriate S3 bucket.
     /// Returns <c>null</c> if the object does not exist.
     /// </summary>

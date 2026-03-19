@@ -36,6 +36,20 @@ public interface IFileService
     Task<BlobResponseDto> UploadAsync(IFormFile blob, string bucketName);
 
     /// <summary>
+    /// Uploads a file to the specified bucket using a caller-supplied object key.
+    /// Use this overload when the storage path must follow a specific naming convention
+    /// (e.g., <c>products/{productId}/{timestamp}-{filename}</c>).
+    /// </summary>
+    /// <param name="blob">The file to upload.</param>
+    /// <param name="bucketName">Logical container name (e.g., <c>FileContainers.PRODUCTS</c>).</param>
+    /// <param name="customObjectName">
+    /// The object name / sub-path within the container.
+    /// For public containers this becomes part of the CloudFront CDN URL.
+    /// Store this value alongside your entity — it is required for deletion.
+    /// </param>
+    Task<BlobResponseDto> UploadAsync(IFormFile blob, string bucketName, string customObjectName);
+
+    /// <summary>
     /// Downloads a file from the specified bucketName.
     /// </summary>
     /// <param name="bucketName">The name of the bucketName where the file is stored.</param>

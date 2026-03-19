@@ -5,8 +5,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 
 /// <summary>
-/// Represents an additional gallery image associated with a product.
-/// Products can have multiple images for displaying from different angles or in different settings.
+/// Represents a gallery image associated with a product.
+/// Products can have multiple images (up to 10) displayed from different angles or settings.
+/// The CDN URL is stored as <see cref="Url"/>; the S3 object key is stored in <see cref="S3Key"/>
+/// so the file can be deleted from storage when the DB record is removed.
 /// </summary>
 [Table("ProductImages")]
 public class ProductImage : EntityBase
@@ -22,20 +24,28 @@ public class ProductImage : EntityBase
     [ForeignKey("ProductId")]
     public virtual Product? Product { get; set; }
 
-    /// <summary>Publicly accessible URL of the image.</summary>
+    /// <summary>CloudFront CDN URL of the image. Never store the raw S3 URL.</summary>
     [Required]
     [MaxLength(500)]
     [Column(TypeName = "nvarchar(500)")]
-    public string ImageUrl { get; set; } = null!;
+    public string Url { get; set; } = null!;
 
-    /// <summary>Alt text for accessibility and SEO.</summary>
-    [MaxLength(200)]
-    [Column(TypeName = "nvarchar(200)")]
-    public string? AltText { get; set; }
+    /// <summary>
+    /// S3 object key (relative path within the container) used for deletion.
+    /// Format: <c>{productId}/{timestamp}-{filename}</c>.
+    /// </summary>
+    [Required]
+    [MaxLength(500)]
+    [Column(TypeName = "nvarchar(500)")]
+    public string S3Key { get; set; } = null!;
 
-    /// <summary>Sort order for displaying images in the gallery.</summary>
+    /// <summary>Sort order for displaying images in the gallery (lower = first).</summary>
     public int DisplayOrder { get; set; }
 
-    /// <summary>Whether this is the primary product image (same as ThumbnailUrl on Product).</summary>
-    public bool IsMain { get; set; }
+    /// <summary>
+    /// Whether this image is the product thumbnail.
+    /// Only one image per product may have this flag set at a time.
+    /// Changing the thumbnail automatically unsets this flag on the previous thumbnail.
+    /// </summary>
+    public bool IsThumbnail { get; set; }
 }
