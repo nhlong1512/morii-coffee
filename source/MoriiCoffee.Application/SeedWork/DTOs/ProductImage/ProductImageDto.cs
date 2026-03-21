@@ -11,7 +11,4 @@ public class ProductImageDto
 
     /// <summary>Sort order within the product's image gallery (lower = first).</summary>
     public int DisplayOrder { get; set; }
-
-    /// <summary>Whether this image is currently set as the product thumbnail.</summary>
-    public bool IsThumbnail { get; set; }
 }

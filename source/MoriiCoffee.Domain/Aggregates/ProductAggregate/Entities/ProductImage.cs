@@ -41,11 +41,4 @@ public class ProductImage : EntityBase
 
     /// <summary>Sort order for displaying images in the gallery (lower = first).</summary>
     public int DisplayOrder { get; set; }
-
-    /// <summary>
-    /// Whether this image is the product thumbnail.
-    /// Only one image per product may have this flag set at a time.
-    /// Changing the thumbnail automatically unsets this flag on the previous thumbnail.
-    /// </summary>
-    public bool IsThumbnail { get; set; }
 }

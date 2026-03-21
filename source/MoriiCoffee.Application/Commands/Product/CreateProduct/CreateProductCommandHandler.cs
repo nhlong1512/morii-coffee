@@ -2,6 +2,7 @@ using AutoMapper;
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Application.SeedWork.Exceptions;
+using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Constants;
@@ -14,7 +15,9 @@ namespace MoriiCoffee.Application.Commands.Product.CreateProduct;
 
 /// <summary>
 /// Handles the creation of a new product.
-/// If a thumbnail file is provided, it is uploaded to MinIO before the DB commit.
+/// If a thumbnail file is provided, it is uploaded to S3 and persisted as a
+/// <see cref="ProductImage"/> with <c>DisplayOrder = 1</c>.
+/// <c>Product.ThumbnailUrl</c> is also set for fast display.
 /// Generates a unique slug from the product name if one is not provided.
 /// </summary>
 public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand, ProductDto>
@@ -49,29 +52,38 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
         // Ensure slug uniqueness
         bool slugExists = await _unitOfWork.Products.SlugExistsAsync(slug);
         if (slugExists)
-        {
             slug = $"{slug}-{Guid.NewGuid().ToString("N")[..6]}";
-        }
 
-        // Upload thumbnail to MinIO if provided
+        // Pre-generate the product ID so the S3 key can reference it
+        var productId = Guid.NewGuid();
+
+        // Upload thumbnail if provided — also creates a ProductImage with DisplayOrder = 1
         string? thumbnailUrl = null;
-        string? thumbnailFileName = null;
+        ProductImage? thumbnailImage = null;
         if (request.Thumbnail != null)
         {
-            var uploadResult = await _fileService.UploadAsync(request.Thumbnail, FileContainers.PRODUCTS);
+            var s3Key = BuildS3Key(productId, request.Thumbnail.FileName);
+            var uploadResult = await _fileService.UploadAsync(request.Thumbnail, FileContainers.PRODUCTS, s3Key);
+
             thumbnailUrl = uploadResult.Blob.Uri;
-            thumbnailFileName = uploadResult.Blob.Name;
+            thumbnailImage = new ProductImage
+            {
+                Id = Guid.NewGuid(),
+                ProductId = productId,
+                Url = thumbnailUrl!,
+                S3Key = s3Key,
+                DisplayOrder = 1
+            };
         }
 
         var product = new ProductEntity
         {
-            Id = Guid.NewGuid(),
+            Id = productId,
             Name = request.Name,
             Slug = slug,
             Description = request.Description,
             BasePrice = request.BasePrice,
             ThumbnailUrl = thumbnailUrl,
-            ThumbnailFileName = thumbnailFileName,
             Status = EProductStatus.Active,
             IsFeatured = request.IsFeatured,
             DisplayOrder = request.DisplayOrder
@@ -88,9 +100,26 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
         }
 
         await _unitOfWork.Products.CreateAsync(product);
+
+        if (thumbnailImage != null)
+            await _unitOfWork.ProductImages.CreateAsync(thumbnailImage);
+
         await _unitOfWork.CommitAsync();
 
         return _mapper.Map<ProductDto>(product);
+    }
+
+    /// <summary>
+    /// Builds the S3 object key as <c>{productId}/{timestamp}-{sanitized-filename}</c>.
+    /// The container prefix (<c>products/</c>) is prepended by the S3 service.
+    /// </summary>
+    private static string BuildS3Key(Guid productId, string originalFileName)
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var name = Path.GetFileNameWithoutExtension(originalFileName);
+        var ext = Path.GetExtension(originalFileName).ToLowerInvariant();
+        var safe = System.Text.RegularExpressions.Regex.Replace(name.ToLowerInvariant(), @"[^a-z0-9\-_]", "-");
+        return $"{productId}/{timestamp}-{safe}{ext}";
     }
 
     /// <summary>Generates a URL-friendly slug from a product name.</summary>

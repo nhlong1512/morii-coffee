@@ -51,9 +51,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
         // Ensure slug uniqueness (excluding current product)
         bool slugExists = await _unitOfWork.Products.SlugExistsAsync(slug, request.Id);
         if (slugExists)
-        {
             throw new BadRequestException($"The slug '{slug}' is already in use by another product.");
-        }
 
         // Replace thumbnail: delete old from MinIO, upload new
         if (request.Thumbnail != null)

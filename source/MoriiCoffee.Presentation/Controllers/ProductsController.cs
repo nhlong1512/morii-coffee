@@ -4,7 +4,6 @@ using MoriiCoffee.Application.Commands.Product.CreateProduct;
 using MoriiCoffee.Application.Commands.Product.DeleteProduct;
 using MoriiCoffee.Application.Commands.Product.DeleteProductImage;
 using MoriiCoffee.Application.Commands.Product.ReorderProductImages;
-using MoriiCoffee.Application.Commands.Product.SetProductImageThumbnail;
 using MoriiCoffee.Application.Commands.Product.UpdateProduct;
 using MoriiCoffee.Application.Commands.Product.UploadProductImages;
 using MoriiCoffee.Application.Queries.Product.GetPaginatedProducts;
@@ -168,30 +167,6 @@ public class ProductsController : ControllerBase
 
         await _mediator.Send(new DeleteProductImageCommand(productId, imageId));
         return NoContent();
-    }
-
-    /// <summary>Set an image as the product thumbnail.</summary>
-    [HttpPatch("{productId:guid}/images/{imageId:guid}/set-thumbnail")]
-    [SwaggerOperation(
-        Summary = "Set product thumbnail",
-        Description = "Promotes the specified image as the product thumbnail. " +
-                      "The previous thumbnail is automatically demoted. " +
-                      "Product.ThumbnailUrl is updated to point to the new thumbnail.")]
-    [SwaggerResponse(200, SwaggerResponseMessages.UpdatedSuccessfully, typeof(ProductImageDto))]
-    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
-    [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
-    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
-    [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
-    public async Task<IActionResult> SetProductImageThumbnail(
-        [FromRoute] Guid productId,
-        [FromRoute] Guid imageId)
-    {
-        _logger.LogInformation(
-            "PATCH /api/v1/products/{ProductId}/images/{ImageId}/set-thumbnail",
-            productId, imageId);
-
-        var result = await _mediator.Send(new SetProductImageThumbnailCommand(productId, imageId));
-        return Ok(new ApiOkResponse(result));
     }
 
     /// <summary>Reorder product gallery images.</summary>
