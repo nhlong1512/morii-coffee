@@ -62,18 +62,11 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
         ProductImage? thumbnailImage = null;
         if (request.Thumbnail != null)
         {
-            var s3Key = BuildS3Key(productId, request.Thumbnail.FileName);
+            var s3Key = ProductImageFactory.BuildS3Key(productId, request.Thumbnail.FileName);
             var uploadResult = await _fileService.UploadAsync(request.Thumbnail, FileContainers.PRODUCTS, s3Key);
 
             thumbnailUrl = uploadResult.Blob.Uri;
-            thumbnailImage = new ProductImage
-            {
-                Id = Guid.NewGuid(),
-                ProductId = productId,
-                Url = thumbnailUrl!,
-                S3Key = s3Key,
-                DisplayOrder = 1
-            };
+            thumbnailImage = ProductImageFactory.CreateImage(productId, thumbnailUrl!, s3Key, displayOrder: 1);
         }
 
         var product = new ProductEntity
@@ -107,19 +100,6 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
         await _unitOfWork.CommitAsync();
 
         return _mapper.Map<ProductDto>(product);
-    }
-
-    /// <summary>
-    /// Builds the S3 object key as <c>{productId}/{timestamp}-{sanitized-filename}</c>.
-    /// The container prefix (<c>products/</c>) is prepended by the S3 service.
-    /// </summary>
-    private static string BuildS3Key(Guid productId, string originalFileName)
-    {
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var name = Path.GetFileNameWithoutExtension(originalFileName);
-        var ext = Path.GetExtension(originalFileName).ToLowerInvariant();
-        var safe = System.Text.RegularExpressions.Regex.Replace(name.ToLowerInvariant(), @"[^a-z0-9\-_]", "-");
-        return $"{productId}/{timestamp}-{safe}{ext}";
     }
 
     /// <summary>Generates a URL-friendly slug from a product name.</summary>

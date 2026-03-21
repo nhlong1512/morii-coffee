@@ -56,17 +56,11 @@ public class UploadProductImagesCommandHandler : ICommandHandler<UploadProductIm
         for (int i = 0; i < request.Files.Count; i++)
         {
             var file = request.Files[i];
-            var s3Key = BuildS3Key(request.ProductId, file.FileName);
+            var s3Key = ProductImageFactory.BuildS3Key(request.ProductId, file.FileName);
             var uploadResult = await _fileService.UploadAsync(file, FileContainers.PRODUCTS, s3Key);
 
-            uploadedImages.Add(new ProductImage
-            {
-                Id = Guid.NewGuid(),
-                ProductId = request.ProductId,
-                Url = uploadResult.Blob.Uri!,
-                S3Key = s3Key,
-                DisplayOrder = nextOrder + i
-            });
+            uploadedImages.Add(ProductImageFactory.CreateImage(
+                request.ProductId, uploadResult.Blob.Uri!, s3Key, displayOrder: nextOrder + i));
         }
 
         // Step 2: Persist to DB inside a retriable transaction
@@ -79,22 +73,4 @@ public class UploadProductImagesCommandHandler : ICommandHandler<UploadProductIm
         return uploadedImages.Select(image => _mapper.Map<ProductImageDto>(image)).ToList();
     }
 
-    /// <summary>
-    /// Builds the S3 object key as <c>{productId}/{timestamp}-{sanitized-filename}</c>.
-    /// The container prefix (<c>products/</c>) is prepended by the S3 service.
-    /// </summary>
-    private static string BuildS3Key(Guid productId, string originalFileName)
-    {
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var sanitized = SanitizeFilename(originalFileName);
-        return $"{productId}/{timestamp}-{sanitized}";
-    }
-
-    private static string SanitizeFilename(string filename)
-    {
-        var name = Path.GetFileNameWithoutExtension(filename);
-        var ext = Path.GetExtension(filename).ToLowerInvariant();
-        var safe = System.Text.RegularExpressions.Regex.Replace(name.ToLowerInvariant(), @"[^a-z0-9\-_]", "-");
-        return $"{safe}{ext}";
-    }
 }
