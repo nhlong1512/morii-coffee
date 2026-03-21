@@ -136,9 +136,6 @@ _TeamCity*
 
 .dotnet/
 
-docs/templates/
-docs/
-
 # AxoCover is a Code Coverage Tool
 .axoCover/*
 !.axoCover/settings.json
@@ -461,3 +458,7 @@ riderModule.iml
 dotnet-tools.json
 aspire/MoriiCoffee.AppHost/appsettings.Development.json
 source/MoriiCoffee.Presentation/appsettings.Development.json
+
+
+docs/templates/
+docs/

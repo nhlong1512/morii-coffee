@@ -1,5 +1,6 @@
 using AutoMapper;
 using MoriiCoffee.Application.SeedWork.Abstractions;
+using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Application.SeedWork.DTOs.ProductImage;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
@@ -56,7 +57,7 @@ public class UploadProductImagesCommandHandler : ICommandHandler<UploadProductIm
         for (int i = 0; i < request.Files.Count; i++)
         {
             var file = request.Files[i];
-            var s3Key = ProductImageFactory.BuildS3Key(request.ProductId, file.FileName);
+            var s3Key = S3KeyHelper.BuildS3Key(request.ProductId, file.FileName);
             var uploadResult = await _fileService.UploadAsync(file, FileContainers.PRODUCTS, s3Key);
 
             uploadedImages.Add(ProductImageFactory.CreateImage(

@@ -1,5 +1,5 @@
 ---
-name: morii-coffee-dotnet
+name: clean-architecture-skill
 description: >
   Architecture and coding patterns for the MoriiCoffee .NET 8 Clean Architecture project.
   Use this skill whenever working on MoriiCoffee — adding features, creating aggregates,

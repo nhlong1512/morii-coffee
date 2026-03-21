@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using MoriiCoffee.Domain.Aggregates.BannerAggregate;
 using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
@@ -33,6 +34,12 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
     #region CategoryAggregate
 
     public DbSet<Category> Categories { get; set; }
+
+    #endregion
+
+    #region BannerAggregate
+
+    public DbSet<Banner> Banners { get; set; }
 
     #endregion
 
