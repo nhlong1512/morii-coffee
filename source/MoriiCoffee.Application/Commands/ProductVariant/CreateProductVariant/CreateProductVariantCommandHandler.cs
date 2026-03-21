@@ -7,7 +7,8 @@ using MoriiCoffee.Domain.SeedWork.Persistence;
 namespace MoriiCoffee.Application.Commands.ProductVariant.CreateProductVariant;
 
 /// <summary>
-/// Handles adding one or more variants to a product in a single operation.
+/// Handles creating one or more variants for a product in a single operation.
+/// Rejects the request if any incoming size already exists on the product — use PUT to update existing variants.
 /// If any variant in the batch is marked as default, all pre-existing default flags are cleared first.
 /// </summary>
 public class CreateProductVariantCommandHandler : ICommandHandler<CreateProductVariantCommand, List<ProductVariantDto>>
@@ -26,6 +27,18 @@ public class CreateProductVariantCommandHandler : ICommandHandler<CreateProductV
         // Ensure the product exists
         var product = await _unitOfWork.Products.GetByIdAsync(request.ProductId)
             ?? throw new NotFoundException("Product", request.ProductId);
+
+        // Guard against duplicate sizes — each product may have at most one variant per size
+        var existingVariants = await _unitOfWork.ProductVariants.GetByProductIdAsync(request.ProductId);
+        var existingSizes = existingVariants.Select(v => v.Size).ToHashSet();
+        var duplicates = request.Variants
+            .Where(v => existingSizes.Contains(v.Size))
+            .Select(v => v.Size.ToString())
+            .ToList();
+
+        if (duplicates.Count > 0)
+            throw new BadRequestException(
+                $"Variant(s) with the following size(s) already exist for this product: {string.Join(", ", duplicates)}. Use PUT to update existing variants.");
 
         // Clear existing default flag if any variant in the batch is marked as default
         bool anyDefault = request.Variants.Any(v => v.IsDefault);

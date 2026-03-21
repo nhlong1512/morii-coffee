@@ -7,6 +7,8 @@ using MoriiCoffee.Application.Commands.Product.ReorderProductImages;
 using MoriiCoffee.Application.Commands.Product.UpdateProduct;
 using MoriiCoffee.Application.Commands.Product.UploadProductImages;
 using MoriiCoffee.Application.Commands.ProductVariant.CreateProductVariant;
+using MoriiCoffee.Application.Commands.ProductVariant.DeleteProductVariant;
+using MoriiCoffee.Application.Commands.ProductVariant.UpdateProductVariant;
 using MoriiCoffee.Application.Queries.Product.GetPaginatedProducts;
 using MoriiCoffee.Application.Queries.Product.GetProductById;
 using MoriiCoffee.Application.Queries.ProductVariant.GetVariantsByProductId;
@@ -146,6 +148,7 @@ public class ProductsController : ControllerBase
     [SwaggerOperation(
         Summary = "Create product variants",
         Description = "Adds one or more size variants to an existing product in a single request. " +
+                      "Returns 400 if a variant with the same size already exists — use PUT to update it. " +
                       "If any variant has isDefault set to true, all pre-existing default flags are cleared first.")]
     [SwaggerResponse(201, SwaggerResponseMessages.CreatedSuccessfully, typeof(List<ProductVariantDto>))]
     [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
@@ -160,6 +163,47 @@ public class ProductsController : ControllerBase
         _logger.LogInformation("POST {Count} variant(s) for product {ProductId}", request.Count, productId);
         var result = await _mediator.Send(new CreateProductVariantCommand(productId, request));
         return StatusCode(201, new ApiCreatedResponse(result));
+    }
+
+    /// <summary>Update an existing variant that belongs to a product.</summary>
+    [HttpPut("{productId:guid}/variants/{variantId:guid}")]
+    [SwaggerOperation(
+        Summary = "Update a product variant",
+        Description = "Updates the name, size, price, stock, availability, and default flag of a specific variant. " +
+                      "If isDefault is set to true, all other variants for this product will have their default flag cleared.")]
+    [SwaggerResponse(200, SwaggerResponseMessages.UpdatedSuccessfully, typeof(ProductVariantDto))]
+    [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
+    public async Task<IActionResult> UpdateVariant(
+        [FromRoute] Guid productId,
+        [FromRoute] Guid variantId,
+        [FromBody] UpdateProductVariantDto request)
+    {
+        _logger.LogInformation("PUT variant {VariantId} for product {ProductId}", variantId, productId);
+        var result = await _mediator.Send(new UpdateProductVariantCommand(variantId, request));
+        return Ok(new ApiOkResponse(result));
+    }
+
+    /// <summary>Soft-delete a variant that belongs to a product.</summary>
+    [HttpDelete("{productId:guid}/variants/{variantId:guid}")]
+    [SwaggerOperation(
+        Summary = "Delete a product variant",
+        Description = "Soft-deletes a product variant. The record is retained in the database for order history integrity.")]
+    [SwaggerResponse(204, SwaggerResponseMessages.DeletedSuccessfully)]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
+    public async Task<IActionResult> DeleteVariant(
+        [FromRoute] Guid productId,
+        [FromRoute] Guid variantId)
+    {
+        _logger.LogInformation("DELETE variant {VariantId} for product {ProductId}", variantId, productId);
+        await _mediator.Send(new DeleteProductVariantCommand(variantId));
+        return NoContent();
     }
 
     #endregion
