@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MoriiCoffee.Domain.Aggregates.BannerAggregate;
 using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
@@ -44,6 +45,7 @@ public class ApplicationDbContextSeed
         await SeedAdminUserAsync();
         await SeedSampleUsersAsync();
         await SeedCatalogAsync();
+        await SeedBannersAsync();
     }
 
     private async Task SeedRolesAsync()
@@ -385,5 +387,82 @@ public class ApplicationDbContextSeed
         }
 
         return result;
+    }
+
+    private async Task SeedBannersAsync()
+    {
+        if (await _context.Banners.AnyAsync())
+        {
+            _logger.LogInformation("Banners already seeded. Skipping.");
+            return;
+        }
+
+        _logger.LogInformation("Seeding banner data...");
+
+        var banners = GetSeedBanners();
+        await _context.Banners.AddRangeAsync(banners);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Banners seeded successfully.");
+    }
+
+    private static List<Banner> GetSeedBanners()
+    {
+        DateTime now = DateTime.UtcNow;
+        return new List<Banner>
+        {
+            new()
+            {
+                Id           = Guid.NewGuid(),
+                Title        = "Savor the Moment",
+                Subtitle     = "Artisan coffee crafted with passion. Experience the perfect blend of tradition and innovation.",
+                Cta          = "Shop Now",
+                CtaLink      = "/products",
+                DisplayOrder = 1,
+                StartDate    = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndDate      = new DateTime(2026, 12, 31, 23, 59, 59, DateTimeKind.Utc),
+                IsActive     = true,
+                CreatedAt    = now,
+            },
+            new()
+            {
+                Id           = Guid.NewGuid(),
+                Title        = "New Seasonal Blend",
+                Subtitle     = "Introducing our Spring Blossom blend — floral, bright, and delicately sweet. Available for a limited time.",
+                Cta          = "Discover",
+                CtaLink      = "/products/spring-blossom-blend",
+                DisplayOrder = 2,
+                StartDate    = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndDate      = new DateTime(2026, 5, 31, 23, 59, 59, DateTimeKind.Utc),
+                IsActive     = true,
+                CreatedAt    = now,
+            },
+            new()
+            {
+                Id           = Guid.NewGuid(),
+                Title        = "Earn Rewards with Every Sip",
+                Subtitle     = "Join the Morii Loyalty program and unlock exclusive perks, free drinks, and early access to new releases.",
+                Cta          = "Join Now",
+                CtaLink      = "/loyalty",
+                DisplayOrder = 3,
+                StartDate    = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndDate      = new DateTime(2026, 6, 30, 23, 59, 59, DateTimeKind.Utc),
+                IsActive     = true,
+                CreatedAt    = now,
+            },
+            new()
+            {
+                Id           = Guid.NewGuid(),
+                Title        = "Visit Our New Location",
+                Subtitle     = "Our newest cafe in District 1, Ho Chi Minh City is now open. Come in for a complimentary tasting.",
+                Cta          = "Find Us",
+                CtaLink      = "/stores",
+                DisplayOrder = 4,
+                StartDate    = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc),
+                EndDate      = new DateTime(2026, 4, 30, 23, 59, 59, DateTimeKind.Utc),
+                IsActive     = true,
+                CreatedAt    = now,
+            },
+        };
     }
 }

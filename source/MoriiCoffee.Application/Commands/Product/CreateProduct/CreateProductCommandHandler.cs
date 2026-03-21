@@ -1,5 +1,6 @@
 using AutoMapper;
 using MoriiCoffee.Application.SeedWork.Abstractions;
+using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
@@ -62,7 +63,7 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
         ProductImage? thumbnailImage = null;
         if (request.Thumbnail != null)
         {
-            var s3Key = ProductImageFactory.BuildS3Key(productId, request.Thumbnail.FileName);
+            var s3Key = S3KeyHelper.BuildS3Key(productId, request.Thumbnail.FileName);
             var uploadResult = await _fileService.UploadAsync(request.Thumbnail, FileContainers.PRODUCTS, s3Key);
 
             thumbnailUrl = uploadResult.Blob.Uri;

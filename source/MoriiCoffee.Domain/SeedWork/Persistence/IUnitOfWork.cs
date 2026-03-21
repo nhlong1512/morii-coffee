@@ -40,5 +40,8 @@ public interface IUnitOfWork : IDisposable
     /// <summary>Repository for managing product gallery images.</summary>
     IProductImagesRepository ProductImages { get; }
 
+    /// <summary>Repository for managing promotional banners.</summary>
+    IBannersRepository Banners { get; }
+
     #endregion
 }
