@@ -6,8 +6,11 @@ using MoriiCoffee.Application.Commands.Product.DeleteProductImage;
 using MoriiCoffee.Application.Commands.Product.ReorderProductImages;
 using MoriiCoffee.Application.Commands.Product.UpdateProduct;
 using MoriiCoffee.Application.Commands.Product.UploadProductImages;
+using MoriiCoffee.Application.Commands.ProductVariant.CreateProductVariant;
 using MoriiCoffee.Application.Queries.Product.GetPaginatedProducts;
 using MoriiCoffee.Application.Queries.Product.GetProductById;
+using MoriiCoffee.Application.Queries.ProductVariant.GetVariantsByProductId;
+using MoriiCoffee.Application.SeedWork.DTOs.ProductVariant;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Application.SeedWork.DTOs.ProductImage;
 using MoriiCoffee.Domain.Shared.Constants;
@@ -116,6 +119,47 @@ public class ProductsController : ControllerBase
     {
         await _mediator.Send(new DeleteProductCommand(id));
         return NoContent();
+    }
+
+    #endregion
+
+    #region Variant Management
+
+    /// <summary>Get all variants for a specific product.</summary>
+    [HttpGet("{productId:guid}/variants")]
+    [SwaggerOperation(
+        Summary = "Get variants by product",
+        Description = "Returns all available size variants for the specified product, ordered by size.")]
+    [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(ProductVariantDto))]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
+    public async Task<IActionResult> GetVariantsByProductId([FromRoute] Guid productId)
+    {
+        var result = await _mediator.Send(new GetVariantsByProductIdQuery(productId));
+        return Ok(new ApiOkResponse(result));
+    }
+
+    /// <summary>Add one or more variants to a product in a single request.</summary>
+    [HttpPost("{productId:guid}/variants")]
+    [SwaggerOperation(
+        Summary = "Create product variants",
+        Description = "Adds one or more size variants to an existing product in a single request. " +
+                      "If any variant has isDefault set to true, all pre-existing default flags are cleared first.")]
+    [SwaggerResponse(201, SwaggerResponseMessages.CreatedSuccessfully, typeof(List<ProductVariantDto>))]
+    [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    [SwaggerResponse(500, SwaggerResponseMessages.InternalServerError)]
+    public async Task<IActionResult> CreateVariants(
+        [FromRoute] Guid productId,
+        [FromBody] List<CreateProductVariantDto> request)
+    {
+        _logger.LogInformation("POST {Count} variant(s) for product {ProductId}", request.Count, productId);
+        var result = await _mediator.Send(new CreateProductVariantCommand(productId, request));
+        return StatusCode(201, new ApiCreatedResponse(result));
     }
 
     #endregion

@@ -7,10 +7,10 @@ using MoriiCoffee.Domain.SeedWork.Persistence;
 namespace MoriiCoffee.Application.Commands.ProductVariant.CreateProductVariant;
 
 /// <summary>
-/// Handles adding a new variant to a product.
-/// If the new variant is marked as default, all other variants' IsDefault flag is cleared first.
+/// Handles adding one or more variants to a product in a single operation.
+/// If any variant in the batch is marked as default, all pre-existing default flags are cleared first.
 /// </summary>
-public class CreateProductVariantCommandHandler : ICommandHandler<CreateProductVariantCommand, ProductVariantDto>
+public class CreateProductVariantCommandHandler : ICommandHandler<CreateProductVariantCommand, List<ProductVariantDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
@@ -21,38 +21,44 @@ public class CreateProductVariantCommandHandler : ICommandHandler<CreateProductV
         _mapper = mapper;
     }
 
-    public async Task<ProductVariantDto> Handle(CreateProductVariantCommand request, CancellationToken cancellationToken)
+    public async Task<List<ProductVariantDto>> Handle(CreateProductVariantCommand request, CancellationToken cancellationToken)
     {
         // Ensure the product exists
         var product = await _unitOfWork.Products.GetByIdAsync(request.ProductId)
             ?? throw new NotFoundException("Product", request.ProductId);
 
-        // Clear default flag on other variants if this one will be default
-        if (request.IsDefault)
-        {
+        // Clear existing default flag if any variant in the batch is marked as default
+        bool anyDefault = request.Variants.Any(v => v.IsDefault);
+        if (anyDefault)
             await _unitOfWork.ProductVariants.ClearDefaultFlagAsync(request.ProductId);
-            await _unitOfWork.CommitAsync();
+
+        var createdVariants = new List<Domain.Aggregates.ProductAggregate.Entities.ProductVariant>();
+        foreach (var dto in request.Variants)
+        {
+            var variant = new Domain.Aggregates.ProductAggregate.Entities.ProductVariant
+            {
+                Id = Guid.NewGuid(),
+                ProductId = request.ProductId,
+                Name = dto.Name,
+                Size = dto.Size,
+                AdditionalPrice = dto.AdditionalPrice,
+                Sku = dto.Sku,
+                StockQuantity = dto.StockQuantity,
+                IsDefault = dto.IsDefault,
+                IsAvailable = true
+            };
+
+            await _unitOfWork.ProductVariants.CreateAsync(variant);
+            createdVariants.Add(variant);
         }
 
-        var variant = new Domain.Aggregates.ProductAggregate.Entities.ProductVariant
-        {
-            Id = Guid.NewGuid(),
-            ProductId = request.ProductId,
-            Name = request.Name,
-            Size = request.Size,
-            AdditionalPrice = request.AdditionalPrice,
-            Sku = request.Sku,
-            StockQuantity = request.StockQuantity,
-            IsDefault = request.IsDefault,
-            IsAvailable = true
-        };
-
-        await _unitOfWork.ProductVariants.CreateAsync(variant);
         await _unitOfWork.CommitAsync();
 
-        var dto = _mapper.Map<ProductVariantDto>(variant);
-        dto.TotalPrice = product.BasePrice + variant.AdditionalPrice;
-
-        return dto;
+        return createdVariants.Select(v =>
+        {
+            var result = _mapper.Map<ProductVariantDto>(v);
+            result.TotalPrice = product.BasePrice + v.AdditionalPrice;
+            return result;
+        }).ToList();
     }
 }
