@@ -28,4 +28,7 @@ public class CreateProductVariantDto
 
     /// <summary>Whether this should be the default selection when viewing the product.</summary>
     public bool IsDefault { get; set; }
+
+    /// <summary>Whether this variant is currently available for ordering. Defaults to true.</summary>
+    public bool IsAvailable { get; set; } = true;
 }

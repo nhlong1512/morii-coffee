@@ -58,7 +58,7 @@ public class CreateProductVariantCommandHandler : ICommandHandler<CreateProductV
                 Sku = dto.Sku,
                 StockQuantity = dto.StockQuantity,
                 IsDefault = dto.IsDefault,
-                IsAvailable = true
+                IsAvailable = dto.IsAvailable
             };
 
             await _unitOfWork.ProductVariants.CreateAsync(variant);

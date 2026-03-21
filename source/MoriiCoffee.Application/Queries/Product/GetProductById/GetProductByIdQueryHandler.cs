@@ -24,7 +24,7 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Pro
             .FindByCondition(p => p.Id == request.ProductId)
             .Include(p => p.ProductCategories)
                 .ThenInclude(pc => pc.Category)
-            .Include(p => p.Variants)
+            .Include(p => p.Variants.Where(v => !v.IsDeleted))
             .Include(p => p.Images)
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Product", request.ProductId);
