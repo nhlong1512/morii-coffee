@@ -1,5 +1,5 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using MoriiCoffee.Application.SeedWork.Exceptions;
 using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -138,11 +138,10 @@ public class UsersController : ControllerBase
 
     private Guid GetCurrentUserId()
     {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        // JWT middleware maps "sub" → ClaimTypes.NameIdentifier by default
+        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(sub, out var userId))
-        {
-             throw new UnauthorizedAccessException();
-        }
+            throw new UnauthorizedException("Invalid or missing user identity claim.");
         return userId;
     }
 }

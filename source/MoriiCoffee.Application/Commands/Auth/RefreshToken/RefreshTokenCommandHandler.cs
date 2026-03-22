@@ -34,7 +34,7 @@ public class RefreshTokenCommandHandler : ICommandHandler<RefreshTokenCommand, A
         var principal = await _tokenService.GetPrincipalFromTokenAsync(request.AccessToken)
             ?? throw new UnauthorizedException("Invalid access token.");
 
-        var userIdStr = principal.FindFirst("jti")?.Value;
+        var userIdStr = principal.FindFirst("sub")?.Value;
         if (!Guid.TryParse(userIdStr, out var userId))
             throw new UnauthorizedException("Invalid access token.");
 

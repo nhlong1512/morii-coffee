@@ -13,6 +13,9 @@ public class UserDto
     [SwaggerSchema("Email address of the user.")]
     public string? Email { get; set; }
 
+    [SwaggerSchema("Phone number of the user.")]
+    public string? PhoneNumber { get; set; }
+
     [SwaggerSchema("Display username of the user.")]
     public string? UserName { get; set; }
 

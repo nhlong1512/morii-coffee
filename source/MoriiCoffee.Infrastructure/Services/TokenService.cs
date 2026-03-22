@@ -65,6 +65,7 @@ public class TokenService : ITokenService
             IssuerSigningKey = new SymmetricSecurityKey(key),
             ValidAudience = _jwtOptions.Audience,
             ValidIssuer = _jwtOptions.Issuer,
+            ValidateLifetime = false, // Must be false — refresh flow accepts expired access tokens
         };
 
         TokenValidationResult result = await _handler.ValidateTokenAsync(token, tokenValidationParameters);
