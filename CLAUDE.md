@@ -77,3 +77,8 @@
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
 - **No Laziness**: Find root causes. No temporary band-aids. Uphold Senior Developer standards.
 - **Minimal Impact**: Changes should only touch what's necessary. Avoid refactoring unrelated code unless explicitly asked.
+
+## Run Project
+```sh
+cd deploy && bash run-docker-development.sh
+```

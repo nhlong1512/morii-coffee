@@ -20,6 +20,9 @@ public static class SettingsConfiguration
         var awsS3Settings = configuration.GetSection(nameof(AwsS3Settings)).Get<AwsS3Settings>();
         services.AddSingleton<AwsS3Settings>(awsS3Settings!);
 
+        var emailSettings = configuration.GetSection(nameof(EmailSettings)).Get<EmailSettings>();
+        services.AddSingleton<EmailSettings>(emailSettings!);
+
         return services;
     }
 }
