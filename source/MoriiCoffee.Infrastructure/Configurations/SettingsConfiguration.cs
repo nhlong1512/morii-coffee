@@ -20,6 +20,15 @@ public static class SettingsConfiguration
         var awsS3Settings = configuration.GetSection(nameof(AwsS3Settings)).Get<AwsS3Settings>();
         services.AddSingleton<AwsS3Settings>(awsS3Settings!);
 
+        var emailSettings = configuration.GetSection(nameof(EmailSettings)).Get<EmailSettings>();
+        if (emailSettings == null)
+        {
+            throw new InvalidOperationException(
+                "EmailSettings configuration is missing in appsettings.json"
+            );
+        }
+        services.AddSingleton(emailSettings);
+
         return services;
     }
 }

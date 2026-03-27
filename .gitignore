@@ -460,5 +460,7 @@ aspire/MoriiCoffee.AppHost/appsettings.Development.json
 source/MoriiCoffee.Presentation/appsettings.Development.json
 
 
-docs/templates/
-docs/
+# Ignore everything in docs/ except these files and folders:
+docs/**
+!docs/features/
+!docs/features/**
