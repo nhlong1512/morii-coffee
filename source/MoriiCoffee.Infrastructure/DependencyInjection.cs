@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MoriiCoffee.Application.SeedWork.Abstractions;
+using MoriiCoffee.Domain.Shared.Settings;
 using MoriiCoffee.Infrastructure.Clock;
 using MoriiCoffee.Infrastructure.Configurations;
 using MoriiCoffee.Infrastructure.Persistence;
 using MoriiCoffee.Infrastructure.Services;
+using MoriiCoffee.Infrastructure.Services.Email;
 
 namespace MoriiCoffee.Infrastructure;
 
@@ -40,7 +42,7 @@ public static class DependencyInjection
     {
         services.AddTransient<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<ITokenService, TokenService>();
-        services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IEmailService, SendGridEmailService>();
         services.AddScoped<IFileService, AwsS3FileService>();
         return services;
     }
