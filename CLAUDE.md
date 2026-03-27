@@ -77,3 +77,15 @@
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
 - **No Laziness**: Find root causes. No temporary band-aids. Uphold Senior Developer standards.
 - **Minimal Impact**: Changes should only touch what's necessary. Avoid refactoring unrelated code unless explicitly asked.
+
+## Run Project
+```sh
+cd deploy && bash run-docker-development.sh
+```
+
+## Active Technologies
+- C# / .NET 8.0 + SendGrid SDK 9.29.3, ASP.NET Core Identity, MediatR, Serilog (002-remove-aws-ses)
+- SQL Server (via Entity Framework Core), email configuration in appsettings.json (002-remove-aws-ses)
+
+## Recent Changes
+- 002-remove-aws-ses: Added C# / .NET 8.0 + SendGrid SDK 9.29.3, ASP.NET Core Identity, MediatR, Serilog
