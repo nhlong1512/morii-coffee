@@ -21,7 +21,7 @@ public static class SettingsConfiguration
         services.AddSingleton<AwsS3Settings>(awsS3Settings!);
 
         var emailSettings = configuration.GetSection(nameof(EmailSettings)).Get<EmailSettings>();
-        services.AddSingleton(emailSettings);
+        services.AddSingleton<EmailSettings>(emailSettings!);
 
         return services;
     }

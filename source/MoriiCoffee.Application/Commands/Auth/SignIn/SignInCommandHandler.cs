@@ -11,7 +11,7 @@ using MoriiCoffee.Domain.Shared.Enums.User;
 
 namespace MoriiCoffee.Application.Commands.Auth.SignIn;
 
-/// <summary>Handles sign-in: resolves the user by email or username, validates the password and account status, then issues new tokens.</summary>
+/// <summary>Handles sign-in: resolves the user by email only, validates the password and account status, then issues new tokens.</summary>
 public class SignInCommandHandler : ICommandHandler<SignInCommand, AuthResponseDto>
 {
     private readonly UserManager<UserEntity> _userManager;
@@ -31,7 +31,7 @@ public class SignInCommandHandler : ICommandHandler<SignInCommand, AuthResponseD
     public async Task<AuthResponseDto> Handle(SignInCommand request, CancellationToken cancellationToken)
     {
         var user = _userManager.Users.FirstOrDefault(u =>
-            u.Email == request.Identity || u.PhoneNumber == request.Identity);
+            u.Email == request.Identity);
 
         if (user is null || user.IsDeleted)
         {
