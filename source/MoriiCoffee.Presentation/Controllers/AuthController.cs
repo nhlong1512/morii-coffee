@@ -39,10 +39,11 @@ public class AuthController : ControllerBase
         return StatusCode(201, new ApiCreatedResponse(result));
     }
 
-    /// <summary>Sign in with email/username and password.</summary>
+    /// <summary>Sign in with email and password. BREAKING CHANGE: Phone numbers are no longer accepted as identity.</summary>
     [HttpPost("signin")]
-    [SwaggerOperation(Summary = "Sign in", Description = "Authenticates a user and returns JWT access + refresh tokens.")]
+    [SwaggerOperation(Summary = "Sign in", Description = "Authenticates a user by email address and returns JWT access + refresh tokens. Phone numbers are no longer supported for authentication.")]
     [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(AuthResponseDto))]
+    [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
     public async Task<IActionResult> SignIn([FromBody] SignInDto dto)
     {
