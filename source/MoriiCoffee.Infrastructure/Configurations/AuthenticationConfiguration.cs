@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -24,14 +25,18 @@ public static class AuthenticationConfiguration
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var jwtOptions = services.GetOptions<JwtOptions>(nameof(JwtOptions));
+        JwtOptions jwtOptions = services.GetOptions<JwtOptions>(nameof(JwtOptions));
+        Authentication authentication = services.GetOptions<Authentication>("Authentication");
+        ProviderOptions googleAuthentication = authentication.Google;
 
         services
             .AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             })
+            .AddCookie()
             .AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
@@ -46,11 +51,12 @@ public static class AuthenticationConfiguration
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero
                 };
+                options.SaveToken = true;
             })
             .AddGoogle(googleOptions =>
             {
-                var googleClientId = configuration["Authentication:Google:ClientId"];
-                var googleClientSecret = configuration["Authentication:Google:ClientSecret"];
+                string googleClientId = googleAuthentication.ClientId;
+                string googleClientSecret = googleAuthentication.ClientSecret;
 
                 if (string.IsNullOrWhiteSpace(googleClientId) || string.IsNullOrWhiteSpace(googleClientSecret))
                 {
@@ -60,14 +66,15 @@ public static class AuthenticationConfiguration
 
                 googleOptions.ClientId = googleClientId;
                 googleOptions.ClientSecret = googleClientSecret;
-                googleOptions.CallbackPath = "/api/v1/auth/external-auth-callback"; // Custom callback path matching Google Console
 
-                // Request additional scopes for user profile information
-                googleOptions.Scope.Add("openid");
+                // Configure sign-in scheme to use External cookie
+                googleOptions.SignInScheme = IdentityConstants.ExternalScheme;
+
+                // Request user profile scopes
                 googleOptions.Scope.Add("profile");
                 googleOptions.Scope.Add("email");
 
-                // Save tokens to allow refresh
+                // Save tokens for retrieval
                 googleOptions.SaveTokens = true;
             });
 

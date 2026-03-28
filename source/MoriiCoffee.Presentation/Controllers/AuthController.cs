@@ -9,8 +9,11 @@ using MoriiCoffee.Application.Commands.Auth.ResetPassword;
 using MoriiCoffee.Application.Commands.Auth.SignIn;
 using MoriiCoffee.Application.Commands.Auth.SignUp;
 using MoriiCoffee.Application.SeedWork.DTOs.Auth;
+using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Shared.Constants;
 using MoriiCoffee.Domain.Shared.HttpResponses;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace MoriiCoffee.Presentation.Controllers;
@@ -122,72 +125,55 @@ public class AuthController : ControllerBase
             ReturnUrl = returnUrl
         };
 
-        _ = await _mediator.Send(command);
+        ExternalLoginResponseDto externalLoginResponse = await _mediator.Send(command);
 
-        // Trigger OAuth challenge to redirect user to Google
-        return Challenge(
-            new Microsoft.AspNetCore.Authentication.AuthenticationProperties
-            {
-                RedirectUri = $"/api/v1/auth/external-auth-callback?returnUrl={Uri.EscapeDataString(returnUrl)}"
-            },
-            provider);
+        return Challenge(externalLoginResponse.Properties, externalLoginResponse.Provider);
     }
 
     /// <summary>
-    /// Process OAuth callback from Google after user authentication.
-    /// Exchanges authorization code for user profile, creates or links account,
-    /// generates JWT tokens, and redirects to returnUrl with tokens in secure cookie.
+    /// Process OAuth callback from Google after authentication middleware validates OAuth response.
+    /// Retrieves external login info, creates or links account, generates JWT tokens,
+    /// and redirects to returnUrl with tokens in secure cookie.
     /// </summary>
-    /// <param name="code">Authorization code from Google (single-use, expires in ~10 seconds).</param>
-    /// <param name="state">CSRF protection token (validated automatically by ASP.NET Core Identity).</param>
-    /// <param name="returnUrl">URL to redirect to after successful authentication.</param>
-    /// <param name="error">Error code if user denied permission (e.g., "access_denied").</param>
-    /// <param name="error_description">Human-readable error description from Google.</param>
+    /// <param name="returnUrl">URL to redirect to after successful authentication. Defaults to "/".</param>
     /// <returns>HTTP 302 redirect to returnUrl with AuthTokenHolder cookie containing access and refresh tokens.</returns>
     [HttpGet("external-auth-callback")]
     [SwaggerOperation(
         Summary = "OAuth callback endpoint",
-        Description = "Processes Google OAuth callback. Exchanges authorization code for tokens, creates/links account, and redirects with tokens in cookie.")]
+        Description = "Processes Google OAuth callback. Creates/links account, generates JWT tokens, and redirects with tokens in cookie.")]
     [SwaggerResponse(302, "Redirect to returnUrl with AuthTokenHolder cookie")]
     [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
     [SwaggerResponse(403, "Account inactive or deleted")]
     [SwaggerResponse(500, "Token exchange or account creation failed")]
-    public async Task<IActionResult> ExternalAuthCallback(
-        [FromQuery] string? code = null,
-        [FromQuery] string? state = null,
-        [FromQuery] string returnUrl = "/",
-        [FromQuery] string? error = null,
-        [FromQuery] string? error_description = null)
+    public async Task<IActionResult> ExternalAuthCallback([FromQuery] string returnUrl = "/")
     {
-        var command = new ExternalLoginCallbackCommand
+        try
         {
-            Code = code ?? string.Empty,
-            State = state ?? string.Empty,
-            ReturnUrl = returnUrl,
-            Error = error,
-            ErrorDescription = error_description
-        };
+            var command = new ExternalLoginCallbackCommand(returnUrl);
+            AuthResponseDto signInResponse = await _mediator.Send(command);
 
-        var result = await _mediator.Send(command);
+            var options = new CookieOptions
+            {
+                Expires = DateTime.UtcNow.AddMinutes(5)
+            };
 
-        // Store tokens in HttpOnly cookie for client extraction
-        var cookieValue = System.Text.Json.JsonSerializer.Serialize(new
+            Response.Cookies.Append(
+                "AuthTokenHolder",
+                JsonConvert.SerializeObject(signInResponse, new JsonSerializerSettings
+                {
+                    ContractResolver = new DefaultContractResolver
+                    {
+                        NamingStrategy = new CamelCaseNamingStrategy()
+                    },
+                    Formatting = Formatting.Indented
+                }), options);
+            // Redirect to returnUrl (frontend will extract tokens from cookie)
+            return Redirect(returnUrl);
+        }
+        catch (BadRequestException e)
         {
-            accessToken = result.AccessToken,
-            refreshToken = result.RefreshToken
-        });
-
-        Response.Cookies.Append("AuthTokenHolder", cookieValue, new Microsoft.AspNetCore.Http.CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true, // HTTPS only in production
-            SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict,
-            MaxAge = TimeSpan.FromMinutes(5), // Short expiration - client should extract immediately
-            Path = "/"
-        });
-
-        // Redirect to returnUrl (frontend will extract tokens from cookie)
-        return Redirect(returnUrl);
+            return BadRequest(new ApiBadRequestResponse(e.Message));
+        }
     }
 }

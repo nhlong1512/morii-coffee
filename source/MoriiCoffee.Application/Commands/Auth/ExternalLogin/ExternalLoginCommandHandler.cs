@@ -1,4 +1,6 @@
 using MediatR;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using MoriiCoffee.Application.SeedWork.DTOs.Auth;
 using UserEntity = MoriiCoffee.Domain.Aggregates.UserAggregate.User;
@@ -7,8 +9,8 @@ namespace MoriiCoffee.Application.Commands.Auth.ExternalLogin;
 
 /// <summary>
 /// Handles external OAuth login initiation.
-/// Prepares OAuth authentication properties and generates redirect URL to external provider.
-/// Uses ASP.NET Core Identity's SignInManager to configure OAuth challenge.
+/// Prepares OAuth authentication properties with dynamic redirect URL.
+/// Returns properties and provider for Challenge() call in controller.
 /// </summary>
 public class ExternalLoginCommandHandler : IRequestHandler<ExternalLoginCommand, ExternalLoginResponseDto>
 {
@@ -21,30 +23,34 @@ public class ExternalLoginCommandHandler : IRequestHandler<ExternalLoginCommand,
 
     /// <summary>
     /// Initiates OAuth flow by preparing authentication properties.
-    /// Generates state parameter for CSRF protection and sets redirect URI.
+    /// Builds redirect URL dynamically using current HttpContext.
     /// </summary>
     /// <param name="request">Command containing provider name and return URL.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Response DTO with redirect URL to external provider.</returns>
+    /// <returns>Response DTO with authentication properties and provider name.</returns>
     public Task<ExternalLoginResponseDto> Handle(
         ExternalLoginCommand request,
         CancellationToken cancellationToken)
     {
-        // Configure OAuth authentication properties
-        // - RedirectUri: Where provider should redirect after authentication
-        // - State parameter: Auto-generated CSRF token by SignInManager
-        var properties = _signInManager.ConfigureExternalAuthenticationProperties(
-            request.Provider,
-            $"/api/v1/auth/external-auth-callback?returnUrl={Uri.EscapeDataString(request.ReturnUrl)}");
-
-        // Note: In a web application, this would trigger a ChallengeResult redirect.
-        // Since we're using MediatR, the controller will handle the actual redirect.
-        // The properties contain the redirect URL to the external provider.
-        var redirectUrl = properties.RedirectUri ?? string.Empty;
-
-        return Task.FromResult(new ExternalLoginResponseDto
+        return Task.Run(() =>
         {
-            RedirectUrl = redirectUrl
-        });
+            // Build redirect URL dynamically using current request context
+            HttpContext httpContext = _signInManager.Context;
+            string domainName = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
+            string redirectUrl = $"{domainName}/api/v1/auth/external-auth-callback?returnUrl={request.ReturnUrl}";
+
+            // Configure OAuth authentication properties with redirect URL
+            AuthenticationProperties properties = _signInManager.ConfigureExternalAuthenticationProperties(
+                request.Provider,
+                redirectUrl);
+
+            properties.AllowRefresh = true;
+
+            return new ExternalLoginResponseDto
+            {
+                Properties = properties,
+                Provider = request.Provider
+            };
+        }, cancellationToken);
     }
 }
