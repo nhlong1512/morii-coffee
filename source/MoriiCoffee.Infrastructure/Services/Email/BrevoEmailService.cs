@@ -94,8 +94,6 @@ public class BrevoEmailService : IEmailService
                 toEmail,
                 subject
             );
-
-            // Fire-and-forget: do not rethrow
         }
     }
 }
