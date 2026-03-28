@@ -89,6 +89,8 @@ cd deploy && bash run-docker-development.sh
 - C# / .NET 8.0 + brevo_csharp (official Brevo SDK), ASP.NET Core Identity, MediatR, Serilog (003-email-service-spec)
 - SQL Server (via Entity Framework Core), embedded HTML email templates, email configuration in appsettings.json (003-email-service-spec)
 - C# / .NET 8.0 + ASP.NET Core Identity, MediatR, FluentValidation, EF Core (004-email-only-auth)
+- C# / .NET 8.0 + ASP.NET Core Identity, Microsoft.AspNetCore.Authentication.Google, MediatR, FluentValidation, EF Core (005-google-oauth)
+- SQL Server (via Entity Framework Core) - AspNetUsers, AspNetUserLogins, AspNetUserTokens tables (005-google-oauth)
 
 ## Recent Changes
 - 002-remove-aws-ses: Added C# / .NET 8.0 + SendGrid SDK 9.29.3, ASP.NET Core Identity, MediatR, Serilog
