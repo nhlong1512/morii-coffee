@@ -1,12 +1,15 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MoriiCoffee.Application.Commands.Auth.ExternalLogin;
+using MoriiCoffee.Application.Commands.Auth.ExternalLoginCallback;
 using MoriiCoffee.Application.Commands.Auth.ForgotPassword;
 using MoriiCoffee.Application.Commands.Auth.RefreshToken;
 using MoriiCoffee.Application.Commands.Auth.ResetPassword;
 using MoriiCoffee.Application.Commands.Auth.SignIn;
 using MoriiCoffee.Application.Commands.Auth.SignUp;
 using MoriiCoffee.Application.SeedWork.DTOs.Auth;
+using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Shared.Constants;
 using MoriiCoffee.Domain.Shared.HttpResponses;
 using Swashbuckle.AspNetCore.Annotations;
@@ -93,5 +96,66 @@ public class AuthController : ControllerBase
             NewPassword = dto.NewPassword
         });
         return Ok(new ApiOkResponse("Password reset successfully."));
+    }
+
+    /// <summary>
+    /// Initiate OAuth 2.0 authentication flow with Google.
+    /// Redirects user to Google's consent screen for authentication.
+    /// After successful authentication, Google redirects back to external-auth-callback endpoint.
+    /// </summary>
+    /// <param name="provider">OAuth provider name. Currently only "Google" is supported (case-insensitive).</param>
+    /// <param name="returnUrl">URL to redirect to after successful authentication. Defaults to "/".</param>
+    /// <returns>HTTP 302 redirect to Google's OAuth consent screen.</returns>
+    [HttpPost("external-login")]
+    [SwaggerOperation(
+        Summary = "External login with Google OAuth",
+        Description = "Initiates Google OAuth 2.0 authorization code flow. Redirects to Google for authentication, then returns to external-auth-callback with authorization code.")]
+    [SwaggerResponse(302, "Redirect to Google OAuth consent screen")]
+    [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
+    [SwaggerResponse(500, "OAuth configuration missing or invalid")]
+    public async Task<IActionResult> ExternalLogin(
+        [FromQuery] string provider = "Google",
+        [FromQuery] string returnUrl = "/")
+    {
+        var command = new ExternalLoginCommand
+        {
+            Provider = provider,
+            ReturnUrl = returnUrl
+        };
+
+        ExternalLoginResponseDto externalLoginResponse = await _mediator.Send(command);
+
+        return Challenge(externalLoginResponse.Properties, externalLoginResponse.Provider);
+    }
+
+    /// <summary>
+    /// Process OAuth callback from Google after authentication middleware validates OAuth response.
+    /// Retrieves external login info, creates or links account, generates JWT tokens,
+    /// and redirects to returnUrl with tokens as query parameters.
+    /// </summary>
+    /// <param name="returnUrl">URL to redirect to after successful authentication. Defaults to "/".</param>
+    /// <returns>HTTP 302 redirect to returnUrl?accessToken=...&amp;refreshToken=...</returns>
+    [HttpGet("external-auth-callback")]
+    [SwaggerOperation(
+        Summary = "OAuth callback endpoint",
+        Description = "Processes Google OAuth callback. Creates/links account, generates JWT tokens, and redirects with tokens as query parameters.")]
+    [SwaggerResponse(302, "Redirect to returnUrl with accessToken and refreshToken as query parameters")]
+    [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(403, "Account inactive or deleted")]
+    [SwaggerResponse(500, "Token exchange or account creation failed")]
+    public async Task<IActionResult> ExternalAuthCallback([FromQuery] string returnUrl = "/")
+    {
+        try
+        {
+            var command = new ExternalLoginCallbackCommand(returnUrl);
+            AuthResponseDto signInResponse = await _mediator.Send(command);
+
+            return Redirect($"{returnUrl}?accessToken={signInResponse.AccessToken}&refreshToken={signInResponse.RefreshToken}");
+        }
+        catch (BadRequestException e)
+        {
+            return BadRequest(new ApiBadRequestResponse(e.Message));
+        }
     }
 }

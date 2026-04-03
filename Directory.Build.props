@@ -1,10 +1,12 @@
 <Project>
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-        <!-- AutoMapper has an unpatched vulnerability (GHSA-rvv3-g6hj-g44x) across all versions. Suppressed temporarily. -->
-        <NoWarn>$(NoWarn);NU1903</NoWarn>
+        <!-- AutoMapper 16.1.1: Vulnerability GHSA-rvv3-g6hj-g44x remains unpatched across all versions. Monitor for future updates. -->
+        <!-- NU1902/NU1901: Transitive dependency vulnerabilities - will be resolved as packages update -->
+        <!-- NU1608: MicroElements.Swashbuckle.FluentValidation 6.0.0 doesn't officially support FluentValidation 12.x but works in practice -->
+        <NoWarn>$(NoWarn);NU1903;NU1902;NU1901;NU1608</NoWarn>
     </PropertyGroup>
 </Project>

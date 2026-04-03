@@ -1,5 +1,5 @@
 # Stage: dev (hot reload với dotnet watch)
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS dev
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS dev
 WORKDIR /app
 
 # Copy project files trước để tận dụng layer cache khi restore
@@ -23,11 +23,11 @@ CMD ["dotnet", "watch", "run", "--no-launch-profile", "--urls", "http://0.0.0.0:
 
 
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
 EXPOSE 80
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY Directory.Build.props ./

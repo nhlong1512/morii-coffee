@@ -18,6 +18,8 @@ public static class ApplicationDbContextConfiguration
         {
             var interceptor = serviceProvider.GetRequiredService<DateTrackingInterceptor>();
 
+            // UseSqlServer: For SQL Server 2022+ or self-hosted SQL Server (Docker)
+            // Note: Use UseAzureSql() instead if targeting Azure SQL Database for EF Core 10+ optimizations
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnectionString"),
                 sqlOptions =>

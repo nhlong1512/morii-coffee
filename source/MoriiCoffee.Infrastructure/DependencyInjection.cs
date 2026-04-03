@@ -25,7 +25,7 @@ public static class DependencyInjection
         services.ConfigureCors(appCors);
         services.ConfigureApplicationDbContext(configuration);
         services.ConfigureIdentity();
-        services.ConfigureAuthentication();
+        services.ConfigureAuthentication(configuration);
         services.ConfigureMediatR();
         services.ConfigureMapper();
         services.ConfigureValidation();

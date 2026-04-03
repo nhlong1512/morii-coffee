@@ -1,24 +1,42 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using MoriiCoffee.Domain.Shared.Settings;
 
 namespace MoriiCoffee.Infrastructure.Configurations;
 
-/// <summary>Registers JWT Bearer authentication with strict token validation parameters (ClockSkew = Zero).</summary>
+/// <summary>
+/// Registers authentication schemes for MoriiCoffee application.
+/// Configures JWT Bearer authentication for API access tokens and Google OAuth 2.0 for external authentication.
+/// </summary>
 public static class AuthenticationConfiguration
 {
-    public static IServiceCollection ConfigureAuthentication(this IServiceCollection services)
+    /// <summary>
+    /// Configures JWT Bearer authentication and Google OAuth 2.0 provider.
+    /// JWT is used for API authentication, Google OAuth is used for external sign-in.
+    /// </summary>
+    /// <param name="services">The service collection to add authentication to.</param>
+    /// <param name="configuration">The application configuration containing JWT and Google OAuth settings.</param>
+    /// <returns>The service collection for method chaining.</returns>
+    public static IServiceCollection ConfigureAuthentication(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
-        var jwtOptions = services.GetOptions<JwtOptions>(nameof(JwtOptions));
+        JwtOptions jwtOptions = services.GetOptions<JwtOptions>(nameof(JwtOptions));
+        Authentication authentication = services.GetOptions<Authentication>("Authentication");
+        ProviderOptions googleAuthentication = authentication.Google;
 
         services
             .AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             })
+            .AddCookie()
             .AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
@@ -33,6 +51,36 @@ public static class AuthenticationConfiguration
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero
                 };
+                options.SaveToken = true;
+            })
+            .AddGoogle(googleOptions =>
+            {
+                string googleClientId = googleAuthentication.ClientId;
+                string googleClientSecret = googleAuthentication.ClientSecret;
+
+                if (string.IsNullOrWhiteSpace(googleClientId) || string.IsNullOrWhiteSpace(googleClientSecret))
+                {
+                    throw new InvalidOperationException(
+                        "Google OAuth credentials are not configured. Please set Authentication:Google:ClientId and Authentication:Google:ClientSecret in appsettings.json or User Secrets.");
+                }
+
+                googleOptions.ClientId = googleClientId;
+                googleOptions.ClientSecret = googleClientSecret;
+
+                // Configure sign-in scheme to use External cookie
+                googleOptions.SignInScheme = IdentityConstants.ExternalScheme;
+
+                // .NET 10 note: PAR (Pushed Authorization Requests) is enabled by default.
+                // If Google OAuth fails with PAR-related errors, uncomment the following line:
+                // googleOptions.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Disable;
+
+
+                // Request user profile scopes
+                googleOptions.Scope.Add("profile");
+                googleOptions.Scope.Add("email");
+
+                // Save tokens for retrieval
+                googleOptions.SaveTokens = true;
             });
 
         return services;
