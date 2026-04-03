@@ -4,7 +4,9 @@
       "Bash(*)",
       "Edit",
       "Write",
-      "Read"
+      "Read",
+      "WebFetch(domain:www.nuget.org)",
+      "WebFetch(domain:devblogs.microsoft.com)"
     ]
   }
 }

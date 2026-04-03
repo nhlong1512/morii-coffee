@@ -12,8 +12,6 @@ using MoriiCoffee.Application.SeedWork.DTOs.Auth;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Shared.Constants;
 using MoriiCoffee.Domain.Shared.HttpResponses;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace MoriiCoffee.Presentation.Controllers;
@@ -133,15 +131,15 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Process OAuth callback from Google after authentication middleware validates OAuth response.
     /// Retrieves external login info, creates or links account, generates JWT tokens,
-    /// and redirects to returnUrl with tokens in secure cookie.
+    /// and redirects to returnUrl with tokens as query parameters.
     /// </summary>
     /// <param name="returnUrl">URL to redirect to after successful authentication. Defaults to "/".</param>
-    /// <returns>HTTP 302 redirect to returnUrl with AuthTokenHolder cookie containing access and refresh tokens.</returns>
+    /// <returns>HTTP 302 redirect to returnUrl?accessToken=...&amp;refreshToken=...</returns>
     [HttpGet("external-auth-callback")]
     [SwaggerOperation(
         Summary = "OAuth callback endpoint",
-        Description = "Processes Google OAuth callback. Creates/links account, generates JWT tokens, and redirects with tokens in cookie.")]
-    [SwaggerResponse(302, "Redirect to returnUrl with AuthTokenHolder cookie")]
+        Description = "Processes Google OAuth callback. Creates/links account, generates JWT tokens, and redirects with tokens as query parameters.")]
+    [SwaggerResponse(302, "Redirect to returnUrl with accessToken and refreshToken as query parameters")]
     [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
     [SwaggerResponse(403, "Account inactive or deleted")]
@@ -153,23 +151,7 @@ public class AuthController : ControllerBase
             var command = new ExternalLoginCallbackCommand(returnUrl);
             AuthResponseDto signInResponse = await _mediator.Send(command);
 
-            var options = new CookieOptions
-            {
-                Expires = DateTime.UtcNow.AddMinutes(5)
-            };
-
-            Response.Cookies.Append(
-                "AuthTokenHolder",
-                JsonConvert.SerializeObject(signInResponse, new JsonSerializerSettings
-                {
-                    ContractResolver = new DefaultContractResolver
-                    {
-                        NamingStrategy = new CamelCaseNamingStrategy()
-                    },
-                    Formatting = Formatting.Indented
-                }), options);
-            // Redirect to returnUrl (frontend will extract tokens from cookie)
-            return Redirect(returnUrl);
+            return Redirect($"{returnUrl}?accessToken={signInResponse.AccessToken}&refreshToken={signInResponse.RefreshToken}");
         }
         catch (BadRequestException e)
         {

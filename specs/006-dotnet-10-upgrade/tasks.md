@@ -253,7 +253,7 @@
 - [x] T135 Create summary documentation in docs/explainations/summary-dotnet-10-upgrade-ENG.md
 - [x] T136 Update quickstart.md with actual .NET 10 SDK version used in global.json
 - [x] T137 Verify all success criteria from spec.md are met (SC-001 through SC-010)
-- [ ] T138 Commit changes with message: "feat: upgrade platform from .NET 8 to .NET 10"
+- [x] T138 Commit changes with message: "feat: upgrade platform from .NET 8 to .NET 10"
 
 ---
 

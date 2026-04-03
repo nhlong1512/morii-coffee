@@ -15,7 +15,8 @@
                 "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
             },
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ConnectionStrings__DefaultConnectionString": "Server=localhost,1433;Database=MoriiCoffeeDb;User Id=sa;Password=MoriiCoffee@123~;TrustServerCertificate=true;"
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
