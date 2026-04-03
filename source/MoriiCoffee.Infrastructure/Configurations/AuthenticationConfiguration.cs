@@ -70,6 +70,11 @@ public static class AuthenticationConfiguration
                 // Configure sign-in scheme to use External cookie
                 googleOptions.SignInScheme = IdentityConstants.ExternalScheme;
 
+                // .NET 10 note: PAR (Pushed Authorization Requests) is enabled by default.
+                // If Google OAuth fails with PAR-related errors, uncomment the following line:
+                // googleOptions.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Disable;
+
+
                 // Request user profile scopes
                 googleOptions.Scope.Add("profile");
                 googleOptions.Scope.Add("email");

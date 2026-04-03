@@ -91,6 +91,9 @@ cd deploy && bash run-docker-development.sh
 - C# / .NET 8.0 + ASP.NET Core Identity, MediatR, FluentValidation, EF Core (004-email-only-auth)
 - C# / .NET 8.0 + ASP.NET Core Identity, Microsoft.AspNetCore.Authentication.Google, MediatR, FluentValidation, EF Core (005-google-oauth)
 - SQL Server (via Entity Framework Core) - AspNetUsers, AspNetUserLogins, AspNetUserTokens tables (005-google-oauth)
+- C# / .NET 10.0 + ASP.NET Core 10.0.5, Entity Framework Core 10.0.5, MediatR 14.1.0, FluentValidation 12.1.1, Serilog 4.3.1, AutoMapper 16.1.1, Brevo SDK 1.1.2, MinIO 7.0.0, AWS SDK S3 4.0.20.2, Microsoft.AspNetCore.Authentication.JwtBearer 10.0.5, Microsoft.AspNetCore.Authentication.Google 10.0.5, Swashbuckle.AspNetCore 6.7.2 (006-dotnet-10-upgrade)
+- SQL Server (via Entity Framework Core 10.0.5), MinIO 7.0.0 (object storage), AWS S3 (fallback storage) (006-dotnet-10-upgrade)
 
 ## Recent Changes
+- 006-dotnet-10-upgrade: Upgraded platform from .NET 8.0 to .NET 10.0, all Microsoft packages to 10.0.5, MediatR to 14.1.0, AutoMapper to 16.1.1, FluentValidation to 12.1.1, Minio to 7.0.0
 - 002-remove-aws-ses: Added C# / .NET 8.0 + SendGrid SDK 9.29.3, ASP.NET Core Identity, MediatR, Serilog
