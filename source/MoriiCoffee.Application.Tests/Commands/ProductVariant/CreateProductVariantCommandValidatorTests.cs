@@ -13,8 +13,8 @@ public class CreateProductVariantCommandValidatorTests
 
     private static CreateProductVariantCommand ValidCommand() => new(
         productId: Guid.NewGuid(),
-        variants:
-        [
+        variants: new List<CreateProductVariantDto>
+        {
             new CreateProductVariantDto
             {
                 Name = "Medium",
@@ -23,23 +23,24 @@ public class CreateProductVariantCommandValidatorTests
                 IsDefault = true,
                 IsAvailable = true
             }
-        ]
+        }
     );
 
     [Fact]
     public void Validate_EmptyProductId_ReturnsError()
     {
         var cmd = new CreateProductVariantCommand(Guid.Empty,
-        [
-            new CreateProductVariantDto { Name = "M", Size = EProductSize.Medium }
-        ]);
+            new List<CreateProductVariantDto>
+            {
+                new CreateProductVariantDto { Name = "M", Size = EProductSize.Medium }
+            });
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.ProductId);
     }
 
     [Fact]
     public void Validate_EmptyVariantsList_ReturnsError()
     {
-        var cmd = new CreateProductVariantCommand(Guid.NewGuid(), []);
+        var cmd = new CreateProductVariantCommand(Guid.NewGuid(), new List<CreateProductVariantDto>());
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Variants);
     }
 
@@ -47,9 +48,10 @@ public class CreateProductVariantCommandValidatorTests
     public void Validate_VariantWithEmptyName_ReturnsErrors()
     {
         var cmd = new CreateProductVariantCommand(Guid.NewGuid(),
-        [
-            new CreateProductVariantDto { Name = "", Size = EProductSize.Medium, AdditionalPrice = 0 }
-        ]);
+            new List<CreateProductVariantDto>
+            {
+                new CreateProductVariantDto { Name = "", Size = EProductSize.Medium, AdditionalPrice = 0 }
+            });
         var result = _validator.TestValidate(cmd);
         result.IsValid.Should().BeFalse();
     }
@@ -58,9 +60,10 @@ public class CreateProductVariantCommandValidatorTests
     public void Validate_VariantNameExceeds100Chars_ReturnsErrors()
     {
         var cmd = new CreateProductVariantCommand(Guid.NewGuid(),
-        [
-            new CreateProductVariantDto { Name = new string('a', 101), Size = EProductSize.Small, AdditionalPrice = 0 }
-        ]);
+            new List<CreateProductVariantDto>
+            {
+                new CreateProductVariantDto { Name = new string('a', 101), Size = EProductSize.Small, AdditionalPrice = 0 }
+            });
         var result = _validator.TestValidate(cmd);
         result.IsValid.Should().BeFalse();
     }
@@ -69,9 +72,10 @@ public class CreateProductVariantCommandValidatorTests
     public void Validate_NegativeAdditionalPrice_ReturnsErrors()
     {
         var cmd = new CreateProductVariantCommand(Guid.NewGuid(),
-        [
-            new CreateProductVariantDto { Name = "Small", Size = EProductSize.Small, AdditionalPrice = -1m }
-        ]);
+            new List<CreateProductVariantDto>
+            {
+                new CreateProductVariantDto { Name = "Small", Size = EProductSize.Small, AdditionalPrice = -1m }
+            });
         var result = _validator.TestValidate(cmd);
         result.IsValid.Should().BeFalse();
     }
