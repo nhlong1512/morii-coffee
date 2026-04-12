@@ -15,7 +15,7 @@ public class CreateProductCommandValidatorTests
         Slug = null,
         Description = null,
         BasePrice = 55_000m,
-        CategoryIds = [Guid.NewGuid()],
+        CategoryIds = new List<Guid> { Guid.NewGuid() },
         IsFeatured = false,
         DisplayOrder = 0
     });
@@ -29,7 +29,7 @@ public class CreateProductCommandValidatorTests
         {
             Name = "",
             BasePrice = 55_000m,
-            CategoryIds = [Guid.NewGuid()]
+            CategoryIds = new List<Guid> { Guid.NewGuid() }
         });
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Name);
     }
@@ -41,7 +41,7 @@ public class CreateProductCommandValidatorTests
         {
             Name = new string('a', 201),
             BasePrice = 55_000m,
-            CategoryIds = [Guid.NewGuid()]
+            CategoryIds = new List<Guid> { Guid.NewGuid() }
         });
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Name);
     }
@@ -56,7 +56,7 @@ public class CreateProductCommandValidatorTests
             Name = "Iced Latte",
             Slug = "Iced-Latte",
             BasePrice = 55_000m,
-            CategoryIds = [Guid.NewGuid()]
+            CategoryIds = new List<Guid> { Guid.NewGuid() }
         });
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Slug);
     }
@@ -69,7 +69,7 @@ public class CreateProductCommandValidatorTests
             Name = "Iced Latte",
             Slug = "iced latte",
             BasePrice = 55_000m,
-            CategoryIds = [Guid.NewGuid()]
+            CategoryIds = new List<Guid> { Guid.NewGuid() }
         });
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Slug);
     }
@@ -82,7 +82,7 @@ public class CreateProductCommandValidatorTests
             Name = "Iced Latte",
             Slug = new string('a', 201),
             BasePrice = 55_000m,
-            CategoryIds = [Guid.NewGuid()]
+            CategoryIds = new List<Guid> { Guid.NewGuid() }
         });
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Slug);
     }
@@ -95,7 +95,7 @@ public class CreateProductCommandValidatorTests
             Name = "Iced Latte",
             Slug = null,
             BasePrice = 55_000m,
-            CategoryIds = [Guid.NewGuid()]
+            CategoryIds = new List<Guid> { Guid.NewGuid() }
         });
         _validator.TestValidate(cmd).ShouldNotHaveValidationErrorFor(x => x.Slug);
     }
@@ -109,7 +109,7 @@ public class CreateProductCommandValidatorTests
         {
             Name = "Iced Latte",
             BasePrice = -1m,
-            CategoryIds = [Guid.NewGuid()]
+            CategoryIds = new List<Guid> { Guid.NewGuid() }
         });
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.BasePrice);
     }
@@ -121,7 +121,7 @@ public class CreateProductCommandValidatorTests
         {
             Name = "Iced Latte",
             BasePrice = 0m,
-            CategoryIds = [Guid.NewGuid()]
+            CategoryIds = new List<Guid> { Guid.NewGuid() }
         });
         _validator.TestValidate(cmd).ShouldNotHaveValidationErrorFor(x => x.BasePrice);
     }
@@ -135,7 +135,7 @@ public class CreateProductCommandValidatorTests
         {
             Name = "Iced Latte",
             BasePrice = 55_000m,
-            CategoryIds = []
+            CategoryIds = new List<Guid>()
         });
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.CategoryIds);
     }
@@ -149,7 +149,7 @@ public class CreateProductCommandValidatorTests
         {
             Name = "Iced Latte",
             BasePrice = 55_000m,
-            CategoryIds = [Guid.NewGuid()],
+            CategoryIds = new List<Guid> { Guid.NewGuid() },
             DisplayOrder = -1
         });
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.DisplayOrder);
@@ -171,7 +171,7 @@ public class CreateProductCommandValidatorTests
             Name = "Iced Latte",
             Slug = "iced-latte",
             BasePrice = 55_000m,
-            CategoryIds = [Guid.NewGuid()],
+            CategoryIds = new List<Guid> { Guid.NewGuid() },
             DisplayOrder = 1
         });
         _validator.TestValidate(cmd).ShouldNotHaveAnyValidationErrors();

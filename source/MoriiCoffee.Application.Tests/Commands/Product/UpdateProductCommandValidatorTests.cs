@@ -16,7 +16,7 @@ public class UpdateProductCommandValidatorTests
         {
             Name = "Iced Latte",
             BasePrice = 55_000m,
-            CategoryIds = [Guid.NewGuid()],
+            CategoryIds = new List<Guid> { Guid.NewGuid() },
             Status = EProductStatus.Active,
             DisplayOrder = 0
         };
@@ -27,7 +27,7 @@ public class UpdateProductCommandValidatorTests
     [Fact]
     public void Validate_EmptyId_ReturnsError()
     {
-        var dto = new UpdateProductDto { Name = "Iced Latte", BasePrice = 55_000m, CategoryIds = [Guid.NewGuid()] };
+        var dto = new UpdateProductDto { Name = "Iced Latte", BasePrice = 55_000m, CategoryIds = new List<Guid> { Guid.NewGuid() } };
         var cmd = new UpdateProductCommand(Guid.Empty, dto);
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Id);
     }
@@ -56,7 +56,7 @@ public class UpdateProductCommandValidatorTests
     [Fact]
     public void Validate_EmptyCategoryIds_ReturnsError()
     {
-        var cmd = ValidCommand(dto => dto.CategoryIds = []);
+        var cmd = ValidCommand(dto => dto.CategoryIds = new List<Guid>());
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.CategoryIds);
     }
 

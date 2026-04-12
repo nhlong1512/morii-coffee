@@ -44,16 +44,17 @@ public class CreateProductVariantCommandHandlerTests
             .Returns(new ProductVariantDto { Name = "Medium", TotalPrice = 60_000m });
 
         var cmd = new CreateProductVariantCommand(productId,
-        [
-            new CreateProductVariantDto
+            new List<CreateProductVariantDto>
             {
-                Name = "Medium",
-                Size = EProductSize.Medium,
-                AdditionalPrice = 10_000m,
-                IsDefault = true,
-                IsAvailable = true
-            }
-        ]);
+                new CreateProductVariantDto
+                {
+                    Name = "Medium",
+                    Size = EProductSize.Medium,
+                    AdditionalPrice = 10_000m,
+                    IsDefault = true,
+                    IsAvailable = true
+                }
+            });
 
         _variantsRepo.Setup(r => r.ClearDefaultFlagAsync(productId, null)).Returns(Task.CompletedTask);
 
@@ -70,10 +71,10 @@ public class CreateProductVariantCommandHandlerTests
         _productsRepo.Setup(r => r.GetByIdAsync(productId)).ReturnsAsync((ProductEntity)null!);
 
         var cmd = new CreateProductVariantCommand(productId,
-        [
-            new CreateProductVariantDto
-                { Name = "Medium", Size = EProductSize.Medium, AdditionalPrice = 0 }
-        ]);
+            new List<CreateProductVariantDto>
+            {
+                new CreateProductVariantDto { Name = "Medium", Size = EProductSize.Medium, AdditionalPrice = 0 }
+            });
 
         await _handler.Invoking(h => h.Handle(cmd, CancellationToken.None))
             .Should().ThrowAsync<NotFoundException>();
@@ -90,10 +91,10 @@ public class CreateProductVariantCommandHandlerTests
             .ReturnsAsync(new List<ProductVariantEntity> { existingVariant });
 
         var cmd = new CreateProductVariantCommand(productId,
-        [
-            new CreateProductVariantDto
-                { Name = "Medium", Size = EProductSize.Medium, AdditionalPrice = 0 }
-        ]);
+            new List<CreateProductVariantDto>
+            {
+                new CreateProductVariantDto { Name = "Medium", Size = EProductSize.Medium, AdditionalPrice = 0 }
+            });
 
         await _handler.Invoking(h => h.Handle(cmd, CancellationToken.None))
             .Should().ThrowAsync<BadRequestException>();
