@@ -7,4 +7,8 @@
     <Project Path="source/MoriiCoffee.Infrastructure/MoriiCoffee.Infrastructure.csproj" />
     <Project Path="source/MoriiCoffee.Presentation/MoriiCoffee.Presentation.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="source/MoriiCoffee.Domain.Tests/MoriiCoffee.Domain.Tests.csproj" />
+    <Project Path="source/MoriiCoffee.Application.Tests/MoriiCoffee.Application.Tests.csproj" />
+  </Folder>
 </Solution>
