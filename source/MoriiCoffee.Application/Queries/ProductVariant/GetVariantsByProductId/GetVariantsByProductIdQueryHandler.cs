@@ -28,7 +28,6 @@ public class GetVariantsByProductIdQueryHandler
         var variants = await _unitOfWork.ProductVariants.GetByProductIdAsync(request.ProductId);
 
         return variants
-            .OrderBy(v => v.Size)
             .Select(v =>
             {
                 var dto = _mapper.Map<ProductVariantDto>(v);

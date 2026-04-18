@@ -19,7 +19,6 @@ public class ProductVariantsRepository : RepositoryBase<ProductVariant>, IProduc
     {
         return await _context.ProductVariants
             .Where(v => v.ProductId == productId && !v.IsDeleted)
-            .OrderBy(v => v.Size)
             .ToListAsync();
     }
 
