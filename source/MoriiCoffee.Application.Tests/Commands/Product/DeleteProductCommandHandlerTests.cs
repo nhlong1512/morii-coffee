@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Moq;
 using MoriiCoffee.Application.Commands.Product.DeleteProduct;
+using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Domain.SeedWork.Persistence;
@@ -13,12 +14,15 @@ public class DeleteProductCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IProductsRepository> _productsRepo = new();
+    private readonly Mock<IProductCatalogCache> _catalogCache = new();
     private readonly DeleteProductCommandHandler _handler;
 
     public DeleteProductCommandHandlerTests()
     {
         _unitOfWork.Setup(u => u.Products).Returns(_productsRepo.Object);
-        _handler = new DeleteProductCommandHandler(_unitOfWork.Object);
+        _catalogCache.Setup(c => c.InvalidateProductAsync(It.IsAny<Guid>())).Returns(Task.CompletedTask);
+        _catalogCache.Setup(c => c.InvalidateAllListsAsync()).Returns(Task.CompletedTask);
+        _handler = new DeleteProductCommandHandler(_unitOfWork.Object, _catalogCache.Object);
     }
 
     [Fact]

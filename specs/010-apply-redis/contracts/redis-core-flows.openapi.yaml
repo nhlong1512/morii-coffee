@@ -1,0 +1,271 @@
+openapi: 3.0.3
+info:
+  title: Morii Coffee Redis Core Flows
+  version: 0.1.0
+  description: >
+    Planned API contracts for Redis-backed cart operations and the opaque password
+    reset session flow.
+tags:
+  - name: Cart
+  - name: Auth
+paths:
+  /api/v1/cart:
+    get:
+      tags: [Cart]
+      summary: Get the authenticated user's active cart
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active cart or empty cart state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '401':
+          description: Authentication required
+        '503':
+          description: Cart storage unavailable
+    delete:
+      tags: [Cart]
+      summary: Clear the authenticated user's active cart
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Cart cleared
+        '401':
+          description: Authentication required
+        '503':
+          description: Cart storage unavailable
+  /api/v1/cart/items:
+    post:
+      tags: [Cart]
+      summary: Add an item to the authenticated user's cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+      responses:
+        '200':
+          description: Cart updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '400':
+          description: Invalid variant or quantity
+        '401':
+          description: Authentication required
+        '503':
+          description: Cart storage unavailable
+  /api/v1/cart/items/{variantId}:
+    put:
+      tags: [Cart]
+      summary: Update quantity for a cart line
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: variantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCartItemRequest'
+      responses:
+        '200':
+          description: Cart updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '400':
+          description: Invalid quantity or unavailable item
+        '401':
+          description: Authentication required
+        '404':
+          description: Cart line not found
+        '503':
+          description: Cart storage unavailable
+    delete:
+      tags: [Cart]
+      summary: Remove a cart line
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: variantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Cart line removed
+        '401':
+          description: Authentication required
+        '404':
+          description: Cart line not found
+        '503':
+          description: Cart storage unavailable
+  /api/v1/auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Start password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Privacy-safe accepted response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericAcceptedResponse'
+        '503':
+          description: Reset-session storage unavailable
+  /api/v1/auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Complete password reset with an opaque reset ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+        '400':
+          description: Invalid, expired, or consumed ticket
+        '503':
+          description: Reset-session storage unavailable
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CartResponse:
+      type: object
+      required: [userId, items, grandTotal, updatedAtUtc]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        grandTotal:
+          type: number
+          format: double
+        updatedAtUtc:
+          type: string
+          format: date-time
+    CartItem:
+      type: object
+      required:
+        - productId
+        - variantId
+        - productName
+        - variantName
+        - unitPrice
+        - quantity
+        - lineTotal
+      properties:
+        productId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+        productName:
+          type: string
+        variantName:
+          type: string
+        thumbnailUrl:
+          type: string
+          nullable: true
+        unitPrice:
+          type: number
+          format: double
+        quantity:
+          type: integer
+          minimum: 1
+        lineTotal:
+          type: number
+          format: double
+    AddCartItemRequest:
+      type: object
+      required: [variantId, quantity]
+      properties:
+        variantId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+    UpdateCartItemRequest:
+      type: object
+      required: [quantity]
+      properties:
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 99
+          description: Quantity 0 removes the item.
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    ResetPasswordRequest:
+      type: object
+      required: [ticket, newPassword]
+      properties:
+        email:
+          type: string
+          format: email
+          nullable: true
+          description: Temporary compatibility field; ignored when ticket is valid.
+        ticket:
+          type: string
+          description: Opaque one-time reset ticket from the email link.
+        newPassword:
+          type: string
+          format: password
+    GenericAcceptedResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: If the email exists, a reset link has been sent.
+    GenericSuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Password reset successfully.

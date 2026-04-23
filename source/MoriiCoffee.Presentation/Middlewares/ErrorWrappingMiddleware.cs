@@ -41,6 +41,11 @@ public class ErrorWrappingMiddleware
             _logger.LogWarning(ex, "{Message}", ex.Message);
             await WriteJsonResponse(context, ex.StatusCode, new ApiUnauthorizedResponse(ex.Message));
         }
+        catch (ServiceUnavailableException ex)
+        {
+            _logger.LogWarning(ex, "{Message}", ex.Message);
+            await WriteJsonResponse(context, ex.StatusCode, new ApiServiceUnavailableResponse(ex.Message));
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception: {Message}", ex.Message);

@@ -4,12 +4,12 @@ using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
+using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Constants;
 using MoriiCoffee.Domain.Shared.Enums.Product;
 using CategoryEntity = MoriiCoffee.Domain.Aggregates.CategoryAggregate.Category;
-using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
 using ProductEntity = MoriiCoffee.Domain.Aggregates.ProductAggregate.Product;
 
 namespace MoriiCoffee.Application.Commands.Product.CreateProduct;
@@ -26,12 +26,18 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileService _fileService;
     private readonly IMapper _mapper;
+    private readonly IProductCatalogCache _catalogCache;
 
-    public CreateProductCommandHandler(IUnitOfWork unitOfWork, IFileService fileService, IMapper mapper)
+    public CreateProductCommandHandler(
+        IUnitOfWork unitOfWork,
+        IFileService fileService,
+        IMapper mapper,
+        IProductCatalogCache catalogCache)
     {
         _unitOfWork = unitOfWork;
         _fileService = fileService;
         _mapper = mapper;
+        _catalogCache = catalogCache;
     }
 
     public async Task<ProductDto> Handle(CreateProductCommand request, CancellationToken cancellationToken)
@@ -99,6 +105,8 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             await _unitOfWork.ProductImages.CreateAsync(thumbnailImage);
 
         await _unitOfWork.CommitAsync();
+
+        await _catalogCache.InvalidateAllListsAsync();
 
         return _mapper.Map<ProductDto>(product);
     }

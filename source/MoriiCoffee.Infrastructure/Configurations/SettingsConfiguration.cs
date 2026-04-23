@@ -26,3 +26,4 @@ public static class SettingsConfiguration
         return services;
     }
 }
+

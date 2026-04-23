@@ -10,12 +10,21 @@ services:
         condition: service_healthy
       moriicoffee.minio:
         condition: service_started
+      moriicoffee.redis:
+        condition: service_started
     ports:
       - "8002:80"
     build:
       context: ..
       dockerfile: source/MoriiCoffee.Presentation/Dockerfile
     restart: on-failure
+
+  moriicoffee.redis:
+    image: redis:7-alpine
+    container_name: moriicoffee.redis
+    ports:
+      - "6379:6379"
+    restart: always
 
 networks:
   default:

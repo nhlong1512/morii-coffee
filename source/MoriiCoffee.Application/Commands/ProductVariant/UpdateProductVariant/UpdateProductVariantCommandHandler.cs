@@ -1,4 +1,5 @@
 using AutoMapper;
+using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.ProductVariant;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.SeedWork.Command;
@@ -10,11 +11,16 @@ public class UpdateProductVariantCommandHandler : ICommandHandler<UpdateProductV
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IProductCatalogCache _catalogCache;
 
-    public UpdateProductVariantCommandHandler(IUnitOfWork unitOfWork, IMapper mapper)
+    public UpdateProductVariantCommandHandler(
+        IUnitOfWork unitOfWork,
+        IMapper mapper,
+        IProductCatalogCache catalogCache)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _catalogCache = catalogCache;
     }
 
     public async Task<ProductVariantDto> Handle(UpdateProductVariantCommand request, CancellationToken cancellationToken)
@@ -42,6 +48,9 @@ public class UpdateProductVariantCommandHandler : ICommandHandler<UpdateProductV
 
         await _unitOfWork.ProductVariants.Update(variant);
         await _unitOfWork.CommitAsync();
+
+        await _catalogCache.InvalidateProductAsync(variant.ProductId);
+        await _catalogCache.InvalidateAllListsAsync();
 
         var dto = _mapper.Map<ProductVariantDto>(variant);
         dto.TotalPrice = product.BasePrice + variant.AdditionalPrice;

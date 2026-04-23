@@ -6,6 +6,8 @@
 
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="4.0.20.2" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.5" />
+    <PackageReference Include="StackExchange.Redis" Version="2.8.24" />
     <PackageReference Include="AutoMapper" Version="16.1.1" />
     <PackageReference Include="brevo_csharp" Version="1.1.2" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />

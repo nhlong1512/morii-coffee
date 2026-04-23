@@ -1,4 +1,5 @@
 using AutoMapper;
+using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.ProductVariant;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.SeedWork.Command;
@@ -15,11 +16,16 @@ public class CreateProductVariantCommandHandler : ICommandHandler<CreateProductV
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IProductCatalogCache _catalogCache;
 
-    public CreateProductVariantCommandHandler(IUnitOfWork unitOfWork, IMapper mapper)
+    public CreateProductVariantCommandHandler(
+        IUnitOfWork unitOfWork,
+        IMapper mapper,
+        IProductCatalogCache catalogCache)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _catalogCache = catalogCache;
     }
 
     public async Task<List<ProductVariantDto>> Handle(CreateProductVariantCommand request, CancellationToken cancellationToken)
@@ -66,6 +72,9 @@ public class CreateProductVariantCommandHandler : ICommandHandler<CreateProductV
         }
 
         await _unitOfWork.CommitAsync();
+
+        await _catalogCache.InvalidateProductAsync(request.ProductId);
+        await _catalogCache.InvalidateAllListsAsync();
 
         return createdVariants.Select(v =>
         {

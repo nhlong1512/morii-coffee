@@ -92,7 +92,7 @@ public class AuthController : ControllerBase
         await _mediator.Send(new ResetPasswordCommand
         {
             Email = dto.Email,
-            Token = dto.Token,
+            Ticket = dto.Ticket,
             NewPassword = dto.NewPassword
         });
         return Ok(new ApiOkResponse("Password reset successfully."));

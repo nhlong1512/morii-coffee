@@ -2,6 +2,7 @@ using AutoMapper;
 using FluentAssertions;
 using Moq;
 using MoriiCoffee.Application.Commands.Product.ReorderProductImages;
+using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.ProductImage;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
@@ -16,12 +17,15 @@ public class ReorderProductImagesCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IProductImagesRepository> _imagesRepo = new();
     private readonly Mock<IMapper> _mapper = new();
+    private readonly Mock<IProductCatalogCache> _catalogCache = new();
     private readonly ReorderProductImagesCommandHandler _handler;
 
     public ReorderProductImagesCommandHandlerTests()
     {
         _unitOfWork.Setup(u => u.ProductImages).Returns(_imagesRepo.Object);
-        _handler = new ReorderProductImagesCommandHandler(_unitOfWork.Object, _mapper.Object);
+        _catalogCache.Setup(c => c.InvalidateProductAsync(It.IsAny<Guid>())).Returns(Task.CompletedTask);
+        _catalogCache.Setup(c => c.InvalidateAllListsAsync()).Returns(Task.CompletedTask);
+        _handler = new ReorderProductImagesCommandHandler(_unitOfWork.Object, _mapper.Object, _catalogCache.Object);
     }
 
     [Fact]

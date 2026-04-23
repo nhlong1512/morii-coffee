@@ -10,33 +10,16 @@ public class ResetPasswordCommandValidatorTests
 
     private static ResetPasswordCommand ValidCommand() => new()
     {
-        Email = "user@morii.coffee",
-        Token = "valid-reset-token",
+        Ticket = "valid-opaque-ticket",
         NewPassword = "StrongPass1!"
     };
 
     [Fact]
-    public void Validate_EmptyEmail_ReturnsError()
+    public void Validate_EmptyTicket_ReturnsError()
     {
         var cmd = ValidCommand();
-        cmd.Email = "";
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Email);
-    }
-
-    [Fact]
-    public void Validate_InvalidEmailFormat_ReturnsError()
-    {
-        var cmd = ValidCommand();
-        cmd.Email = "not-email";
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Email);
-    }
-
-    [Fact]
-    public void Validate_EmptyToken_ReturnsError()
-    {
-        var cmd = ValidCommand();
-        cmd.Token = "";
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Token);
+        cmd.Ticket = "";
+        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Ticket);
     }
 
     [Fact]
@@ -67,5 +50,13 @@ public class ResetPasswordCommandValidatorTests
     public void Validate_ValidCommand_NoErrors()
     {
         _validator.TestValidate(ValidCommand()).ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_OptionalEmailNull_NoError()
+    {
+        var cmd = ValidCommand();
+        cmd.Email = null;
+        _validator.TestValidate(cmd).ShouldNotHaveAnyValidationErrors();
     }
 }

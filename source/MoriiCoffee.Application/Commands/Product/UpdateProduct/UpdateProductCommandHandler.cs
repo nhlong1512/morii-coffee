@@ -18,12 +18,18 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileService _fileService;
     private readonly IMapper _mapper;
+    private readonly IProductCatalogCache _catalogCache;
 
-    public UpdateProductCommandHandler(IUnitOfWork unitOfWork, IFileService fileService, IMapper mapper)
+    public UpdateProductCommandHandler(
+        IUnitOfWork unitOfWork,
+        IFileService fileService,
+        IMapper mapper,
+        IProductCatalogCache catalogCache)
     {
         _unitOfWork = unitOfWork;
         _fileService = fileService;
         _mapper = mapper;
+        _catalogCache = catalogCache;
     }
 
     public async Task<ProductDto> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
@@ -86,6 +92,9 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
 
         await _unitOfWork.Products.Update(product);
         await _unitOfWork.CommitAsync();
+
+        await _catalogCache.InvalidateProductAsync(product.Id);
+        await _catalogCache.InvalidateAllListsAsync();
 
         return _mapper.Map<ProductDto>(product);
     }

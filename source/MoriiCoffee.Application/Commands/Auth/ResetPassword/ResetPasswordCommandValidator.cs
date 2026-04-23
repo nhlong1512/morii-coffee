@@ -2,17 +2,13 @@ using FluentValidation;
 
 namespace MoriiCoffee.Application.Commands.Auth.ResetPassword;
 
-/// <summary>Validates ResetPasswordCommand: email format, token presence, and password complexity.</summary>
+/// <summary>Validates ResetPasswordCommand: ticket presence and password complexity.</summary>
 public class ResetPasswordCommandValidator : AbstractValidator<ResetPasswordCommand>
 {
     public ResetPasswordCommandValidator()
     {
-        RuleFor(x => x.Email)
-            .NotEmpty()
-            .EmailAddress().WithMessage("A valid email address is required.");
-
-        RuleFor(x => x.Token)
-            .NotEmpty();
+        RuleFor(x => x.Ticket)
+            .NotEmpty().WithMessage("A reset ticket is required.");
 
         RuleFor(x => x.NewPassword)
             .NotEmpty()

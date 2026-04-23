@@ -20,11 +20,16 @@ public class DeleteProductImageCommandHandler : ICommandHandler<DeleteProductIma
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileService _fileService;
+    private readonly IProductCatalogCache _catalogCache;
 
-    public DeleteProductImageCommandHandler(IUnitOfWork unitOfWork, IFileService fileService)
+    public DeleteProductImageCommandHandler(
+        IUnitOfWork unitOfWork,
+        IFileService fileService,
+        IProductCatalogCache catalogCache)
     {
         _unitOfWork = unitOfWork;
         _fileService = fileService;
+        _catalogCache = catalogCache;
     }
 
     public async Task<bool> Handle(DeleteProductImageCommand request, CancellationToken cancellationToken)
@@ -39,6 +44,9 @@ public class DeleteProductImageCommandHandler : ICommandHandler<DeleteProductIma
 
         await _unitOfWork.ProductImages.Delete(image);
         await _unitOfWork.CommitAsync();
+
+        await _catalogCache.InvalidateProductAsync(request.ProductId);
+        await _catalogCache.InvalidateAllListsAsync();
 
         await _fileService.DeleteAsync(FileContainers.PRODUCTS, s3KeyToDelete);
 

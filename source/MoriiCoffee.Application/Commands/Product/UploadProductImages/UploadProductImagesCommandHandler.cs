@@ -29,12 +29,18 @@ public class UploadProductImagesCommandHandler : ICommandHandler<UploadProductIm
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileService _fileService;
     private readonly IMapper _mapper;
+    private readonly IProductCatalogCache _catalogCache;
 
-    public UploadProductImagesCommandHandler(IUnitOfWork unitOfWork, IFileService fileService, IMapper mapper)
+    public UploadProductImagesCommandHandler(
+        IUnitOfWork unitOfWork,
+        IFileService fileService,
+        IMapper mapper,
+        IProductCatalogCache catalogCache)
     {
         _unitOfWork = unitOfWork;
         _fileService = fileService;
         _mapper = mapper;
+        _catalogCache = catalogCache;
     }
 
     public async Task<List<ProductImageDto>> Handle(
@@ -70,6 +76,9 @@ public class UploadProductImagesCommandHandler : ICommandHandler<UploadProductIm
             foreach (var image in uploadedImages)
                 await _unitOfWork.ProductImages.CreateAsync(image);
         });
+
+        await _catalogCache.InvalidateProductAsync(request.ProductId);
+        await _catalogCache.InvalidateAllListsAsync();
 
         return uploadedImages.Select(image => _mapper.Map<ProductImageDto>(image)).ToList();
     }

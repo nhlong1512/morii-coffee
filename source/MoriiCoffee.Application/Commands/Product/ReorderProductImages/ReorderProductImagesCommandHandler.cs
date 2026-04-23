@@ -1,4 +1,5 @@
 using AutoMapper;
+using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.ProductImage;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.SeedWork.Command;
@@ -15,11 +16,16 @@ public class ReorderProductImagesCommandHandler : ICommandHandler<ReorderProduct
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IProductCatalogCache _catalogCache;
 
-    public ReorderProductImagesCommandHandler(IUnitOfWork unitOfWork, IMapper mapper)
+    public ReorderProductImagesCommandHandler(
+        IUnitOfWork unitOfWork,
+        IMapper mapper,
+        IProductCatalogCache catalogCache)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _catalogCache = catalogCache;
     }
 
     public async Task<List<ProductImageDto>> Handle(
@@ -53,6 +59,9 @@ public class ReorderProductImagesCommandHandler : ICommandHandler<ReorderProduct
         }
 
         await _unitOfWork.CommitAsync();
+
+        await _catalogCache.InvalidateProductAsync(request.ProductId);
+        await _catalogCache.InvalidateAllListsAsync();
 
         return existing.Values
             .OrderBy(i => i.DisplayOrder)
