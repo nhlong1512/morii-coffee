@@ -88,17 +88,17 @@ public class RepositoryBase<T> : IRepositoryBase<T> where T : EntityBase
 
     public Task<int> CountAsync() => _context.Set<T>().CountAsync();
 
-    public async Task<T> GetByIdAsync(Guid id)
+    public async Task<T?> GetByIdAsync(Guid id)
     {
         var entity = await _context.Set<T>().FindAsync(id);
-        return (entity is not null && !entity.IsDeleted) ? entity : null!;
+        return entity is not null && !entity.IsDeleted ? entity : null;
     }
 
-    public async Task<T> GetByIdAsync(Guid id, params Expression<Func<T, object>>[] includeProperties)
+    public async Task<T?> GetByIdAsync(Guid id, params Expression<Func<T, object>>[] includeProperties)
     {
         IQueryable<T> query = _context.Set<T>().Where(e => !e.IsDeleted);
         query = includeProperties.Aggregate(query, (current, include) => current.Include(include));
-        return await query.FirstOrDefaultAsync(e => EF.Property<Guid>(e, "Id") == id) ?? null!;
+        return await query.FirstOrDefaultAsync(e => EF.Property<Guid>(e, "Id") == id);
     }
 
     public async Task CreateAsync(T entity) => await _context.Set<T>().AddAsync(entity);

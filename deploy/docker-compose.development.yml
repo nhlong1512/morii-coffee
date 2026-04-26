@@ -10,6 +10,8 @@ services:
         condition: service_healthy
       moriicoffee.minio:
         condition: service_started
+      moriicoffee.redis:
+        condition: service_started
     ports:
       - "8002:80"
     build:

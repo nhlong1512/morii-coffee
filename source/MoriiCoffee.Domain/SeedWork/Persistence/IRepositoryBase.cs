@@ -65,10 +65,10 @@ public interface IRepositoryBase<T> where T : EntityBase
     #region Retrieval Methods
 
     /// <summary>Retrieves a non-deleted entity by its primary key.</summary>
-    Task<T> GetByIdAsync(Guid id);
+    Task<T?> GetByIdAsync(Guid id);
 
     /// <summary>Retrieves a non-deleted entity by its primary key, including specified navigation properties.</summary>
-    Task<T> GetByIdAsync(Guid id, params Expression<Func<T, object>>[] includeProperties);
+    Task<T?> GetByIdAsync(Guid id, params Expression<Func<T, object>>[] includeProperties);
 
     #endregion
 

@@ -33,6 +33,7 @@ public static class DependencyInjection
 
         services
             .AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>))
+            .AddScoped(typeof(ICachedRepositoryBase<>), typeof(CachedRepositoryBase<>))
             .AddScoped<IUnitOfWork, UnitOfWorkImpl>();
 
         services

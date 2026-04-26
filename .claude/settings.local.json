@@ -8,5 +8,9 @@
       "WebFetch(domain:www.nuget.org)",
       "WebFetch(domain:devblogs.microsoft.com)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "code-review-graph"
+  ],
+  "enableAllProjectMcpServers": true
 }
