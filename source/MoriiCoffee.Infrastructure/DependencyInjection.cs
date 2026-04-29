@@ -5,6 +5,7 @@ using MoriiCoffee.Infrastructure.Clock;
 using MoriiCoffee.Infrastructure.Configurations;
 using MoriiCoffee.Infrastructure.Persistence;
 using MoriiCoffee.Infrastructure.Services;
+using MoriiCoffee.Infrastructure.Services.Cart;
 using MoriiCoffee.Infrastructure.Services.Email;
 
 namespace MoriiCoffee.Infrastructure;
@@ -46,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IEmailService, BrevoEmailService>();
         services.AddScoped<IFileService, AwsS3FileService>();
+        services.AddScoped<ICartService, RedisCartService>();
         return services;
     }
 }
