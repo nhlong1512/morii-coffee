@@ -1,3 +1,6 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
 
 /// <summary>
@@ -20,9 +23,18 @@ public record DeliveryInfo
             : address.Trim();
     }
 
+    [Required]
+    [MaxLength(100)]
+    [Column(TypeName = "nvarchar(100)")]
     public string FullName { get; init; }
 
+    [Required]
+    [MaxLength(15)]
+    [Column(TypeName = "nvarchar(15)")]
     public string PhoneNumber { get; init; }
 
+    [Required]
+    [MaxLength(500)]
+    [Column(TypeName = "nvarchar(500)")]
     public string Address { get; init; }
 }

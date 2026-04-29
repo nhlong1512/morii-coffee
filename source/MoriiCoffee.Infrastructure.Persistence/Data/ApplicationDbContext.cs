@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MoriiCoffee.Domain.Aggregates.BannerAggregate;
 using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
+using MoriiCoffee.Domain.Aggregates.OrderAggregate;
+using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
@@ -49,6 +51,13 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
     public DbSet<ProductVariant> ProductVariants { get; set; }
     public DbSet<ProductImage> ProductImages { get; set; }
     public DbSet<ProductCategory> ProductCategories { get; set; }
+
+    #endregion
+
+    #region OrderAggregate
+
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<OrderItem> OrderItems { get; set; }
 
     #endregion
 
