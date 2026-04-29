@@ -29,6 +29,7 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
 
     public override DbSet<User> Users { get; set; }
     public override DbSet<Role> Roles { get; set; }
+    public DbSet<UserDeliveryProfile> UserDeliveryProfiles { get; set; }
 
     #endregion
 
