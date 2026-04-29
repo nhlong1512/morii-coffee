@@ -39,6 +39,7 @@ internal static class ApplicationExtensions
 
         // 7. Controller endpoints
         app.MapControllers();
+        app.MapHealthChecks("/health");
 
         // 8. Auto-migrate and seed
         using var scope = app.Services.CreateScope();

@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MoriiCoffee.Infrastructure.HealthChecks;
+using StackExchange.Redis;
 
 namespace MoriiCoffee.Infrastructure.Configurations;
 
@@ -15,6 +17,13 @@ public static class CachingConfiguration
         {
             options.Configuration = connectionString;
         });
+
+        services.AddSingleton<IConnectionMultiplexer>(_ =>
+            ConnectionMultiplexer.Connect(connectionString));
+
+        services.AddHealthChecks()
+            .AddCheck<RedisHealthCheck>("redis");
+
         return services;
     }
 }
