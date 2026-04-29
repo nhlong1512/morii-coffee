@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.ConfigureValidation();
         services.ConfigureSwagger();
         services.ConfigureStorage();
+        services.ConfigureRedis(configuration);
         services.ConfigurePersistenceServices();
         services.ConfigureDependencyInjection();
 
@@ -40,6 +41,8 @@ public static class DependencyInjection
     public static IServiceCollection ConfigureDependencyInjection(this IServiceCollection services)
     {
         services.AddTransient<IDateTimeProvider, DateTimeProvider>();
+        services.AddSingleton<ISerializeService, JsonSerializeService>();
+        services.AddScoped<ICacheService, CacheService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IEmailService, BrevoEmailService>();
         services.AddScoped<IFileService, AwsS3FileService>();

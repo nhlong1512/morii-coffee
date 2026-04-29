@@ -459,8 +459,8 @@ source/MoriiCoffee.Presentation/appsettings.Development.json
 
 # Ignore everything in docs/ except these files and folders:
 docs/**
-!docs/features/
-!docs/features/**
+# !docs/features/
+# !docs/features/**
 
 # Coverage
 coverage-results/
