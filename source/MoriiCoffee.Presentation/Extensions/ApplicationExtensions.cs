@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using MoriiCoffee.Infrastructure;
 using MoriiCoffee.Infrastructure.Configurations;
@@ -41,7 +42,10 @@ internal static class ApplicationExtensions
         app.MapControllers();
         app.MapHealthChecks("/health");
 
-        // 8. Auto-migrate and seed
+        // 8. Hangfire dashboard
+        app.UseHangfireDashboard();
+
+        // 9. Auto-migrate and seed
         using var scope = app.Services.CreateScope();
         var services = scope.ServiceProvider;
         var logger = services.GetRequiredService<ILogger<ApplicationDbContext>>();
@@ -65,4 +69,5 @@ internal static class ApplicationExtensions
             logger.LogError(ex, "An error occurred during database migration or seeding.");
         }
     }
+
 }

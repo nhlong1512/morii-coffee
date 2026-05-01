@@ -23,6 +23,9 @@ public static class SettingsConfiguration
         var emailSettings = configuration.GetSection(nameof(EmailSettings)).Get<EmailSettings>();
         services.AddSingleton<EmailSettings>(emailSettings!);
 
+        var orderSettings = configuration.GetSection(nameof(OrderSettings)).Get<OrderSettings>();
+        services.AddSingleton<OrderSettings>(orderSettings!);
+
         return services;
     }
 }

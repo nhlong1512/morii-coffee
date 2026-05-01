@@ -2,7 +2,7 @@
 
 **Feature:** `cart-order-management`  
 **Branch:** `009-cart-payment`  
-**Ngày cập nhật:** 2026-04-27  
+**Ngày cập nhật:** 2026-05-02  
 **Ngôn ngữ:** C# / .NET 10.0 — Clean Architecture
 
 ---
@@ -565,31 +565,33 @@ public async Task<string> GenerateAsync()
 
 ## 7. Infrastructure — Auto-Complete Background Job
 
+> ✅ **Đã implement bằng Hangfire** (thay vì .NET BackgroundService như plan gốc)
+
 **Đường dẫn:** `/source/MoriiCoffee.Infrastructure/BackgroundJobs/`
 
 ```
-OrderAutoCompleteJob.cs    ← kế thừa BackgroundService
+OrderAutoCompleteJob.cs    ← Hangfire recurring job (plain class, không kế thừa gì)
 ```
 
 **Logic:**
 
 ```csharp
-// Chạy mỗi ngày lúc 2:00 AM
-// Tìm tất cả đơn IN_DELIVERY đã quá AutoCompleteAfterDays ngày
-// → Update status = DELIVERED
-// → Log ra Serilog để audit
+// Mỗi ngày lúc 2:00 UTC, Hangfire tự trigger
+// Tìm tất cả đơn IN_DELIVERY có CreatedAt <= (now - 3 ngày)
+// → order.MarkDelivered() → CommitAsync() một lần cho toàn batch
 
-protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+[DisableConcurrentExecution(timeoutInSeconds: 10 * 60)]
+public async Task ExecuteAsync(CancellationToken ct = default)
 {
-    while (!stoppingToken.IsCancellationRequested)
-    {
-        var now = DateTime.UtcNow;
-        var todayRun = now.Date.AddHours(2);
-        var nextRun = now < todayRun ? todayRun : todayRun.AddDays(1);
-        await Task.Delay(nextRun - now, stoppingToken);
+    var cutoffDate = DateTime.UtcNow.AddDays(-3);
+    var staleOrders = await _unitOfWork.Orders
+        .FindByCondition(o => !o.IsDeleted
+            && o.OrderStatus == EOrderStatus.IN_DELIVERY
+            && o.CreatedAt <= cutoffDate, trackChanges: true)
+        .ToListAsync(ct);
 
-        await AutoCompleteOrdersAsync();
-    }
+    foreach (var order in staleOrders) order.MarkDelivered();
+    await _unitOfWork.CommitAsync();
 }
 ```
 
@@ -597,17 +599,31 @@ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 
 ```json
 "OrderSettings": {
-  "AutoCompleteAfterDays": 3,
   "AutoCompleteJobRunHour": 2
 }
 ```
 
-**Đăng ký DI:**
+**Đăng ký DI và recurring job:**
 
 ```csharp
-services.AddHostedService<OrderAutoCompleteJob>();
-services.Configure<OrderSettings>(configuration.GetSection("OrderSettings"));
+// Infrastructure/DependencyInjection.cs
+services.ConfigureHangfire(configuration);  // AddHangfire + AddHangfireServer + SqlServer storage
+
+// Presentation/Extensions/HangfireJobsExtensions.cs
+recurringJobs.AddOrUpdate<OrderAutoCompleteJob>(
+    "order-auto-complete",
+    job => job.ExecuteAsync(CancellationToken.None),
+    $"0 {orderSettings.AutoCompleteJobRunHour} * * *");
+
+// Presentation/Extensions/ApplicationExtensions.cs
+app.UseHangfireDashboard();  // /hangfire — localhost only
 ```
+
+**Lý do dùng Hangfire thay BackgroundService:**
+- Có retry tự động khi job fail
+- Dashboard tại `/hangfire` để monitor và trigger thủ công
+- Dễ thêm job mới (email, cleanup...) mà không cần viết lại vòng lặp scheduling
+- Lưu lịch sử chạy job để audit trail
 
 ---
 
@@ -793,9 +809,9 @@ Phase 5 — Delivery Profile
   ☑ 22. Mở rộng UsersController (2 endpoints)
 
 Phase 6 — Background Job
-  ☐ 23. Thêm OrderSettings vào appsettings.json (AutoCompleteAfterDays, RunHour)
-  ☐ 24. Tạo OrderAutoCompleteJob (BackgroundService)
-  ☐ 25. Đăng ký hosted service trong DI
+  ☑ 23. Thêm OrderSettings vào appsettings.json (AutoCompleteJobRunHour)
+  ☑ 24. Tạo OrderAutoCompleteJob (Hangfire recurring job — thay BackgroundService)
+  ☑ 25. Đăng ký Hangfire (ConfigureHangfire, dashboard, RecurringJob)
 
 Phase 7 — Hardening
   ☐ 26. Unit tests cho PlaceOrderCommandHandler (case: stock hết, giá thay đổi, cart rỗng)
@@ -810,7 +826,7 @@ Phase 7 — Hardening
 | Hạng mục | Số lượng | Chi tiết |
 |---|---|---|
 | Phases | 7 | Redis → Domain/DB → Cart → Order → Profile → Job → Tests |
-| NuGet packages mới | 2 | StackExchange.Redis (optional direct use), Microsoft.Extensions.Caching.StackExchangeRedis |
+| NuGet packages mới | 5 | StackExchange.Redis, Microsoft.Extensions.Caching.StackExchangeRedis, Hangfire.Core, Hangfire.SqlServer, Hangfire.AspNetCore |
 | Docker services mới | 1 | redis:7-alpine |
 | Config sections mới | 2 | ConnectionStrings (CachingConnectionString), OrderSettings |
 | Enums mới | 2 | EOrderStatus, EPaymentMethod |
@@ -819,6 +835,6 @@ Phase 7 — Hardening
 | Queries mới | 5 | Cart (1) + Order (3) + Profile (1) |
 | Controllers mới | 2 | CartController, OrdersController |
 | Endpoints mở rộng (Users) | 2 | delivery-profile GET/PUT |
-| Infrastructure services mới | 3 | RedisCartService, OrderIdGenerator, OrderAutoCompleteJob |
+| Infrastructure services mới | 3 | RedisCartService, OrderIdGenerator, OrderAutoCompleteJob (Hangfire) |
 | DB migrations | 1 | 3 bảng: orders, order_items, user_delivery_profiles |
 | Tổng tasks checklist | 28 | Phân bổ theo 7 phases |

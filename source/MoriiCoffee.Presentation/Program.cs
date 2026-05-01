@@ -14,4 +14,5 @@ Log.Information("Starting MoriiCoffee API...");
 
 WebApplication app = builder.Build();
 app.UseInfrastructure(AppCors);
+app.RegisterRecurringJobs();
 app.Run();

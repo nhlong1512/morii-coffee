@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.ConfigureStorage();
         services.ConfigureRedis(configuration);
         services.ConfigurePersistenceServices();
+        services.ConfigureHangfire(configuration);
         services.ConfigureDependencyInjection();
 
         return services;
