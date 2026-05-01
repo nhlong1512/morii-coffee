@@ -21,6 +21,8 @@ public class UnitOfWork : IUnitOfWork
     private ProductVariantsRepository? _productVariants;
     private ProductImagesRepository? _productImages;
     private BannersRepository? _banners;
+    private OrdersRepository? _orders;
+    private UserDeliveryProfilesRepository? _userDeliveryProfiles;
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -41,6 +43,12 @@ public class UnitOfWork : IUnitOfWork
 
     public IBannersRepository Banners =>
         _banners ??= new BannersRepository(_context);
+
+    public IOrderRepository Orders =>
+        _orders ??= new OrdersRepository(_context);
+
+    public IUserDeliveryProfileRepository UserDeliveryProfiles =>
+        _userDeliveryProfiles ??= new UserDeliveryProfilesRepository(_context);
 
     public async Task<int> CommitAsync() =>
         await _context.SaveChangesAsync();

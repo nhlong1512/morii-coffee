@@ -461,6 +461,8 @@ source/MoriiCoffee.Presentation/appsettings.Development.json
 docs/**
 # !docs/features/
 # !docs/features/**
+# !docs/explainations/
+# !docs/explainations/**
 
 # Coverage
 coverage-results/
