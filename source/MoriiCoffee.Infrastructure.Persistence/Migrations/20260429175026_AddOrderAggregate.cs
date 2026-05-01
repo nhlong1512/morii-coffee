@@ -11,6 +11,23 @@ namespace MoriiCoffee.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql(
+                """
+                ;WITH DuplicateSlugs AS (
+                    SELECT
+                        Id,
+                        Slug,
+                        ROW_NUMBER() OVER (PARTITION BY Slug ORDER BY CreatedAt, Id) AS RowNum
+                    FROM dbo.Products
+                    WHERE Slug IS NOT NULL
+                )
+                UPDATE p
+                SET Slug = LEFT(d.Slug, 191) + '-' + RIGHT(CONVERT(nvarchar(36), p.Id), 8)
+                FROM dbo.Products p
+                INNER JOIN DuplicateSlugs d ON d.Id = p.Id
+                WHERE d.RowNum > 1;
+                """);
+
             migrationBuilder.CreateTable(
                 name: "Orders",
                 columns: table => new

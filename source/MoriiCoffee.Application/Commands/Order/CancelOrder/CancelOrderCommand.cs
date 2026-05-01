@@ -5,7 +5,7 @@ namespace MoriiCoffee.Application.Commands.Order.CancelOrder;
 
 /// <summary>
 /// Command to cancel an existing order. Only the owner of the order may cancel it,
-/// and only when the order is in PENDING or CONFIRMED status.
+/// and only when the order is still pending staff/admin confirmation.
 /// </summary>
 public class CancelOrderCommand : ICommand<Unit>
 {

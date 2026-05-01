@@ -19,7 +19,7 @@ namespace MoriiCoffee.Presentation.Controllers;
 
 /// <summary>
 /// Manages customer orders. Authenticated users can place orders, view their own orders,
-/// and cancel pending/confirmed orders. Admins can view all orders and update order statuses.
+/// and cancel orders that are still pending confirmation. Admins can view all orders and update order statuses.
 /// </summary>
 [ApiController]
 [Route("api/v1/orders")]
@@ -89,7 +89,7 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Cancel an existing order. Only the order owner may cancel. Only PENDING or CONFIRMED orders can be cancelled.
+    /// Cancel an existing order. Only the order owner may cancel, and only before staff/admin confirmation.
     /// </summary>
     [HttpPatch("{id:guid}/cancel")]
     [SwaggerOperation(Summary = "Cancel an order")]

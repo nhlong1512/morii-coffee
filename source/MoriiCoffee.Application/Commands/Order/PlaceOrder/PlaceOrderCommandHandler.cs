@@ -5,6 +5,7 @@ using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
+using Microsoft.EntityFrameworkCore;
 using OrderDto = MoriiCoffee.Application.SeedWork.DTOs.Order.OrderDto;
 using OrderEntity = MoriiCoffee.Domain.Aggregates.OrderAggregate.Order;
 using OrderItemDto = MoriiCoffee.Application.SeedWork.DTOs.Order.OrderItemDto;
@@ -95,38 +96,63 @@ public class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand, Order
         // 6. Clear cart after successful transaction
         await _cartService.ClearCartAsync(command.UserId);
 
-        return MapToDto(order);
+        return await MapToDtoAsync(order, cart.Items, cancellationToken);
     }
 
     /// <summary>Maps an <see cref="OrderEntity"/> aggregate to its full <see cref="OrderDto"/> representation.</summary>
-    private static OrderDto MapToDto(OrderEntity order) => new()
+    private async Task<OrderDto> MapToDtoAsync(
+        OrderEntity order,
+        IReadOnlyCollection<MoriiCoffee.Application.SeedWork.DTOs.Cart.CartItemDto> cartItems,
+        CancellationToken cancellationToken)
     {
-        Id = order.Id,
-        OrderNumber = order.OrderNumber,
-        UserId = order.UserId,
-        DeliveryFullName = order.DeliveryInfo.FullName,
-        DeliveryPhoneNumber = order.DeliveryInfo.PhoneNumber,
-        DeliveryAddress = order.DeliveryInfo.Address,
-        Notes = order.Notes,
-        PaymentMethod = order.PaymentMethod,
-        Subtotal = order.Subtotal,
-        Tax = order.Tax,
-        Shipping = order.Shipping,
-        Discount = order.Discount,
-        Total = order.Total,
-        OrderStatus = order.OrderStatus,
-        CreatedAt = order.CreatedAt,
-        UpdatedAt = order.UpdatedAt,
-        Items = order.Items.Select(i => new OrderItemDto
+        var cartItemImageMap = cartItems.ToDictionary(
+            item => (item.ProductId, item.VariantId),
+            item => item.ImageUrl);
+
+        var missingProductIds = order.Items
+            .Where(item => !cartItemImageMap.ContainsKey((item.ProductId, item.VariantId)))
+            .Select(item => item.ProductId)
+            .Distinct()
+            .ToList();
+
+        var productImageMap = missingProductIds.Count == 0
+            ? new Dictionary<Guid, string?>()
+            : await _unitOfWork.Products
+                .FindByCondition(p => missingProductIds.Contains(p.Id), false)
+                .ToDictionaryAsync(p => p.Id, p => p.ThumbnailUrl, cancellationToken);
+
+        return new OrderDto
         {
-            Id = i.Id,
-            ProductId = i.ProductId,
-            ProductName = i.ProductName,
-            VariantId = i.VariantId,
-            VariantLabel = i.VariantLabel,
-            UnitPrice = i.UnitPrice,
-            Quantity = i.Quantity,
-            LineTotal = i.LineTotal
-        }).ToList()
-    };
+            Id = order.Id,
+            OrderNumber = order.OrderNumber,
+            UserId = order.UserId,
+            DeliveryFullName = order.DeliveryInfo.FullName,
+            DeliveryPhoneNumber = order.DeliveryInfo.PhoneNumber,
+            DeliveryAddress = order.DeliveryInfo.Address,
+            Notes = order.Notes,
+            PaymentMethod = order.PaymentMethod,
+            Subtotal = order.Subtotal,
+            Tax = order.Tax,
+            Shipping = order.Shipping,
+            Discount = order.Discount,
+            Total = order.Total,
+            OrderStatus = order.OrderStatus,
+            CreatedAt = order.CreatedAt,
+            UpdatedAt = order.UpdatedAt,
+            Items = order.Items.Select(i => new OrderItemDto
+            {
+                Id = i.Id,
+                ProductId = i.ProductId,
+                ProductName = i.ProductName,
+                VariantId = i.VariantId,
+                VariantLabel = i.VariantLabel,
+                ImageUrl = cartItemImageMap.TryGetValue((i.ProductId, i.VariantId), out var imageUrl)
+                    ? imageUrl
+                    : productImageMap.GetValueOrDefault(i.ProductId),
+                UnitPrice = i.UnitPrice,
+                Quantity = i.Quantity,
+                LineTotal = i.LineTotal
+            }).ToList()
+        };
+    }
 }

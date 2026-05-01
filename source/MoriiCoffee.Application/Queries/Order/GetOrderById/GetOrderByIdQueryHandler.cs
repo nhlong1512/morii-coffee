@@ -1,6 +1,7 @@
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.SeedWork.Query;
+using Microsoft.EntityFrameworkCore;
 using OrderDto = MoriiCoffee.Application.SeedWork.DTOs.Order.OrderDto;
 using OrderEntity = MoriiCoffee.Domain.Aggregates.OrderAggregate.Order;
 using OrderItemDto = MoriiCoffee.Application.SeedWork.DTOs.Order.OrderItemDto;
@@ -32,38 +33,53 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDt
         if (!request.IsAdmin && order.UserId != request.RequestingUserId)
             throw new UnauthorizedException("You are not authorized to view this order.");
 
-        return MapToDto(order);
+        return await MapToDtoAsync(order, cancellationToken);
     }
 
     /// <summary>Maps an <see cref="OrderEntity"/> aggregate to its full <see cref="OrderDto"/> representation.</summary>
-    private static OrderDto MapToDto(OrderEntity order) => new()
+    private async Task<OrderDto> MapToDtoAsync(OrderEntity order, CancellationToken cancellationToken)
     {
-        Id = order.Id,
-        OrderNumber = order.OrderNumber,
-        UserId = order.UserId,
-        DeliveryFullName = order.DeliveryInfo.FullName,
-        DeliveryPhoneNumber = order.DeliveryInfo.PhoneNumber,
-        DeliveryAddress = order.DeliveryInfo.Address,
-        Notes = order.Notes,
-        PaymentMethod = order.PaymentMethod,
-        Subtotal = order.Subtotal,
-        Tax = order.Tax,
-        Shipping = order.Shipping,
-        Discount = order.Discount,
-        Total = order.Total,
-        OrderStatus = order.OrderStatus,
-        CreatedAt = order.CreatedAt,
-        UpdatedAt = order.UpdatedAt,
-        Items = order.Items.Select(i => new OrderItemDto
+        var productIds = order.Items
+            .Select(i => i.ProductId)
+            .Distinct()
+            .ToList();
+
+        var productImageMap = productIds.Count == 0
+            ? new Dictionary<Guid, string?>()
+            : await _unitOfWork.Products
+                .FindByCondition(p => productIds.Contains(p.Id), false)
+                .ToDictionaryAsync(p => p.Id, p => p.ThumbnailUrl, cancellationToken);
+
+        return new OrderDto
         {
-            Id = i.Id,
-            ProductId = i.ProductId,
-            ProductName = i.ProductName,
-            VariantId = i.VariantId,
-            VariantLabel = i.VariantLabel,
-            UnitPrice = i.UnitPrice,
-            Quantity = i.Quantity,
-            LineTotal = i.LineTotal
-        }).ToList()
-    };
+            Id = order.Id,
+            OrderNumber = order.OrderNumber,
+            UserId = order.UserId,
+            DeliveryFullName = order.DeliveryInfo.FullName,
+            DeliveryPhoneNumber = order.DeliveryInfo.PhoneNumber,
+            DeliveryAddress = order.DeliveryInfo.Address,
+            Notes = order.Notes,
+            PaymentMethod = order.PaymentMethod,
+            Subtotal = order.Subtotal,
+            Tax = order.Tax,
+            Shipping = order.Shipping,
+            Discount = order.Discount,
+            Total = order.Total,
+            OrderStatus = order.OrderStatus,
+            CreatedAt = order.CreatedAt,
+            UpdatedAt = order.UpdatedAt,
+            Items = order.Items.Select(i => new OrderItemDto
+            {
+                Id = i.Id,
+                ProductId = i.ProductId,
+                ProductName = i.ProductName,
+                VariantId = i.VariantId,
+                VariantLabel = i.VariantLabel,
+                ImageUrl = productImageMap.GetValueOrDefault(i.ProductId),
+                UnitPrice = i.UnitPrice,
+                Quantity = i.Quantity,
+                LineTotal = i.LineTotal
+            }).ToList()
+        };
+    }
 }

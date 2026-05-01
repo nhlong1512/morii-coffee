@@ -97,15 +97,14 @@ public class UsersController : ControllerBase
     }
     // ─── Delivery Profile ─────────────────────────────────────────────────────
 
-    /// <summary>Get the current user's saved delivery profile. Returns 404 if none has been saved yet.</summary>
+    /// <summary>Get the current user's saved delivery profile. Returns 200 with null data if none has been saved yet.</summary>
     [HttpGet("me/delivery-profile")]
     [SwaggerOperation(Summary = "Get my delivery profile")]
     [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(DeliveryProfileDto))]
-    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
     public async Task<IActionResult> GetMyDeliveryProfile()
     {
         var result = await _mediator.Send(new GetMyDeliveryProfileQuery(GetCurrentUserId()));
-        return result is null ? NotFound() : Ok(new ApiOkResponse(result));
+        return Ok(new ApiOkResponse(result));
     }
 
     /// <summary>Create or update the current user's delivery profile.</summary>
