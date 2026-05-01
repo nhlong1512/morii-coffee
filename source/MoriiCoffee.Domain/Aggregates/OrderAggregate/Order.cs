@@ -154,6 +154,12 @@ public class Order : AggregateRoot
         OrderStatus = EOrderStatus.CANCELLED;
     }
 
+    public void CancelByCustomer()
+    {
+        EnsureStatusIs(EOrderStatus.PENDING, "Customers can only cancel orders before staff/admin confirmation.");
+        OrderStatus = EOrderStatus.CANCELLED;
+    }
+
     public void UpdateStatus(EOrderStatus newStatus)
     {
         if (OrderStatus == newStatus)

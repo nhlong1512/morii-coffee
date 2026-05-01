@@ -21,6 +21,9 @@ public class OrderItemDto
     /// <summary>Human-readable variant label (e.g., "Size M"). Null when no variant.</summary>
     public string? VariantLabel { get; set; }
 
+    /// <summary>Current thumbnail image URL for the product.</summary>
+    public string? ImageUrl { get; set; }
+
     /// <summary>Unit price at the time of order placement (VND).</summary>
     public decimal UnitPrice { get; set; }
 

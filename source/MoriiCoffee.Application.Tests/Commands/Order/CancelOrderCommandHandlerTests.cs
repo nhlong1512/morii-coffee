@@ -70,6 +70,23 @@ public class CancelOrderCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ConfirmedOrder_ThrowsInvalidOperationException()
+    {
+        var userId = Guid.NewGuid();
+        var order = BuildPendingOrder(userId);
+        order.Confirm();
+
+        _ordersRepo.Setup(r => r.GetByIdWithItemsAsync(order.Id)).ReturnsAsync(order);
+
+        var act = () => _handler.Handle(
+            new CancelOrderCommand { OrderId = order.Id, UserId = userId },
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Customers can only cancel orders before staff/admin confirmation.");
+    }
+
+    [Fact]
     public async Task Handle_ValidCancellation_CommitsAndReturnsUnit()
     {
         var userId = Guid.NewGuid();

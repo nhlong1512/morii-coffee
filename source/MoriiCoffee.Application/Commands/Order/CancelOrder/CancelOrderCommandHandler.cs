@@ -30,8 +30,8 @@ public class CancelOrderCommandHandler : ICommandHandler<CancelOrderCommand, Uni
         if (order.UserId != command.UserId)
             throw new UnauthorizedException("You are not authorized to cancel this order.");
 
-        // The aggregate throws InvalidOperationException if the status is not PENDING or CONFIRMED
-        order.Cancel();
+        // Customers may only cancel before the order has been confirmed by staff/admin.
+        order.CancelByCustomer();
 
         await _unitOfWork.CommitAsync();
 
