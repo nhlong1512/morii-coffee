@@ -7,7 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 using MoriiCoffee.Application.Commands.User.AssignRoles;
 using MoriiCoffee.Application.Commands.User.ChangeAvatar;
 using MoriiCoffee.Application.Commands.User.ChangePassword;
+using MoriiCoffee.Application.Commands.User.SaveDeliveryProfile;
 using MoriiCoffee.Application.Commands.User.UpdateProfile;
+using MoriiCoffee.Application.Queries.User.GetMyDeliveryProfile;
 using MoriiCoffee.Application.Queries.User.GetMyProfile;
 using MoriiCoffee.Application.Queries.User.GetPaginatedUsers;
 using MoriiCoffee.Application.Queries.User.GetUserById;
@@ -93,6 +95,36 @@ public class UsersController : ControllerBase
         });
         return Ok(new ApiOkResponse("Password changed successfully."));
     }
+    // ─── Delivery Profile ─────────────────────────────────────────────────────
+
+    /// <summary>Get the current user's saved delivery profile. Returns 404 if none has been saved yet.</summary>
+    [HttpGet("me/delivery-profile")]
+    [SwaggerOperation(Summary = "Get my delivery profile")]
+    [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(DeliveryProfileDto))]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    public async Task<IActionResult> GetMyDeliveryProfile()
+    {
+        var result = await _mediator.Send(new GetMyDeliveryProfileQuery(GetCurrentUserId()));
+        return result is null ? NotFound() : Ok(new ApiOkResponse(result));
+    }
+
+    /// <summary>Create or update the current user's delivery profile.</summary>
+    [HttpPut("me/delivery-profile")]
+    [SwaggerOperation(Summary = "Save my delivery profile")]
+    [SwaggerResponse(200, SwaggerResponseMessages.UpdatedSuccessfully, typeof(DeliveryProfileDto))]
+    [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
+    public async Task<IActionResult> SaveDeliveryProfile([FromBody] SaveDeliveryProfileDto dto)
+    {
+        var result = await _mediator.Send(new SaveDeliveryProfileCommand
+        {
+            UserId = GetCurrentUserId(),
+            FullName = dto.FullName,
+            PhoneNumber = dto.PhoneNumber,
+            Address = dto.Address
+        });
+        return Ok(new ApiOkResponse(result));
+    }
+
     // ─── Admin / Staff ────────────────────────────────────────────────────────
 
     /// <summary>Get a paginated list of users.</summary>
