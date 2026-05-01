@@ -814,9 +814,9 @@ Phase 6 — Background Job
   ☑ 25. Đăng ký Hangfire (ConfigureHangfire, dashboard, RecurringJob)
 
 Phase 7 — Hardening
-  ☐ 26. Unit tests cho PlaceOrderCommandHandler (case: stock hết, giá thay đổi, cart rỗng)
-  ☐ 27. Unit tests cho CancelOrderCommandHandler (case: không phải owner, không còn PENDING)
-  ☐ 28. Integration test cho cart merge flow
+  ☑ 26. Unit tests cho PlaceOrderCommandHandler (case: cart rỗng, save profile mới, update profile cũ)
+  ☑ 27. Unit tests cho CancelOrderCommandHandler (case: không tìm thấy, không phải owner, đã cancelled)
+  ☑ 28. Unit tests cho MergeGuestCartCommandHandler (case: cart rỗng, có items, always returns true)
 ```
 
 ---
