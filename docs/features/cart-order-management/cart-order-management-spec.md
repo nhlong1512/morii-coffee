@@ -2,8 +2,8 @@
 
 **Feature ID:** `cart-order-management`  
 **Branch:** `009-cart-payment`  
-**Status:** In Design — UI Phase  
-**Last Updated:** 2026-04-26
+**Status:** Backend Complete — UI Phase Pending  
+**Last Updated:** 2026-05-02
 
 ---
 
@@ -339,10 +339,16 @@ REVIEWED
 
 ## 8. Delivery Information
 
+> **Implementation status:** ✅ Backend complete (Phase 5)  
+> - `GET /api/users/me/delivery-profile` — returns saved profile or `404` if none exists  
+> - `PUT /api/users/me/delivery-profile` — upsert (create or update) delivery profile  
+> - Handler: `GetMyDeliveryProfileQueryHandler`, `SaveDeliveryProfileCommandHandler`  
+> - Storage: `UserDeliveryProfiles` table, PK = `UserId` (one record per user)
+
 ### Form Behavior
 
 1. On page load, call `GET /api/users/me/delivery-profile`
-2. If a saved profile exists → pre-populate all fields
+2. If a saved profile exists → pre-populate all fields; `404` means no profile yet
 3. User can edit fields freely
 4. Checkbox **"Lưu thông tin giao hàng"** (default: checked if no saved profile, unchecked if pre-filled from saved)
 5. On order submit with checkbox checked → upsert delivery profile via `PUT /api/users/me/delivery-profile`
@@ -559,18 +565,28 @@ Staff workflow per order:
 
 ## 13. Auto-Complete Mechanism
 
+> **Implementation status:** ✅ Backend complete (Phase 6 — dùng Hangfire, không phải BackgroundService)  
+> - Class: `OrderAutoCompleteJob` — Hangfire recurring job (plain class, `[DisableConcurrentExecution]`)  
+> - Runs once per day at 02:00 UTC (configured via `OrderSettings.AutoCompleteJobRunHour`)  
+> - Dashboard: `/hangfire` (localhost only)  
+> - Hangfire storage: schema `[HangFire]` trong `MoriiCoffeeDb` — tự tạo khi app khởi động lần đầu
+
 **Problem:** Customers rarely tap "I received my order" in apps, so `IN_DELIVERY` orders would never auto-progress.
 
-**Solution:** Background job (Hangfire or .NET Hosted Service) runs daily:
+**Solution:** Hangfire recurring job chạy mỗi ngày lúc 02:00 UTC:
 
 ```
 IF order.status == IN_DELIVERY
-AND order.updatedAt < (NOW - AutoCompleteAfterDays)
+AND order.createdAt <= (NOW - 3 days)   ← dùng createdAt, không phải updatedAt
 THEN order.status = DELIVERED
 ```
 
-- Default threshold: **3 days** (configurable via `appsettings.json`)
-- Log auto-completed orders for audit trail
+> **Note — `createdAt` vs `updatedAt`:** Spec gốc dùng `updatedAt`, nhưng backend dùng `createdAt` làm cutoff. `ApplicationDbContext` không có override `SaveChangesAsync` để auto-set `UpdatedAt`, nên `UpdatedAt` vẫn `null` sau các lần đổi status. `CreatedAt` luôn có giá trị tại thời điểm insert — dùng làm proxy "đơn này cũ bao nhiêu ngày" là an toàn.
+
+- Threshold cố định: **3 ngày**
+- Run hour cấu hình qua `OrderSettings.AutoCompleteJobRunHour` (default: `2` = 02:00 UTC)
+- Log batch result (completed, skipped, total) để audit trail
+- `order.MarkDelivered()` gọi trên aggregate; EF change tracking tự sinh `UPDATE` (`trackChanges: true`)
 
 **Alternative (deferred):** Customer-facing "Tôi đã nhận được hàng" button on Order Detail page — lower priority, not required in Phase 1.
 

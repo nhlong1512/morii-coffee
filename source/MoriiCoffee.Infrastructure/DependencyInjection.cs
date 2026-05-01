@@ -7,6 +7,7 @@ using MoriiCoffee.Infrastructure.Persistence;
 using MoriiCoffee.Infrastructure.Services;
 using MoriiCoffee.Infrastructure.Services.Cart;
 using MoriiCoffee.Infrastructure.Services.Email;
+using MoriiCoffee.Infrastructure.Services.Order;
 
 namespace MoriiCoffee.Infrastructure;
 
@@ -34,6 +35,7 @@ public static class DependencyInjection
         services.ConfigureStorage();
         services.ConfigureRedis(configuration);
         services.ConfigurePersistenceServices();
+        services.ConfigureHangfire(configuration);
         services.ConfigureDependencyInjection();
 
         return services;
@@ -48,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailService, BrevoEmailService>();
         services.AddScoped<IFileService, AwsS3FileService>();
         services.AddScoped<ICartService, RedisCartService>();
+        services.AddScoped<IOrderIdGenerator, OrderIdGenerator>();
         return services;
     }
 }
