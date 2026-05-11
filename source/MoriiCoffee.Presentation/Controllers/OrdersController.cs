@@ -12,6 +12,7 @@ using MoriiCoffee.Application.SeedWork.DTOs.Order;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Shared.Constants;
 using MoriiCoffee.Domain.Shared.Enums.Order;
+using MoriiCoffee.Domain.Shared.Enums.User;
 using MoriiCoffee.Domain.Shared.HttpResponses;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -112,7 +113,7 @@ public class OrdersController : ControllerBase
     /// [Admin] Get all orders in the system, optionally filtered by status and/or user.
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = nameof(ERole.ADMIN))]
     [SwaggerOperation(Summary = "Get all orders (admin)")]
     [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(List<OrderSummaryDto>))]
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
@@ -129,7 +130,7 @@ public class OrdersController : ControllerBase
     /// [Admin] Update the lifecycle status of an order. Invalid transitions are rejected by the domain.
     /// </summary>
     [HttpPatch("{id:guid}/status")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = nameof(ERole.ADMIN))]
     [SwaggerOperation(Summary = "Update order status (admin)")]
     [SwaggerResponse(200, SwaggerResponseMessages.UpdatedSuccessfully)]
     [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
@@ -161,5 +162,5 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>Returns <c>true</c> when the authenticated user has the Admin role.</summary>
-    private bool IsAdmin() => User.IsInRole("Admin");
+    private bool IsAdmin() => User.IsInRole(nameof(ERole.ADMIN));
 }
