@@ -116,31 +116,31 @@ public class Order : AggregateRoot
 
     public void Confirm()
     {
-        EnsureStatusIs(EOrderStatus.PENDING, "Only pending orders can be confirmed.");
+        EnsureCanAdvanceTo(EOrderStatus.CONFIRMED);
         OrderStatus = EOrderStatus.CONFIRMED;
     }
 
     public void MarkReadyToPickup()
     {
-        EnsureStatusIs(EOrderStatus.CONFIRMED, "Only confirmed orders can be marked ready to pick up.");
+        EnsureCanAdvanceTo(EOrderStatus.READY_TO_PICKUP);
         OrderStatus = EOrderStatus.READY_TO_PICKUP;
     }
 
     public void MarkInDelivery()
     {
-        EnsureStatusIs(EOrderStatus.READY_TO_PICKUP, "Only ready-to-pick-up orders can be marked in delivery.");
+        EnsureCanAdvanceTo(EOrderStatus.IN_DELIVERY);
         OrderStatus = EOrderStatus.IN_DELIVERY;
     }
 
     public void MarkDelivered()
     {
-        EnsureStatusIs(EOrderStatus.IN_DELIVERY, "Only in-delivery orders can be marked delivered.");
+        EnsureCanAdvanceTo(EOrderStatus.DELIVERED);
         OrderStatus = EOrderStatus.DELIVERED;
     }
 
     public void MarkReviewed()
     {
-        EnsureStatusIs(EOrderStatus.DELIVERED, "Only delivered orders can be marked reviewed.");
+        EnsureCanAdvanceTo(EOrderStatus.REVIEWED);
         OrderStatus = EOrderStatus.REVIEWED;
     }
 
@@ -156,7 +156,11 @@ public class Order : AggregateRoot
 
     public void CancelByCustomer()
     {
-        EnsureStatusIs(EOrderStatus.PENDING, "Customers can only cancel orders before staff/admin confirmation.");
+        if (OrderStatus != EOrderStatus.PENDING)
+        {
+            throw new InvalidOperationException("Customers can only cancel orders before staff/admin confirmation.");
+        }
+
         OrderStatus = EOrderStatus.CANCELLED;
     }
 
@@ -194,11 +198,43 @@ public class Order : AggregateRoot
         }
     }
 
-    private void EnsureStatusIs(EOrderStatus expectedStatus, string errorMessage)
+    private static readonly Dictionary<EOrderStatus, int> StatusRank = new()
     {
-        if (OrderStatus != expectedStatus)
-        {
-            throw new InvalidOperationException(errorMessage);
-        }
+        { EOrderStatus.PENDING, 0 },
+        { EOrderStatus.CONFIRMED, 1 },
+        { EOrderStatus.READY_TO_PICKUP, 2 },
+        { EOrderStatus.IN_DELIVERY, 3 },
+        { EOrderStatus.DELIVERED, 4 },
+        { EOrderStatus.REVIEWED, 5 }
+    };
+
+    public IReadOnlyList<EOrderStatus> GetValidNextStatuses()
+    {
+        // CANCELLED is not in StatusRank, REVIEWED has rank 5 (no forward statuses exist)
+        if (!StatusRank.TryGetValue(OrderStatus, out var currentRank))
+            return [];
+
+        var next = StatusRank
+            .Where(kv => kv.Value > currentRank)
+            .Select(kv => kv.Key)
+            .ToList();
+
+        // CANCELLED is only reachable from PENDING or CONFIRMED (admin Cancel rule)
+        if (OrderStatus is EOrderStatus.PENDING or EOrderStatus.CONFIRMED)
+            next.Add(EOrderStatus.CANCELLED);
+
+        return next.AsReadOnly();
+    }
+
+    private void EnsureCanAdvanceTo(EOrderStatus target)
+    {
+        if (OrderStatus == EOrderStatus.CANCELLED)
+            throw new InvalidOperationException("Cancelled orders cannot be updated.");
+
+        if (!StatusRank.TryGetValue(OrderStatus, out var current) || !StatusRank.TryGetValue(target, out var next))
+            throw new InvalidOperationException($"Unsupported status transition from {OrderStatus} to {target}.");
+
+        if (current >= next)
+            throw new InvalidOperationException($"Cannot transition from {OrderStatus} to {target}.");
     }
 }
