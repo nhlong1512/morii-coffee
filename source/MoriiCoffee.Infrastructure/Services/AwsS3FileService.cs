@@ -99,6 +99,7 @@ public class AwsS3FileService : IFileService
         var response = new BlobResponseDto { Status = "File uploaded successfully." };
         response.Blob.Uri = uri;
         response.Blob.Name = objectName;
+        response.Blob.StorageKey = isPublic ? s3Key : null;
         response.Blob.ContentType = blob.ContentType;
         response.Blob.Size = blob.Length;
         return response;
@@ -136,6 +137,7 @@ public class AwsS3FileService : IFileService
         var response = new BlobResponseDto { Status = "File uploaded successfully." };
         response.Blob.Uri = uri;
         response.Blob.Name = customObjectName;
+        response.Blob.StorageKey = isPublic ? s3Key : null;
         response.Blob.ContentType = blob.ContentType;
         response.Blob.Size = blob.Length;
         return response;

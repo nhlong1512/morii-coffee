@@ -45,7 +45,7 @@ public class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategoryComman
                 await _fileService.DeleteAsync(FileContainers.CATEGORIES, category.IconFileName);
 
             var uploadResult = await _fileService.UploadAsync(request.Icon, FileContainers.CATEGORIES);
-            category.IconUrl = uploadResult.Blob.Uri;
+            category.IconUrl = uploadResult.Blob.StorageKey;
             category.IconFileName = uploadResult.Blob.Name;
         }
 

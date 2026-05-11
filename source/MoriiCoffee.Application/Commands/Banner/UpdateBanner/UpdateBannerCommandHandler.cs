@@ -44,7 +44,7 @@ public class UpdateBannerCommandHandler : ICommandHandler<UpdateBannerCommand, B
         {
             var s3Key = S3KeyHelper.BuildS3Key(banner.Id, request.Image.FileName);
             var uploadResult = await _fileService.UploadAsync(request.Image, FileContainers.BANNERS, s3Key);
-            banner.ImageUrl = uploadResult.Blob.Uri;
+            banner.ImageUrl = uploadResult.Blob.StorageKey;
         }
 
         await _unitOfWork.Banners.Update(banner);

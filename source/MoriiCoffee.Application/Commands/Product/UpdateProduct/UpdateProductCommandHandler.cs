@@ -60,7 +60,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
                 await _fileService.DeleteAsync(FileContainers.PRODUCTS, product.ThumbnailFileName);
 
             var uploadResult = await _fileService.UploadAsync(request.Thumbnail, FileContainers.PRODUCTS);
-            product.ThumbnailUrl = uploadResult.Blob.Uri;
+            product.ThumbnailUrl = uploadResult.Blob.StorageKey;
             product.ThumbnailFileName = uploadResult.Blob.Name;
         }
 

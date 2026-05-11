@@ -61,7 +61,7 @@ public class UploadProductImagesCommandHandler : ICommandHandler<UploadProductIm
             var uploadResult = await _fileService.UploadAsync(file, FileContainers.PRODUCTS, s3Key);
 
             uploadedImages.Add(ProductImageFactory.CreateImage(
-                request.ProductId, uploadResult.Blob.Uri!, s3Key, displayOrder: nextOrder + i));
+                request.ProductId, uploadResult.Blob.StorageKey!, s3Key, displayOrder: nextOrder + i));
         }
 
         // Step 2: Persist to DB inside a retriable transaction

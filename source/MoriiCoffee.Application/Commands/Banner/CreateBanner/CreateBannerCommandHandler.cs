@@ -34,7 +34,7 @@ public class CreateBannerCommandHandler : ICommandHandler<CreateBannerCommand, B
         {
             var s3Key = S3KeyHelper.BuildS3Key(bannerId, request.Image.FileName);
             var uploadResult = await _fileService.UploadAsync(request.Image, FileContainers.BANNERS, s3Key);
-            imageUrl = uploadResult.Blob.Uri;
+            imageUrl = uploadResult.Blob.StorageKey;
         }
 
         var banner = new Domain.Aggregates.BannerAggregate.Banner

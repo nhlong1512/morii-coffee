@@ -8,6 +8,7 @@ using MoriiCoffee.Application.SeedWork.Mappings;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
+using MoriiCoffee.Domain.Shared.Settings;
 using Xunit;
 using CategoryEntity = MoriiCoffee.Domain.Aggregates.CategoryAggregate.Category;
 using ProductEntity = MoriiCoffee.Domain.Aggregates.ProductAggregate.Product;
@@ -17,13 +18,14 @@ namespace MoriiCoffee.Application.Tests.Mappings;
 public class ProductMapperTests
 {
     private readonly IMapper _mapper;
+    private static readonly AwsS3Settings S3Settings = new() { CdnBaseUrl = "https://cdn.test" };
 
     public ProductMapperTests()
     {
         var config = new MapperConfiguration(cfg =>
         {
-            cfg.AddProfile<ProductMapper>();
-            cfg.AddProfile<CategoryMapper>(); // ProductDto.Categories maps Category → CategoryDto
+            cfg.AddProfile(new ProductMapper(S3Settings));
+            cfg.AddProfile(new CategoryMapper(S3Settings));
         }, NullLoggerFactory.Instance);
         config.AssertConfigurationIsValid();
         _mapper = config.CreateMapper();
