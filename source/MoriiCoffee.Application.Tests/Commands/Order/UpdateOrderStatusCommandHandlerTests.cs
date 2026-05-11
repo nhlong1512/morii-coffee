@@ -1,5 +1,4 @@
 using FluentAssertions;
-using MediatR;
 using Moq;
 using MoriiCoffee.Application.Commands.Order.UpdateOrderStatus;
 using MoriiCoffee.Application.SeedWork.Exceptions;
@@ -40,7 +39,7 @@ public class UpdateOrderStatusCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ValidTransition_CommitsAndReturnsUnit()
+    public async Task Handle_ValidTransition_CommitsAndReturnsValidNextStatuses()
     {
         var order = BuildPendingOrder();
         _ordersRepo.Setup(r => r.GetByIdWithItemsAsync(order.Id)).ReturnsAsync(order);
@@ -49,8 +48,10 @@ public class UpdateOrderStatusCommandHandlerTests
             new UpdateOrderStatusCommand { OrderId = order.Id, NewStatus = EOrderStatus.CONFIRMED },
             CancellationToken.None);
 
-        result.Should().Be(Unit.Value);
         order.OrderStatus.Should().Be(EOrderStatus.CONFIRMED);
+        result.Should().Contain([EOrderStatus.READY_TO_PICKUP, EOrderStatus.IN_DELIVERY, EOrderStatus.DELIVERED, EOrderStatus.REVIEWED, EOrderStatus.CANCELLED]);
+        result.Should().NotContain(EOrderStatus.PENDING);
+        result.Should().NotContain(EOrderStatus.CONFIRMED);
         _unitOfWork.Verify(u => u.CommitAsync(), Times.Once);
     }
 

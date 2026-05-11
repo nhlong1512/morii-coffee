@@ -8,6 +8,7 @@ using MoriiCoffee.Application.Commands.Order.UpdateOrderStatus;
 using MoriiCoffee.Application.Queries.Order.GetAllOrders;
 using MoriiCoffee.Application.Queries.Order.GetMyOrders;
 using MoriiCoffee.Application.Queries.Order.GetOrderById;
+using MoriiCoffee.Application.Queries.Order.GetValidOrderStatuses;
 using MoriiCoffee.Application.SeedWork.DTOs.Order;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Shared.Constants;
@@ -132,7 +133,7 @@ public class OrdersController : ControllerBase
     [HttpPatch("{id:guid}/status")]
     [Authorize(Roles = nameof(ERole.ADMIN))]
     [SwaggerOperation(Summary = "Update order status (admin)")]
-    [SwaggerResponse(200, SwaggerResponseMessages.UpdatedSuccessfully)]
+    [SwaggerResponse(200, SwaggerResponseMessages.UpdatedSuccessfully, typeof(List<EOrderStatus>))]
     [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
     [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
@@ -141,13 +142,29 @@ public class OrdersController : ControllerBase
         [FromRoute] Guid id,
         [FromBody] UpdateOrderStatusDto dto)
     {
-        await _mediator.Send(new UpdateOrderStatusCommand
+        var validStatuses = await _mediator.Send(new UpdateOrderStatusCommand
         {
             OrderId = id,
             NewStatus = dto.NewStatus
         });
 
-        return Ok(new ApiOkResponse("Order status updated successfully."));
+        return Ok(new ApiOkResponse(validStatuses));
+    }
+
+    /// <summary>
+    /// [Admin] Get the list of valid next statuses for a given order based on its current state.
+    /// </summary>
+    [HttpGet("{id:guid}/valid-statuses")]
+    [Authorize(Roles = nameof(ERole.ADMIN))]
+    [SwaggerOperation(Summary = "Get valid next statuses for an order (admin)")]
+    [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(List<EOrderStatus>))]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    public async Task<IActionResult> GetValidOrderStatuses([FromRoute] Guid id)
+    {
+        var result = await _mediator.Send(new GetValidOrderStatusesQuery(id));
+        return Ok(new ApiOkResponse(result));
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

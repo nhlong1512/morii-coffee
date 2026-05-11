@@ -208,6 +208,24 @@ public class Order : AggregateRoot
         { EOrderStatus.REVIEWED, 5 }
     };
 
+    public IReadOnlyList<EOrderStatus> GetValidNextStatuses()
+    {
+        // CANCELLED is not in StatusRank, REVIEWED has rank 5 (no forward statuses exist)
+        if (!StatusRank.TryGetValue(OrderStatus, out var currentRank))
+            return [];
+
+        var next = StatusRank
+            .Where(kv => kv.Value > currentRank)
+            .Select(kv => kv.Key)
+            .ToList();
+
+        // CANCELLED is only reachable from PENDING or CONFIRMED (admin Cancel rule)
+        if (OrderStatus is EOrderStatus.PENDING or EOrderStatus.CONFIRMED)
+            next.Add(EOrderStatus.CANCELLED);
+
+        return next.AsReadOnly();
+    }
+
     private void EnsureCanAdvanceTo(EOrderStatus target)
     {
         if (OrderStatus == EOrderStatus.CANCELLED)

@@ -324,6 +324,91 @@ public class OrderAggregateTests
         order.OrderStatus.Should().Be(EOrderStatus.CANCELLED);
     }
 
+    // ── GetValidNextStatuses ──────────────────────────────────────────────────
+
+    [Fact]
+    public void GetValidNextStatuses_FromPending_IncludesAllForwardAndCancelled()
+    {
+        var order = BuildOrder();
+
+        var result = order.GetValidNextStatuses();
+
+        result.Should().Contain([
+            EOrderStatus.CONFIRMED,
+            EOrderStatus.READY_TO_PICKUP,
+            EOrderStatus.IN_DELIVERY,
+            EOrderStatus.DELIVERED,
+            EOrderStatus.REVIEWED,
+            EOrderStatus.CANCELLED
+        ]);
+    }
+
+    [Fact]
+    public void GetValidNextStatuses_FromConfirmed_IncludesCancelled()
+    {
+        var order = BuildOrder();
+        order.Confirm();
+
+        var result = order.GetValidNextStatuses();
+
+        result.Should().Contain(EOrderStatus.CANCELLED);
+        result.Should().NotContain(EOrderStatus.PENDING);
+        result.Should().NotContain(EOrderStatus.CONFIRMED);
+    }
+
+    [Fact]
+    public void GetValidNextStatuses_FromReadyToPickup_ExcludesCancelled()
+    {
+        var order = BuildOrder();
+        order.Confirm();
+        order.MarkReadyToPickup();
+
+        var result = order.GetValidNextStatuses();
+
+        result.Should().NotContain(EOrderStatus.CANCELLED);
+        result.Should().Contain([EOrderStatus.IN_DELIVERY, EOrderStatus.DELIVERED, EOrderStatus.REVIEWED]);
+    }
+
+    [Fact]
+    public void GetValidNextStatuses_FromDelivered_OnlyReviewed()
+    {
+        var order = BuildOrder();
+        order.Confirm();
+        order.MarkReadyToPickup();
+        order.MarkInDelivery();
+        order.MarkDelivered();
+
+        var result = order.GetValidNextStatuses();
+
+        result.Should().ContainSingle().Which.Should().Be(EOrderStatus.REVIEWED);
+    }
+
+    [Fact]
+    public void GetValidNextStatuses_FromReviewed_IsEmpty()
+    {
+        var order = BuildOrder();
+        order.Confirm();
+        order.MarkReadyToPickup();
+        order.MarkInDelivery();
+        order.MarkDelivered();
+        order.MarkReviewed();
+
+        var result = order.GetValidNextStatuses();
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetValidNextStatuses_FromCancelled_IsEmpty()
+    {
+        var order = BuildOrder();
+        order.Cancel();
+
+        var result = order.GetValidNextStatuses();
+
+        result.Should().BeEmpty();
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static void InvokeTransitionMethod(OrderEntity order, string method)

@@ -1,4 +1,3 @@
-using MediatR;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.Shared.Enums.Order;
 
@@ -6,9 +5,9 @@ namespace MoriiCoffee.Application.Commands.Order.UpdateOrderStatus;
 
 /// <summary>
 /// Admin command to advance an order to a new lifecycle status.
-/// Status transitions are enforced by the Order aggregate.
+/// Returns the valid next statuses after the transition completes.
 /// </summary>
-public class UpdateOrderStatusCommand : ICommand<Unit>
+public class UpdateOrderStatusCommand : ICommand<List<EOrderStatus>>
 {
     /// <summary>Identifier of the order whose status will be updated.</summary>
     public Guid OrderId { get; set; }
