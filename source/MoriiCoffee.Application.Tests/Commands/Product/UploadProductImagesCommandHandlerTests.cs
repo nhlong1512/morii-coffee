@@ -37,24 +37,75 @@ public class UploadProductImagesCommandHandlerTests
     public async Task Handle_Success_UploadsFilesAndReturnsImageDtos()
     {
         var productId = Guid.NewGuid();
-        var product = new ProductEntity { Id = productId, Name = "Iced Latte" };
+        var product = new ProductEntity { Id = productId, Name = "Iced Latte", ThumbnailUrl = "existing-key.jpg" };
         _productsRepo.Setup(r => r.GetByIdAsync(productId)).ReturnsAsync(product);
         _imagesRepo.Setup(r => r.CountByProductIdAsync(productId)).ReturnsAsync(0);
         _imagesRepo.Setup(r => r.CreateAsync(It.IsAny<ProductImage>())).Returns(Task.CompletedTask);
 
         var fileMock = new Mock<IFormFile>();
         fileMock.Setup(f => f.FileName).Returns("photo.jpg");
-        var blobResponse = new BlobResponseDto { Blob = new BlobDto { Uri = "https://cdn.test/photo.jpg", Name = "photo.jpg" } };
+        var blobResponse = new BlobResponseDto { Blob = new BlobDto { StorageKey = "products/abc/123-photo.jpg" } };
         _fileService.Setup(f => f.UploadAsync(It.IsAny<IFormFile>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(blobResponse);
         _mapper.Setup(m => m.Map<ProductImageDto>(It.IsAny<ProductImage>()))
-            .Returns(new ProductImageDto { Url = "https://cdn.test/photo.jpg" });
+            .Returns(new ProductImageDto { Url = "https://cdn.test/products/abc/123-photo.jpg" });
 
         var cmd = new UploadProductImagesCommand(productId, new List<IFormFile> { fileMock.Object });
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
         result.Should().HaveCount(1);
         _fileService.Verify(f => f.UploadAsync(It.IsAny<IFormFile>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ProductHasNoThumbnail_SetsThumbnailFromFirstImage()
+    {
+        var productId = Guid.NewGuid();
+        var product = new ProductEntity { Id = productId, Name = "Iced Latte", ThumbnailUrl = null };
+        _productsRepo.Setup(r => r.GetByIdAsync(productId)).ReturnsAsync(product);
+        _productsRepo.Setup(r => r.Update(product)).Returns(Task.CompletedTask);
+        _imagesRepo.Setup(r => r.CountByProductIdAsync(productId)).ReturnsAsync(0);
+        _imagesRepo.Setup(r => r.CreateAsync(It.IsAny<ProductImage>())).Returns(Task.CompletedTask);
+
+        var fileMock = new Mock<IFormFile>();
+        fileMock.Setup(f => f.FileName).Returns("photo.jpg");
+        const string storageKey = "products/abc/123-photo.jpg";
+        var blobResponse = new BlobResponseDto { Blob = new BlobDto { StorageKey = storageKey } };
+        _fileService.Setup(f => f.UploadAsync(It.IsAny<IFormFile>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(blobResponse);
+        _mapper.Setup(m => m.Map<ProductImageDto>(It.IsAny<ProductImage>()))
+            .Returns(new ProductImageDto { Url = storageKey });
+
+        var cmd = new UploadProductImagesCommand(productId, new List<IFormFile> { fileMock.Object });
+        await _handler.Handle(cmd, CancellationToken.None);
+
+        product.ThumbnailUrl.Should().Be(storageKey);
+        _productsRepo.Verify(r => r.Update(product), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ProductAlreadyHasThumbnail_DoesNotOverrideThumbnail()
+    {
+        var productId = Guid.NewGuid();
+        const string existingThumbnail = "products/abc/old-thumb.jpg";
+        var product = new ProductEntity { Id = productId, Name = "Iced Latte", ThumbnailUrl = existingThumbnail };
+        _productsRepo.Setup(r => r.GetByIdAsync(productId)).ReturnsAsync(product);
+        _imagesRepo.Setup(r => r.CountByProductIdAsync(productId)).ReturnsAsync(1);
+        _imagesRepo.Setup(r => r.CreateAsync(It.IsAny<ProductImage>())).Returns(Task.CompletedTask);
+
+        var fileMock = new Mock<IFormFile>();
+        fileMock.Setup(f => f.FileName).Returns("new-photo.jpg");
+        var blobResponse = new BlobResponseDto { Blob = new BlobDto { StorageKey = "products/abc/456-new-photo.jpg" } };
+        _fileService.Setup(f => f.UploadAsync(It.IsAny<IFormFile>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(blobResponse);
+        _mapper.Setup(m => m.Map<ProductImageDto>(It.IsAny<ProductImage>()))
+            .Returns(new ProductImageDto { Url = "products/abc/456-new-photo.jpg" });
+
+        var cmd = new UploadProductImagesCommand(productId, new List<IFormFile> { fileMock.Object });
+        await _handler.Handle(cmd, CancellationToken.None);
+
+        product.ThumbnailUrl.Should().Be(existingThumbnail);
+        _productsRepo.Verify(r => r.Update(It.IsAny<ProductEntity>()), Times.Never);
     }
 
     [Fact]

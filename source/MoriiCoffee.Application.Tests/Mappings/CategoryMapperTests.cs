@@ -40,4 +40,34 @@ public class CategoryMapperTests
         dto.DisplayOrder.Should().Be(1);
         dto.IsActive.Should().BeTrue();
     }
+
+    [Fact]
+    public void CategoryToCategoryDto_StorageKey_ResolvesToCdnUrl()
+    {
+        var category = new CategoryEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Espresso",
+            IconUrl = "categories/abc/123-espresso.png"
+        };
+
+        var dto = _mapper.Map<CategoryDto>(category);
+
+        dto.IconUrl.Should().Be("https://cdn.test/categories/abc/123-espresso.png");
+    }
+
+    [Fact]
+    public void CategoryToCategoryDto_AbsoluteUrl_PassthroughAsIs()
+    {
+        var category = new CategoryEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Espresso",
+            IconUrl = "https://legacy-cdn.example.com/categories/espresso.png"
+        };
+
+        var dto = _mapper.Map<CategoryDto>(category);
+
+        dto.IconUrl.Should().Be("https://legacy-cdn.example.com/categories/espresso.png");
+    }
 }

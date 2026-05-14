@@ -40,4 +40,34 @@ public class BannerMapperTests
         dto.DisplayOrder.Should().Be(1);
         dto.IsActive.Should().BeTrue();
     }
+
+    [Fact]
+    public void BannerToBannerDto_StorageKey_ResolvesToCdnUrl()
+    {
+        var banner = new BannerEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = "Promo",
+            ImageUrl = "banners/abc/123-promo.jpg"
+        };
+
+        var dto = _mapper.Map<BannerDto>(banner);
+
+        dto.ImageUrl.Should().Be("https://cdn.test/banners/abc/123-promo.jpg");
+    }
+
+    [Fact]
+    public void BannerToBannerDto_AbsoluteUrl_PassthroughAsIs()
+    {
+        var banner = new BannerEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = "Promo",
+            ImageUrl = "https://legacy-cdn.example.com/banners/promo.jpg"
+        };
+
+        var dto = _mapper.Map<BannerDto>(banner);
+
+        dto.ImageUrl.Should().Be("https://legacy-cdn.example.com/banners/promo.jpg");
+    }
 }

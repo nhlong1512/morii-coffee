@@ -92,7 +92,42 @@ public class ProductMapperTests
     }
 
     [Fact]
-    public void ProductImageToProductImageDto_MapsCorrectly()
+    public void ProductToProductDto_StorageKey_ResolvesToCdnUrl()
+    {
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Latte",
+            Slug = "latte",
+            ThumbnailUrl = "products/abc/123-latte.jpg",
+            ProductCategories = new List<ProductCategory>(),
+            Variants = new List<ProductVariant>(),
+            Images = new List<ProductImage>()
+        };
+
+        var dto = _mapper.Map<ProductDto>(product);
+
+        dto.ThumbnailUrl.Should().Be("https://cdn.test/products/abc/123-latte.jpg");
+    }
+
+    [Fact]
+    public void ProductImageToProductImageDto_StorageKey_ResolvesToCdnUrl()
+    {
+        var image = new ProductImage
+        {
+            Id = Guid.NewGuid(),
+            Url = "products/abc/123-photo.jpg",
+            DisplayOrder = 1
+        };
+
+        var dto = _mapper.Map<ProductImageDto>(image);
+
+        dto.Url.Should().Be("https://cdn.test/products/abc/123-photo.jpg");
+        dto.DisplayOrder.Should().Be(1);
+    }
+
+    [Fact]
+    public void ProductImageToProductImageDto_AbsoluteUrl_PassthroughAsIs()
     {
         var image = new ProductImage
         {
