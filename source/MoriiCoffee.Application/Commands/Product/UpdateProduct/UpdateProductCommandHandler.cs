@@ -2,6 +2,7 @@ using AutoMapper;
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Application.SeedWork.Exceptions;
+using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Constants;
@@ -59,8 +60,9 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
             if (!string.IsNullOrEmpty(product.ThumbnailFileName))
                 await _fileService.DeleteAsync(FileContainers.PRODUCTS, product.ThumbnailFileName);
 
-            var uploadResult = await _fileService.UploadAsync(request.Thumbnail, FileContainers.PRODUCTS);
-            product.ThumbnailUrl = uploadResult.Blob.Uri;
+            var s3Key = S3KeyHelper.BuildS3Key(product.Id, request.Thumbnail.FileName);
+            var uploadResult = await _fileService.UploadAsync(request.Thumbnail, FileContainers.PRODUCTS, s3Key);
+            product.ThumbnailUrl = uploadResult.Blob.StorageKey;
             product.ThumbnailFileName = uploadResult.Blob.Name;
         }
 

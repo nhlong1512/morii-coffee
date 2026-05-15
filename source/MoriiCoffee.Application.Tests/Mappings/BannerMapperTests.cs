@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Banner;
 using MoriiCoffee.Application.SeedWork.Mappings;
+using MoriiCoffee.Domain.Shared.Settings;
 using Xunit;
 using BannerEntity = MoriiCoffee.Domain.Aggregates.BannerAggregate.Banner;
 
@@ -11,10 +12,11 @@ namespace MoriiCoffee.Application.Tests.Mappings;
 public class BannerMapperTests
 {
     private readonly IMapper _mapper;
+    private static readonly AwsS3Settings S3Settings = new() { CdnBaseUrl = "https://cdn.test" };
 
     public BannerMapperTests()
     {
-        var config = new MapperConfiguration(cfg => cfg.AddProfile<BannerMapper>(), NullLoggerFactory.Instance);
+        var config = new MapperConfiguration(cfg => cfg.AddProfile(new BannerMapper(S3Settings)), NullLoggerFactory.Instance);
         config.AssertConfigurationIsValid();
         _mapper = config.CreateMapper();
     }
@@ -37,5 +39,35 @@ public class BannerMapperTests
         dto.Title.Should().Be("Summer Sale");
         dto.DisplayOrder.Should().Be(1);
         dto.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
+    public void BannerToBannerDto_StorageKey_ResolvesToCdnUrl()
+    {
+        var banner = new BannerEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = "Promo",
+            ImageUrl = "banners/abc/123-promo.jpg"
+        };
+
+        var dto = _mapper.Map<BannerDto>(banner);
+
+        dto.ImageUrl.Should().Be("https://cdn.test/banners/abc/123-promo.jpg");
+    }
+
+    [Fact]
+    public void BannerToBannerDto_AbsoluteUrl_PassthroughAsIs()
+    {
+        var banner = new BannerEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = "Promo",
+            ImageUrl = "https://legacy-cdn.example.com/banners/promo.jpg"
+        };
+
+        var dto = _mapper.Map<BannerDto>(banner);
+
+        dto.ImageUrl.Should().Be("https://legacy-cdn.example.com/banners/promo.jpg");
     }
 }

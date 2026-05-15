@@ -29,7 +29,7 @@ public static class DependencyInjection
         services.ConfigureIdentity();
         services.ConfigureAuthentication(configuration);
         services.ConfigureMediatR();
-        services.ConfigureMapper();
+        services.ConfigureMapper(configuration);
         services.ConfigureValidation();
         services.ConfigureSwagger();
         services.ConfigureStorage();

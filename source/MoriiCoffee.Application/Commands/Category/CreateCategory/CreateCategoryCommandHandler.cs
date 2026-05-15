@@ -40,7 +40,7 @@ public class CreateCategoryCommandHandler : ICommandHandler<CreateCategoryComman
         if (request.Icon != null)
         {
             var uploadResult = await _fileService.UploadAsync(request.Icon, FileContainers.CATEGORIES);
-            iconUrl = uploadResult.Blob.Uri;
+            iconUrl = uploadResult.Blob.StorageKey;
             iconFileName = uploadResult.Blob.Name;
         }
 

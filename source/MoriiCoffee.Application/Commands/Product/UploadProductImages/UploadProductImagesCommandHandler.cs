@@ -12,14 +12,13 @@ namespace MoriiCoffee.Application.Commands.Product.UploadProductImages;
 
 /// <summary>
 /// Uploads one or more gallery images for a product to the public S3 bucket and persists the records.
-/// Gallery images are independent from the product thumbnail — the thumbnail is managed separately
-/// via the create/update product flow.
 /// Business rules enforced:
 /// <list type="bullet">
 ///   <item>Product must exist and not be deleted.</item>
 ///   <item>Total images per product must not exceed 10 after the upload.</item>
 ///   <item>Files are stored at <c>products/{productId}/{timestamp}-{filename}</c> in S3.</item>
-///   <item>CDN URL is stored in <see cref="ProductImage.Url"/>; the S3 key is stored in <see cref="ProductImage.S3Key"/>.</item>
+///   <item>The storage key is stored in <see cref="ProductImage.Url"/>; the full CDN URL is resolved at read time via <c>CdnUrlHelper</c>.</item>
+///   <item>If <c>Product.ThumbnailUrl</c> is null, it is automatically set to the first uploaded image's storage key.</item>
 /// </list>
 /// </summary>
 public class UploadProductImagesCommandHandler : ICommandHandler<UploadProductImagesCommand, List<ProductImageDto>>
@@ -41,8 +40,8 @@ public class UploadProductImagesCommandHandler : ICommandHandler<UploadProductIm
         UploadProductImagesCommand request,
         CancellationToken cancellationToken)
     {
-        await (_unitOfWork.Products.GetByIdAsync(request.ProductId)
-            ?? throw new NotFoundException("Product", request.ProductId));
+        var product = await _unitOfWork.Products.GetByIdAsync(request.ProductId)
+            ?? throw new NotFoundException("Product", request.ProductId);
 
         int existingCount = await _unitOfWork.ProductImages.CountByProductIdAsync(request.ProductId);
         if (existingCount + request.Files.Count > MaxImagesPerProduct)
@@ -61,14 +60,22 @@ public class UploadProductImagesCommandHandler : ICommandHandler<UploadProductIm
             var uploadResult = await _fileService.UploadAsync(file, FileContainers.PRODUCTS, s3Key);
 
             uploadedImages.Add(ProductImageFactory.CreateImage(
-                request.ProductId, uploadResult.Blob.Uri!, s3Key, displayOrder: nextOrder + i));
+                request.ProductId, uploadResult.Blob.StorageKey!, s3Key, displayOrder: nextOrder + i));
         }
 
-        // Step 2: Persist to DB inside a retriable transaction
+        // Step 2: Persist to DB inside a retriable transaction.
+        // If the product has no thumbnail yet, promote the first uploaded image.
+        bool needsThumbnailUpdate = string.IsNullOrEmpty(product.ThumbnailUrl);
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             foreach (var image in uploadedImages)
                 await _unitOfWork.ProductImages.CreateAsync(image);
+
+            if (needsThumbnailUpdate)
+            {
+                product.ThumbnailUrl = uploadedImages[0].Url;
+                await _unitOfWork.Products.Update(product);
+            }
         });
 
         return uploadedImages.Select(image => _mapper.Map<ProductImageDto>(image)).ToList();

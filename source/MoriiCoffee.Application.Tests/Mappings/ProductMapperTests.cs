@@ -8,6 +8,7 @@ using MoriiCoffee.Application.SeedWork.Mappings;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
+using MoriiCoffee.Domain.Shared.Settings;
 using Xunit;
 using CategoryEntity = MoriiCoffee.Domain.Aggregates.CategoryAggregate.Category;
 using ProductEntity = MoriiCoffee.Domain.Aggregates.ProductAggregate.Product;
@@ -17,13 +18,14 @@ namespace MoriiCoffee.Application.Tests.Mappings;
 public class ProductMapperTests
 {
     private readonly IMapper _mapper;
+    private static readonly AwsS3Settings S3Settings = new() { CdnBaseUrl = "https://cdn.test" };
 
     public ProductMapperTests()
     {
         var config = new MapperConfiguration(cfg =>
         {
-            cfg.AddProfile<ProductMapper>();
-            cfg.AddProfile<CategoryMapper>(); // ProductDto.Categories maps Category → CategoryDto
+            cfg.AddProfile(new ProductMapper(S3Settings));
+            cfg.AddProfile(new CategoryMapper(S3Settings));
         }, NullLoggerFactory.Instance);
         config.AssertConfigurationIsValid();
         _mapper = config.CreateMapper();
@@ -90,7 +92,42 @@ public class ProductMapperTests
     }
 
     [Fact]
-    public void ProductImageToProductImageDto_MapsCorrectly()
+    public void ProductToProductDto_StorageKey_ResolvesToCdnUrl()
+    {
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Latte",
+            Slug = "latte",
+            ThumbnailUrl = "products/abc/123-latte.jpg",
+            ProductCategories = new List<ProductCategory>(),
+            Variants = new List<ProductVariant>(),
+            Images = new List<ProductImage>()
+        };
+
+        var dto = _mapper.Map<ProductDto>(product);
+
+        dto.ThumbnailUrl.Should().Be("https://cdn.test/products/abc/123-latte.jpg");
+    }
+
+    [Fact]
+    public void ProductImageToProductImageDto_StorageKey_ResolvesToCdnUrl()
+    {
+        var image = new ProductImage
+        {
+            Id = Guid.NewGuid(),
+            Url = "products/abc/123-photo.jpg",
+            DisplayOrder = 1
+        };
+
+        var dto = _mapper.Map<ProductImageDto>(image);
+
+        dto.Url.Should().Be("https://cdn.test/products/abc/123-photo.jpg");
+        dto.DisplayOrder.Should().Be(1);
+    }
+
+    [Fact]
+    public void ProductImageToProductImageDto_AbsoluteUrl_PassthroughAsIs()
     {
         var image = new ProductImage
         {

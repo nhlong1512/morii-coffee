@@ -66,7 +66,7 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             var s3Key = S3KeyHelper.BuildS3Key(productId, request.Thumbnail.FileName);
             var uploadResult = await _fileService.UploadAsync(request.Thumbnail, FileContainers.PRODUCTS, s3Key);
 
-            thumbnailUrl = uploadResult.Blob.Uri;
+            thumbnailUrl = uploadResult.Blob.StorageKey;
             thumbnailImage = ProductImageFactory.CreateImage(productId, thumbnailUrl!, s3Key, displayOrder: 1);
         }
 

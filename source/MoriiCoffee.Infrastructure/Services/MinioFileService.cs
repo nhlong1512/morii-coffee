@@ -92,6 +92,7 @@ public class MinioFileService : IFileService
         };
         response.Blob.Uri = presignedUri.ToString();
         response.Blob.Name = objectName;
+        response.Blob.StorageKey = $"{bucketName}/{objectName}";
         response.Blob.ContentType = blob.ContentType;
         response.Blob.Size = blob.Length;
 
@@ -138,6 +139,7 @@ public class MinioFileService : IFileService
         var response = new BlobResponseDto { Status = "File uploaded successfully." };
         response.Blob.Uri = presignedUri.ToString();
         response.Blob.Name = customObjectName;
+        response.Blob.StorageKey = $"{bucketName}/{customObjectName}";
         response.Blob.ContentType = blob.ContentType;
         response.Blob.Size = blob.Length;
         return response;

@@ -18,4 +18,11 @@ public class BlobDto
 
     [SwaggerSchema("Size of the blob content in bytes")]
     public long Size { get; set; } = 0;
+
+    /// <summary>
+    /// Full S3/storage key including the container prefix (e.g. <c>products/uuid/timestamp-file.png</c>).
+    /// Store this in the database instead of <see cref="Uri"/> so URLs survive CDN domain changes.
+    /// </summary>
+    [SwaggerSchema("Storage key (relative path within the bucket, including container prefix)")]
+    public string? StorageKey { get; set; }
 }
