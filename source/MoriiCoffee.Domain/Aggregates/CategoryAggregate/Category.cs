@@ -18,22 +18,18 @@ public class Category : AggregateRoot
     /// <summary>Display name of the category (e.g., "Espresso Drinks").</summary>
     [Required]
     [MaxLength(100)]
-    [Column(TypeName = "nvarchar(100)")]
     public string Name { get; set; } = null!;
 
     /// <summary>Short description shown to customers.</summary>
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string? Description { get; set; }
 
     /// <summary>URL of the icon or thumbnail image for this category.</summary>
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string? IconUrl { get; set; }
 
     /// <summary>Internal MinIO object name (GUID) for the icon. Used to delete or refresh the URL.</summary>
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string? IconFileName { get; set; }
 
     /// <summary>Sort order for displaying categories in the catalog.</summary>

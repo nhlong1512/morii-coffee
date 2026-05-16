@@ -18,18 +18,16 @@ public static class ApplicationDbContextConfiguration
         {
             var interceptor = serviceProvider.GetRequiredService<DateTrackingInterceptor>();
 
-            // UseSqlServer: For SQL Server 2022+ or self-hosted SQL Server (Docker)
-            // Note: Use UseAzureSql() instead if targeting Azure SQL Database for EF Core 10+ optimizations
-            options.UseSqlServer(
+            options.UseNpgsql(
                 configuration.GetConnectionString("DefaultConnectionString"),
-                sqlOptions =>
+                npgsqlOptions =>
                 {
-                    sqlOptions.MigrationsAssembly(
+                    npgsqlOptions.MigrationsAssembly(
                         typeof(Persistence.AssemblyReference).Assembly.FullName);
-                    sqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 3,
-                        maxRetryDelay: TimeSpan.FromSeconds(10),
-                        errorNumbersToAdd: null);
+                    npgsqlOptions.EnableRetryOnFailure(
+                        3,
+                        TimeSpan.FromSeconds(10),
+                        null);
                 })
                 .AddInterceptors(interceptor);
         });

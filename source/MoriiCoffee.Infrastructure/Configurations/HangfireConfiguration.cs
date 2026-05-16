@@ -1,13 +1,13 @@
 using Hangfire;
-using Hangfire.SqlServer;
+using Hangfire.PostgreSql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MoriiCoffee.Infrastructure.Configurations;
 
 /// <summary>
-/// Configures Hangfire with SQL Server storage backed by the existing MoriiCoffeeDb.
-/// Hangfire creates and manages its own <c>[HangFire]</c> schema — no EF migration required.
+/// Configures Hangfire with PostgreSQL storage backed by the existing MoriiCoffeeDb.
+/// Hangfire creates and manages its own schema — no EF migration required.
 /// </summary>
 public static class HangfireConfiguration
 {
@@ -21,13 +21,11 @@ public static class HangfireConfiguration
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()
             .UseRecommendedSerializerSettings()
-            .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
+            .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString), new PostgreSqlStorageOptions
             {
-                CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-                SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-                QueuePollInterval = TimeSpan.Zero,
-                UseRecommendedIsolationLevel = true,
-                DisableGlobalLocks = true
+                PrepareSchemaIfNecessary = true,
+                QueuePollInterval = TimeSpan.FromSeconds(15),
+                InvisibilityTimeout = TimeSpan.FromMinutes(5)
             }));
 
         services.AddHangfireServer();

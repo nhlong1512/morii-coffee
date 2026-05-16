@@ -1,19 +1,18 @@
 services:
   moriicoffee.database:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    platform: linux/amd64
+    image: postgres:17-alpine
     container_name: moriicoffee.database
     environment:
-      MSSQL_DATABASE: MoriiCoffeeDB
-      MSSQL_SA_PASSWORD: "MoriiCoffee@123~"
-      ACCEPT_EULA: "Y"
+      POSTGRES_DB: MoriiCoffeeDb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     restart: always
     volumes:
-      - moriicoffee_sqlserver_data:/var/opt/mssql
+      - moriicoffee_postgres_data:/var/lib/postgresql/data
     ports:
-      - "1433:1433"
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'MoriiCoffee@123~' -Q 'SELECT 1' -C -b"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d MoriiCoffeeDb"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -50,8 +49,8 @@ networks:
     driver: bridge
 
 volumes:
-  moriicoffee_sqlserver_data:
-    name: moriicoffee_sqlserver_data
+  moriicoffee_postgres_data:
+    name: moriicoffee_postgres_data
   moriicoffee_minio_data:
     name: moriicoffee_minio_data
   moriicoffee_minio_config:

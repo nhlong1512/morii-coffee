@@ -52,12 +52,24 @@ public class ErrorWrappingMiddleware
             context.Response.StatusCode = 500;
         }
 
-        if (!context.Response.HasStarted)
+        if (!context.Response.HasStarted && ShouldWriteFallbackBody(context))
         {
             context.Response.ContentType = "application/json";
             var fallback = new ApiResponse(context.Response.StatusCode);
             await context.Response.WriteAsync(JsonConvert.SerializeObject(fallback));
         }
+    }
+
+    private static bool ShouldWriteFallbackBody(HttpContext context)
+    {
+        if (HttpMethods.IsHead(context.Request.Method))
+        {
+            return false;
+        }
+
+        return context.Response.StatusCode is not StatusCodes.Status204NoContent
+            and not StatusCodes.Status205ResetContent
+            and not StatusCodes.Status304NotModified;
     }
 
     private static async Task WriteJsonResponse(HttpContext context, int statusCode, object body)

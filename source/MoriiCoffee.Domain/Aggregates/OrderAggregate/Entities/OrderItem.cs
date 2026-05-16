@@ -25,21 +25,17 @@ public class OrderItem : EntityBase
 
     [Required]
     [MaxLength(200)]
-    [Column(TypeName = "nvarchar(200)")]
     public string ProductName { get; private set; } = null!;
 
     public Guid? VariantId { get; private set; }
 
     [MaxLength(100)]
-    [Column(TypeName = "nvarchar(100)")]
     public string? VariantLabel { get; private set; }
 
-    [Column(TypeName = "decimal(18,2)")]
     public decimal UnitPrice { get; private set; }
 
     public int Quantity { get; private set; }
 
-    [Column(TypeName = "decimal(18,2)")]
     public decimal LineTotal { get; private set; }
 
     public static OrderItem Create(

@@ -5,7 +5,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnectionString=Server=moriicoffee.database,1433;Database=MoriiCoffeeDb;User Id=sa;Password=MoriiCoffee@123~;TrustServerCertificate=true;
+      - ConnectionStrings__DefaultConnectionString=Host=moriicoffee.database;Port=5432;Database=MoriiCoffeeDb;Username=postgres;Password=postgres;Include Error Detail=true
       - ConnectionStrings__CachingConnectionString=moriicoffee.redis:6379,abortConnect=false
     depends_on:
       moriicoffee.database:
