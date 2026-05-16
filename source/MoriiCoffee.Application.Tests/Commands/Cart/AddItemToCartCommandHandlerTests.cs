@@ -6,6 +6,7 @@ using MoriiCoffee.Application.SeedWork.DTOs.Cart;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Domain.SeedWork.Persistence;
+using MoriiCoffee.Domain.Shared.Settings;
 using Xunit;
 using ProductEntity = MoriiCoffee.Domain.Aggregates.ProductAggregate.Product;
 using ProductVariantEntity = MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities.ProductVariant;
@@ -18,13 +19,15 @@ public class AddItemToCartCommandHandlerTests
     private readonly Mock<ICartService> _cartService = new();
     private readonly Mock<IProductsRepository> _productsRepo = new();
     private readonly Mock<IProductVariantsRepository> _variantsRepo = new();
+    private readonly AwsS3Settings _s3Settings;
     private readonly AddItemToCartCommandHandler _handler;
 
     public AddItemToCartCommandHandlerTests()
     {
         _unitOfWork.Setup(u => u.Products).Returns(_productsRepo.Object);
         _unitOfWork.Setup(u => u.ProductVariants).Returns(_variantsRepo.Object);
-        _handler = new AddItemToCartCommandHandler(_unitOfWork.Object, _cartService.Object);
+        _s3Settings = new AwsS3Settings { CdnBaseUrl = "https://cdn.example.com" };
+        _handler = new AddItemToCartCommandHandler(_unitOfWork.Object, _cartService.Object, _s3Settings);
     }
 
     [Fact]
