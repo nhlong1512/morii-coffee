@@ -24,10 +24,9 @@ internal static class ApplicationExtensions
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
             RequireHeaderSymmetry = false
         };
-        // Production runs behind nginx/container networking, so loopback-only trust
-        // prevents ASP.NET from honoring X-Forwarded-Proto=https. Clear the defaults
-        // here so the app can preserve the original HTTPS scheme for OAuth callbacks.
-        forwardedHeadersOptions.KnownNetworks.Clear();
+        // Production runs behind nginx/container networking, so clearing defaults
+        // allows the app to honor X-Forwarded-Proto=https and preserve HTTPS scheme for OAuth.
+        forwardedHeadersOptions.KnownIPNetworks.Clear();
         forwardedHeadersOptions.KnownProxies.Clear();
         app.UseForwardedHeaders(forwardedHeadersOptions);
 
