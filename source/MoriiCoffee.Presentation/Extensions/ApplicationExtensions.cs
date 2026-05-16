@@ -5,6 +5,7 @@ using MoriiCoffee.Infrastructure;
 using MoriiCoffee.Infrastructure.Configurations;
 using MoriiCoffee.Infrastructure.Persistence.Data;
 using MoriiCoffee.Presentation.Middlewares;
+using System.Net;
 
 namespace MoriiCoffee.Presentation.Extensions;
 
@@ -24,7 +25,7 @@ internal static class ApplicationExtensions
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
             RequireHeaderSymmetry = false,
-            KnownIPNetworks = { new IPNetwork(System.Net.IPAddress.Parse("127.0.0.1"), 32) }
+            KnownIPNetworks = { new System.Net.IPNetwork(System.Net.IPAddress.Parse("127.0.0.1"), 32) }
         };
         app.UseForwardedHeaders(forwardedHeadersOptions);
 
