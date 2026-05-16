@@ -1,4 +1,5 @@
 using Hangfire;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using MoriiCoffee.Infrastructure;
 using MoriiCoffee.Infrastructure.Configurations;
@@ -23,7 +24,7 @@ internal static class ApplicationExtensions
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
             RequireHeaderSymmetry = false,
-            KnownNetworks = { new System.Net.IPNetwork(System.Net.IPAddress.Parse("127.0.0.1"), 32) }
+            KnownIPNetworks = { new IPNetwork(System.Net.IPAddress.Parse("127.0.0.1"), 32) }
         };
         app.UseForwardedHeaders(forwardedHeadersOptions);
 
