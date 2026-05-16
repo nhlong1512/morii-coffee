@@ -455,6 +455,7 @@ riderModule.iml
 dotnet-tools.json
 aspire/MoriiCoffee.AppHost/appsettings.Development.json
 source/MoriiCoffee.Presentation/appsettings.Development.json
+source/MoriiCoffee.Presentation/appsettings.Production.json
 
 
 # Ignore everything in docs/ except these files and folders:
