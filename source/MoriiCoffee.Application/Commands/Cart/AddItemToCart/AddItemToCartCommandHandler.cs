@@ -1,8 +1,10 @@
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Cart;
 using MoriiCoffee.Application.SeedWork.Exceptions;
+using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
+using MoriiCoffee.Domain.Shared.Settings;
 
 namespace MoriiCoffee.Application.Commands.Cart.AddItemToCart;
 
@@ -15,12 +17,14 @@ public class AddItemToCartCommandHandler : ICommandHandler<AddItemToCartCommand,
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICartService _cartService;
+    private readonly AwsS3Settings _s3Settings;
 
     /// <summary>Initialises the handler with its required dependencies.</summary>
-    public AddItemToCartCommandHandler(IUnitOfWork unitOfWork, ICartService cartService)
+    public AddItemToCartCommandHandler(IUnitOfWork unitOfWork, ICartService cartService, AwsS3Settings s3Settings)
     {
         _unitOfWork = unitOfWork;
         _cartService = cartService;
+        _s3Settings = s3Settings;
     }
 
     /// <summary>
@@ -53,7 +57,7 @@ public class AddItemToCartCommandHandler : ICommandHandler<AddItemToCartCommand,
             ProductName = product.Name,
             UnitPrice = product.BasePrice + additionalPrice,
             Quantity = request.Quantity,
-            ImageUrl = product.ThumbnailUrl,
+            ImageUrl = CdnUrlHelper.Resolve(product.ThumbnailUrl, _s3Settings),
             AddedAt = DateTime.UtcNow
         };
 
