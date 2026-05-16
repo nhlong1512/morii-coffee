@@ -110,7 +110,7 @@ public class CartController : ControllerBase
     /// </summary>
     [HttpPost("merge")]
     [SwaggerOperation(Summary = "Merge guest cart after login")]
-    [SwaggerResponse(200, SwaggerResponseMessages.UpdatedSuccessfully)]
+    [SwaggerResponse(200, SwaggerResponseMessages.UpdatedSuccessfully, typeof(CartDto))]
     [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
     public async Task<IActionResult> MergeGuestCart([FromBody] MergeGuestCartDto dto)
     {
@@ -119,7 +119,9 @@ public class CartController : ControllerBase
             UserId = GetCurrentUserId(),
             GuestItems = dto.GuestItems
         });
-        return Ok(new ApiOkResponse("Guest cart merged."));
+
+        var mergedCart = await _mediator.Send(new GetCartQuery(GetCurrentUserId()));
+        return Ok(new ApiOkResponse(mergedCart));
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
