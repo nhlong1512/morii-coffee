@@ -57,7 +57,7 @@ public class AddItemToCartCommandHandler : ICommandHandler<AddItemToCartCommand,
             ProductName = product.Name,
             UnitPrice = product.BasePrice + additionalPrice,
             Quantity = request.Quantity,
-            ImageUrl = CdnUrlHelper.Resolve(product.ThumbnailUrl, _s3Settings),
+            ImageUrl = CdnUrlHelper.Resolve(product.ThumbnailUrl, _s3Settings.CdnBaseUrl),
             AddedAt = DateTime.UtcNow
         };
 
