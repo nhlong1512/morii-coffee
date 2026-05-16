@@ -16,17 +16,14 @@ public class UserDeliveryProfile : EntityBase
 
     [Required]
     [MaxLength(100)]
-    [Column(TypeName = "nvarchar(100)")]
     public string FullName { get; private set; } = null!;
 
     [Required]
     [MaxLength(15)]
-    [Column(TypeName = "nvarchar(15)")]
     public string PhoneNumber { get; private set; } = null!;
 
     [Required]
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string Address { get; private set; } = null!;
 
     private UserDeliveryProfile()

@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white" alt=".NET 10" />
   <img src="https://img.shields.io/badge/C%23-13.0-239120?logo=csharp&logoColor=white" alt="C#" />
-  <img src="https://img.shields.io/badge/SQL%20Server-2022-CC2927?logo=microsoftsqlserver&logoColor=white" alt="SQL Server" />
+  <img src="https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white" alt="Redis" />
   <img src="https://img.shields.io/badge/MinIO-Object%20Storage-C72E49?logo=minio&logoColor=white" alt="MinIO" />
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker" />
@@ -95,12 +95,12 @@ The codebase follows **Clean Architecture** with strict dependency rules — out
 | Category | Technology |
 |----------|------------|
 | Runtime | .NET 10 / ASP.NET Core 10 |
-| ORM | Entity Framework Core 10.0.5 (SQL Server) |
+| ORM | Entity Framework Core 10.0.5 (PostgreSQL via Npgsql) |
 | Mediator | MediatR 14.1.0 |
 | Validation | FluentValidation 12.1.1 |
 | Mapping | AutoMapper 16.1.1 |
 | Caching | Redis 7 via StackExchange.Redis 2.8.x |
-| Background jobs | Hangfire 1.8.23 (SQL Server storage) |
+| Background jobs | Hangfire 1.8.23 (PostgreSQL storage) |
 | Object storage | MinIO 7.0.0 · AWS S3 SDK 4.0.20.2 |
 | Email | Brevo SDK 1.1.2 |
 | Authentication | JWT Bearer 10.0.5 · Google OAuth 10.0.5 |
@@ -119,7 +119,7 @@ The codebase follows **Clean Architecture** with strict dependency rules — out
 
 ### Running with Docker
 
-The development stack (API + SQL Server + Redis + MinIO) is fully Dockerised.
+The development stack (API + PostgreSQL + Redis + MinIO) is fully Dockerised.
 
 ```bash
 cd deploy
@@ -133,7 +133,7 @@ This brings up:
 | API | `http://localhost:8002` |
 | Swagger UI | `http://localhost:8002/swagger` |
 | Hangfire Dashboard | `http://localhost:8002/hangfire` |
-| SQL Server | `localhost:1433` |
+| PostgreSQL | `localhost:5432` |
 | Redis | `localhost:6379` |
 | MinIO Console | `http://localhost:9001` |
 
@@ -146,7 +146,7 @@ Copy `appsettings.json` and fill in the required values. In development, overrid
 ```jsonc
 {
   "ConnectionStrings": {
-    "DefaultConnectionString": "Server=...;Database=MoriiCoffeeDb;...",
+    "DefaultConnectionString": "Host=localhost;Port=5432;Database=MoriiCoffeeDb;Username=postgres;Password=postgres",
     "CachingConnectionString": "localhost:6379,abortConnect=false"
   },
   "JwtOptions": {
@@ -237,7 +237,7 @@ TTL:         24 hours (reset on each write)
 
 ## Background Jobs
 
-Hangfire manages recurring jobs with SQL Server as the storage backend. The dashboard is available at `/hangfire` (admin-only in production).
+Hangfire manages recurring jobs with PostgreSQL as the storage backend. The dashboard is available at `/hangfire` (admin-only in production).
 
 ### Order Auto-Complete
 
@@ -316,7 +316,7 @@ morii-coffee/
 │   ├── MoriiCoffee.Domain.Tests/        # Domain layer unit tests
 │   └── MoriiCoffee.Application.Tests/   # Application layer unit tests
 ├── deploy/
-│   ├── docker-compose.yml               # Base services (SQL Server, Redis, MinIO)
+│   ├── docker-compose.yml               # Base services (PostgreSQL, Redis, MinIO)
 │   ├── docker-compose.development.yml   # Development overrides (API container)
 │   └── run-docker-development.sh        # One-command dev startup
 ├── docs/

@@ -22,7 +22,7 @@ public interface IUnitOfWork : IDisposable
 
     /// <summary>
     /// Executes <paramref name="operation"/> inside a retriable transaction that is compatible
-    /// with <c>SqlServerRetryingExecutionStrategy</c>. Commits on success, rolls back on failure.
+    /// with the provider's retrying execution strategy. Commits on success, rolls back on failure.
     /// </summary>
     Task ExecuteInTransactionAsync(Func<Task> operation);
 

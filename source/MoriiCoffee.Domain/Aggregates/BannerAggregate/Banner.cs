@@ -19,27 +19,22 @@ public class Banner : AggregateRoot
     /// <summary>Main headline text shown on the banner (e.g., "Summer Refreshers are here").</summary>
     [Required]
     [MaxLength(200)]
-    [Column(TypeName = "nvarchar(200)")]
     public string Title { get; set; } = null!;
 
     /// <summary>Optional supporting text shown beneath the title.</summary>
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string? Subtitle { get; set; }
 
     /// <summary>Label for the call-to-action button (e.g., "Order Now").</summary>
     [MaxLength(100)]
-    [Column(TypeName = "nvarchar(100)")]
     public string? Cta { get; set; }
 
     /// <summary>URL the call-to-action button navigates to.</summary>
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string? CtaLink { get; set; }
 
     /// <summary>Public CDN URL of the banner image. Null until an image is uploaded.</summary>
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string? ImageUrl { get; set; }
 
     /// <summary>Sort order for displaying banners. Lower values appear first.</summary>

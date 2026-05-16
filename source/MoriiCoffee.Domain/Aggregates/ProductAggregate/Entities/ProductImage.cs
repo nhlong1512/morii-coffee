@@ -27,7 +27,6 @@ public class ProductImage : EntityBase
     /// <summary>CloudFront CDN URL of the image. Never store the raw S3 URL.</summary>
     [Required]
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string Url { get; set; } = null!;
 
     /// <summary>
@@ -36,7 +35,6 @@ public class ProductImage : EntityBase
     /// </summary>
     [Required]
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string S3Key { get; set; } = null!;
 
     /// <summary>Sort order for displaying images in the gallery (lower = first).</summary>

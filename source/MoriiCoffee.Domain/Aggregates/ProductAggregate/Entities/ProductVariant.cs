@@ -31,7 +31,6 @@ public class ProductVariant : EntityBase
     /// </summary>
     [Required]
     [MaxLength(100)]
-    [Column(TypeName = "nvarchar(100)")]
     public string Name { get; set; } = null!;
 
     /// <summary>Standardized size classification for this variant.</summary>
@@ -43,14 +42,12 @@ public class ProductVariant : EntityBase
     /// Total price = Product.BasePrice + AdditionalPrice.
     /// </summary>
     [Required]
-    [Column(TypeName = "decimal(18,2)")]
     public decimal AdditionalPrice { get; set; }
 
     /// <summary>
     /// Optional stock-keeping unit code for inventory management.
     /// </summary>
     [MaxLength(50)]
-    [Column(TypeName = "nvarchar(50)")]
     public string? Sku { get; set; }
 
     /// <summary>Current stock quantity. A value of -1 indicates unlimited stock.</summary>

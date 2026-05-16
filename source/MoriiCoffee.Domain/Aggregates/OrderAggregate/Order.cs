@@ -25,7 +25,6 @@ public class Order : AggregateRoot
 
     [Required]
     [MaxLength(20)]
-    [Column(TypeName = "nvarchar(20)")]
     public string OrderNumber { get; private set; } = null!;
 
     [Required]
@@ -35,26 +34,20 @@ public class Order : AggregateRoot
     public DeliveryInfo DeliveryInfo { get; private set; } = null!;
 
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string? Notes { get; private set; }
 
     [Required]
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public EPaymentMethod PaymentMethod { get; private set; }
 
-    [Column(TypeName = "decimal(18,2)")]
     public decimal Subtotal { get; private set; }
 
-    [Column(TypeName = "decimal(18,2)")]
     public decimal Tax { get; private set; }
 
-    [Column(TypeName = "decimal(18,2)")]
     public decimal Shipping { get; private set; }
 
-    [Column(TypeName = "decimal(18,2)")]
     public decimal Discount { get; private set; }
 
-    [Column(TypeName = "decimal(18,2)")]
     public decimal Total { get; private set; }
 
     [Required]

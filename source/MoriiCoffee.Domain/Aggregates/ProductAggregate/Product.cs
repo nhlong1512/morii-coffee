@@ -24,7 +24,6 @@ public class Product : AggregateRoot
     /// <summary>Display name of the product (e.g., "Iced Caramel Macchiato").</summary>
     [Required]
     [MaxLength(200)]
-    [Column(TypeName = "nvarchar(200)")]
     public string Name { get; set; } = null!;
 
     /// <summary>
@@ -33,19 +32,16 @@ public class Product : AggregateRoot
     /// </summary>
     [Required]
     [MaxLength(200)]
-    [Column(TypeName = "nvarchar(200)")]
     public string Slug { get; set; } = null!;
 
     /// <summary>Full description of the product shown on the product detail page.</summary>
     [MaxLength(2000)]
-    [Column(TypeName = "nvarchar(2000)")]
     public string? Description { get; set; }
 
     /// <summary>
     /// Base price of the product. Variants may add an additional price on top of this.
     /// </summary>
     [Required]
-    [Column(TypeName = "decimal(18,2)")]
     public decimal BasePrice { get; set; }
 
     /// <summary>Collection of categories this product belongs to.</summary>
@@ -53,12 +49,10 @@ public class Product : AggregateRoot
 
     /// <summary>URL of the main thumbnail image for the product.</summary>
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string? ThumbnailUrl { get; set; }
 
     /// <summary>Internal MinIO object name (GUID) for the thumbnail. Used to delete or refresh the URL.</summary>
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string? ThumbnailFileName { get; set; }
 
     /// <summary>Availability and visibility status of the product.</summary>

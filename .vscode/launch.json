@@ -16,7 +16,7 @@
             },
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "ConnectionStrings__DefaultConnectionString": "Server=localhost,1433;Database=MoriiCoffeeDb;User Id=sa;Password=MoriiCoffee@123~;TrustServerCertificate=true;"
+                "ConnectionStrings__DefaultConnectionString": "Host=localhost;Port=5432;Database=MoriiCoffeeDb;Username=postgres;Password=postgres;Include Error Detail=true"
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"

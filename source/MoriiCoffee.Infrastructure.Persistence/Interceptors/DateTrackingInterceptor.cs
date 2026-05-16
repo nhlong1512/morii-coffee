@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using MoriiCoffee.Domain.SeedWork.Entities;
+using MoriiCoffee.Infrastructure.Persistence.Helpers;
 
 namespace MoriiCoffee.Infrastructure.Persistence.Interceptors;
 
@@ -59,18 +60,20 @@ public sealed class DateTrackingInterceptor : SaveChangesInterceptor
 
             foreach (EntityEntry item in modified)
             {
+                DateTimeNormalizationHelper.NormalizeTrackedDateTimes(item);
+
                 if (item.Entity is not IDateTracking changedOrAddedItem)
                 {
                     continue;
                 }
                 if (item.State == EntityState.Added)
                 {
-                    changedOrAddedItem.CreatedAt = DateTime.UtcNow;
-                    changedOrAddedItem.UpdatedAt = DateTime.UtcNow;
+                    changedOrAddedItem.CreatedAt = DateTimeNormalizationHelper.NormalizeToUtc(DateTime.UtcNow);
+                    changedOrAddedItem.UpdatedAt = DateTimeNormalizationHelper.NormalizeToUtc(DateTime.UtcNow);
                 }
                 else
                 {
-                    changedOrAddedItem.UpdatedAt = DateTime.UtcNow;
+                    changedOrAddedItem.UpdatedAt = DateTimeNormalizationHelper.NormalizeToUtc(DateTime.UtcNow);
                 }
             }
         }

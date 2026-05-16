@@ -20,7 +20,6 @@ public class User : IdentityUser<Guid>, IAggregateRoot, IEntityBase
 
     /// <summary>Full display name of the user (e.g., "Nguyen Van A").</summary>
     [MaxLength(200)]
-    [Column(TypeName = "nvarchar(200)")]
     public string? FullName { get; set; }
 
     /// <summary>Date of birth. Optional — used for personalization and age verification.</summary>
@@ -31,17 +30,14 @@ public class User : IdentityUser<Guid>, IAggregateRoot, IEntityBase
 
     /// <summary>Short user bio or description displayed on the profile page.</summary>
     [MaxLength(1000)]
-    [Column(TypeName = "nvarchar(1000)")]
     public string? Bio { get; set; }
 
     /// <summary>Full public URL of the user's avatar image served from MinIO.</summary>
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string? AvatarUrl { get; set; }
 
     /// <summary>Internal MinIO object key for the avatar file (used to delete the old image on update).</summary>
     [MaxLength(500)]
-    [Column(TypeName = "nvarchar(500)")]
     public string? AvatarFileName { get; set; }
 
     /// <summary>Current account status. Inactive users are blocked from signing in.</summary>
