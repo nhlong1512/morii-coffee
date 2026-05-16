@@ -5,8 +5,6 @@ using MoriiCoffee.Infrastructure;
 using MoriiCoffee.Infrastructure.Configurations;
 using MoriiCoffee.Infrastructure.Persistence.Data;
 using MoriiCoffee.Presentation.Middlewares;
-using System.Net;
-
 namespace MoriiCoffee.Presentation.Extensions;
 
 /// <summary>Configures the HTTP request pipeline: Swagger, error handling, CORS, authentication, authorization, controllers, and database migration/seeding.</summary>
@@ -24,9 +22,13 @@ internal static class ApplicationExtensions
         var forwardedHeadersOptions = new ForwardedHeadersOptions
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-            RequireHeaderSymmetry = false,
-            KnownIPNetworks = { new System.Net.IPNetwork(System.Net.IPAddress.Parse("127.0.0.1"), 32) }
+            RequireHeaderSymmetry = false
         };
+        // Production runs behind nginx/container networking, so loopback-only trust
+        // prevents ASP.NET from honoring X-Forwarded-Proto=https. Clear the defaults
+        // here so the app can preserve the original HTTPS scheme for OAuth callbacks.
+        forwardedHeadersOptions.KnownNetworks.Clear();
+        forwardedHeadersOptions.KnownProxies.Clear();
         app.UseForwardedHeaders(forwardedHeadersOptions);
 
         // 3. HTTPS redirect (production only)
