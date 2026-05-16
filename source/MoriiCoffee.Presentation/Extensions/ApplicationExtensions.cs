@@ -18,6 +18,15 @@ internal static class ApplicationExtensions
         // 2. Global exception handling
         app.UseMiddleware<ErrorWrappingMiddleware>();
 
+        // 2.5 Trust forwarded headers from reverse proxy (nginx/load balancer)
+        var forwardedHeadersOptions = new ForwardedHeadersOptions
+        {
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+            RequireHeaderSymmetry = false,
+            KnownNetworks = { new System.Net.IPNetwork(System.Net.IPAddress.Parse("127.0.0.1"), 32) }
+        };
+        app.UseForwardedHeaders(forwardedHeadersOptions);
+
         // 3. HTTPS redirect (production only)
         if (app.Environment.IsProduction())
         {
