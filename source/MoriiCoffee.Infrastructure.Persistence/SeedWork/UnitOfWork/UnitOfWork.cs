@@ -23,6 +23,8 @@ public class UnitOfWork : IUnitOfWork
     private BannersRepository? _banners;
     private OrdersRepository? _orders;
     private UserDeliveryProfilesRepository? _userDeliveryProfiles;
+    private PaymentRepository? _payments;
+    private PaymentWebhookEventRepository? _paymentWebhookEvents;
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -49,6 +51,12 @@ public class UnitOfWork : IUnitOfWork
 
     public IUserDeliveryProfileRepository UserDeliveryProfiles =>
         _userDeliveryProfiles ??= new UserDeliveryProfilesRepository(_context);
+
+    public IPaymentRepository Payments =>
+        _payments ??= new PaymentRepository(_context);
+
+    public IPaymentWebhookEventRepository PaymentWebhookEvents =>
+        _paymentWebhookEvents ??= new PaymentWebhookEventRepository(_context);
 
     public async Task<int> CommitAsync() =>
         await _context.SaveChangesAsync();

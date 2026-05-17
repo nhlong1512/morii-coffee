@@ -54,6 +54,29 @@ public class Order : AggregateRoot
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public EOrderStatus OrderStatus { get; private set; }
 
+    /// <summary>
+    /// Payment lifecycle, kept distinct from <see cref="OrderStatus"/> (which is fulfilment).
+    /// For COD orders this is <see cref="EPaymentStatus.NotRequired"/>.
+    /// For Stripe orders this starts at <see cref="EPaymentStatus.Pending"/> and is driven by
+    /// webhook events.
+    /// </summary>
+    [Required]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public EPaymentStatus PaymentStatus { get; private set; }
+
+    /// <summary>
+    /// Stripe PaymentIntent id of the successful payment (e.g. <c>pi_3OZA...</c>). Null for COD
+    /// orders and for orders still in <see cref="EPaymentStatus.Pending"/> / <see cref="EPaymentStatus.Failed"/>.
+    /// </summary>
+    [MaxLength(200)]
+    public string? StripePaymentIntentId { get; private set; }
+
+    /// <summary>
+    /// Stripe Charge id of the successful payment (<c>ch_...</c>). Null until payment succeeds.
+    /// </summary>
+    [MaxLength(200)]
+    public string? StripeChargeId { get; private set; }
+
     public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
 
     public static Order Create(
@@ -100,16 +123,98 @@ public class Order : AggregateRoot
             Shipping = shipping,
             Discount = discount,
             Total = total,
-            OrderStatus = EOrderStatus.PENDING
+            OrderStatus = EOrderStatus.PENDING,
+            // Initial PaymentStatus: COD = NotRequired (legacy zero-touch behaviour);
+            // STRIPE / future online providers = Pending (awaiting webhook confirmation).
+            PaymentStatus = paymentMethod == EPaymentMethod.COD
+                ? EPaymentStatus.NotRequired
+                : EPaymentStatus.Pending
         };
 
         order._items.AddRange(orderItems.Select(item => item.AssignToOrder(order.Id)));
         return order;
     }
 
+    /// <summary>
+    /// Flips <see cref="PaymentStatus"/> to <see cref="EPaymentStatus.Paid"/> after the
+    /// <c>checkout.session.completed</c> webhook is verified. Idempotent: re-applying the same
+    /// PaymentIntent id is a no-op; applying a different one throws (defensive — a same-order
+    /// successful charge with a different PI id would be a data-integrity bug).
+    /// </summary>
+    public void MarkPaymentPaid(string stripePaymentIntentId, string stripeChargeId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(stripePaymentIntentId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(stripeChargeId);
+
+        if (PaymentStatus == EPaymentStatus.Paid)
+        {
+            if (!string.Equals(StripePaymentIntentId, stripePaymentIntentId, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "Order is already Paid with a different PaymentIntent id.");
+            return; // idempotent no-op
+        }
+
+        if (PaymentStatus != EPaymentStatus.Pending)
+            throw new InvalidOperationException(
+                $"Cannot transition payment from {PaymentStatus} to Paid.");
+
+        PaymentStatus = EPaymentStatus.Paid;
+        StripePaymentIntentId = stripePaymentIntentId.Trim();
+        StripeChargeId = stripeChargeId.Trim();
+    }
+
+    /// <summary>
+    /// Flips <see cref="PaymentStatus"/> to <see cref="EPaymentStatus.Failed"/> after Stripe
+    /// signals a definitive failure (<c>checkout.session.expired</c> or
+    /// <c>payment_intent.payment_failed</c>). Idempotent.
+    /// </summary>
+    public void MarkPaymentFailed()
+    {
+        if (PaymentStatus == EPaymentStatus.Failed)
+            return;
+
+        if (PaymentStatus != EPaymentStatus.Pending)
+            throw new InvalidOperationException(
+                $"Cannot transition payment from {PaymentStatus} to Failed.");
+
+        PaymentStatus = EPaymentStatus.Failed;
+    }
+
+    /// <summary>
+    /// Updates the order's <see cref="PaymentStatus"/> based on the running cumulative refund
+    /// total recorded against the underlying <see cref="PaymentAggregate.Payment"/>.
+    /// </summary>
+    /// <param name="cumulativeRefundedAmount">Sum of all settled refunds for the order's payment.</param>
+    public void ApplyRefund(decimal cumulativeRefundedAmount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(cumulativeRefundedAmount);
+
+        if (PaymentStatus is not (EPaymentStatus.Paid or EPaymentStatus.PartiallyRefunded))
+            throw new InvalidOperationException(
+                $"Cannot apply a refund while payment status is {PaymentStatus}.");
+
+        if (cumulativeRefundedAmount > Total)
+            throw new InvalidOperationException(
+                "Cumulative refunded amount cannot exceed the order total.");
+
+        PaymentStatus = cumulativeRefundedAmount == Total
+            ? EPaymentStatus.Refunded
+            : EPaymentStatus.PartiallyRefunded;
+    }
+
     public void Confirm()
     {
         EnsureCanAdvanceTo(EOrderStatus.CONFIRMED);
+
+        // FR-013: an online-paid order MUST NOT be confirmed for fulfilment until payment is
+        // settled. COD orders bypass this guard (PaymentStatus == NotRequired).
+        if (PaymentMethod != EPaymentMethod.COD &&
+            PaymentStatus is EPaymentStatus.Pending or EPaymentStatus.Failed)
+        {
+            throw new InvalidOperationException(
+                $"Cannot confirm an order whose payment status is {PaymentStatus}.");
+        }
+
         OrderStatus = EOrderStatus.CONFIRMED;
     }
 

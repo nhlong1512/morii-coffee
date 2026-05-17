@@ -4,6 +4,8 @@ using MoriiCoffee.Domain.Aggregates.BannerAggregate;
 using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
+using MoriiCoffee.Domain.Aggregates.PaymentAggregate;
+using MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
@@ -59,6 +61,14 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
 
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
+
+    #endregion
+
+    #region PaymentAggregate
+
+    public DbSet<Payment> Payments { get; set; }
+    public DbSet<RefundRecord> Refunds { get; set; }
+    public DbSet<PaymentWebhookEvent> PaymentWebhookEvents { get; set; }
 
     #endregion
 

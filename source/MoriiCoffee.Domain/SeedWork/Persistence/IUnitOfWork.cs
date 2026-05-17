@@ -49,5 +49,11 @@ public interface IUnitOfWork : IDisposable
     /// <summary>Repository for managing user delivery profiles.</summary>
     IUserDeliveryProfileRepository UserDeliveryProfiles { get; }
 
+    /// <summary>Repository for the Payment aggregate (Stripe checkout sessions + refunds).</summary>
+    IPaymentRepository Payments { get; }
+
+    /// <summary>Repository for the PaymentWebhookEvent audit/idempotency table.</summary>
+    IPaymentWebhookEventRepository PaymentWebhookEvents { get; }
+
     #endregion
 }
