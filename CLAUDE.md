@@ -95,6 +95,9 @@ cd deploy && bash run-docker-development.sh
 - SQL Server (via Entity Framework Core 10.0.5), MinIO 7.0.0 (object storage), AWS S3 (fallback storage) (006-dotnet-10-upgrade)
 - C# / .NET 10.0 (`net10.0`) + xUnit 2.9.3, xunit.runner.visualstudio 3.1.5, Microsoft.NET.Test.Sdk 18.4.0, Moq 4.20.72, FluentAssertions 8.9.0 (008-unit-tests-setup)
 - N/A — all persistence dependencies are mocked via `Mock<IUnitOfWork>()` (008-unit-tests-setup)
+- C# / .NET 10.0 (`net10.0`) — confirmed in `MoriiCoffee.Presentation.csproj`. The constitution mentions .NET 8 but the repo has already migrated (feature `006-dotnet-10-upgrade`). (011-stripe-payment)
+- PostgreSQL via EF Core 10.0.5 + Npgsql. Two new tables (`Payments`, `Refunds`, `PaymentWebhookEvents`). One column added to `Orders` (`PaymentStatus`). (011-stripe-payment)
+- Stripe.net 47.x, Stripe webhook signature verification, Checkout Sessions (011-stripe-payment)
 
 ## Recent Changes
 - 006-dotnet-10-upgrade: Upgraded platform from .NET 8.0 to .NET 10.0, all Microsoft packages to 10.0.5, MediatR to 14.1.0, AutoMapper to 16.1.1, FluentValidation to 12.1.1, Minio to 7.0.0

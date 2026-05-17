@@ -12,5 +12,12 @@ public enum EPaymentMethod
     MOMO = 2,
 
     /// <summary>PayPal payment (integration planned for a future milestone).</summary>
-    PAYPAL = 3
+    PAYPAL = 3,
+
+    /// <summary>
+    /// Stripe online card payment. After the order is placed the customer is redirected to
+    /// the Stripe-hosted Checkout page; the order is confirmed as paid only when Stripe
+    /// emits a <c>checkout.session.completed</c> webhook event (see feature 011-stripe-payment).
+    /// </summary>
+    STRIPE = 4
 }

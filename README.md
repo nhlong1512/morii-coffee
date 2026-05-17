@@ -27,6 +27,7 @@
   - [Configuration](#configuration)
 - [API Reference](#api-reference)
 - [Order Lifecycle](#order-lifecycle)
+- [Payment System (Stripe)](#payment-system-stripe)
 - [Cart System](#cart-system)
 - [Background Jobs](#background-jobs)
 - [Testing](#testing)
@@ -49,10 +50,11 @@ Morii Coffee API powers a full-featured coffee shop platform — from browsing t
 | **Products** | CRUD for products, product variants (size/type), categories, and promotional banners |
 | **Cart** | Redis-backed cart with 24-hour TTL, guest-to-user merge on login |
 | **Orders** | Place orders from cart, rank-based status lifecycle, admin status management, customer cancellation |
+| **Payments** | Stripe online card payment, full/partial refunds, webhook-driven async settlement, idempotent processing |
 | **Users** | Profile management, saved delivery profiles |
 | **Files** | Presigned upload/download URLs via MinIO (primary) and AWS S3 (fallback) |
 | **Email** | Transactional emails via Brevo (password reset, order confirmations) |
-| **Admin** | Full order management, product catalog management, user listing |
+| **Admin** | Full order management, product catalog management, user listing, refund management |
 
 ---
 
@@ -103,6 +105,7 @@ The codebase follows **Clean Architecture** with strict dependency rules — out
 | Background jobs | Hangfire 1.8.23 (PostgreSQL storage) |
 | Object storage | MinIO 7.0.0 · AWS S3 SDK 4.0.20.2 |
 | Email | Brevo SDK 1.1.2 |
+| Payments | Stripe.net SDK 47.x (hosted checkout, refunds, webhooks) |
 | Authentication | JWT Bearer 10.0.5 · Google OAuth 10.0.5 |
 | Logging | Serilog 4.3.1 |
 | API docs | Swashbuckle / Swagger 6.7.2 |
@@ -171,6 +174,14 @@ Copy `appsettings.json` and fill in the required values. In development, overrid
     "AutoCompleteAfterDays": 3,
     "AutoCompleteJobRunHour": 2,
     "AutoCompleteJobRunMinute": 0
+  },
+  "Stripe": {
+    "SecretKey": "sk_test_...",  // ⚠️ Via environment: Stripe__SecretKey
+    "PublishableKey": "pk_test_...",  // Via environment: Stripe__PublishableKey
+    "WebhookSigningSecret": "whsec_...",  // Via environment: Stripe__WebhookSigningSecret
+    "Currency": "vnd",
+    "SuccessUrlTemplate": "/checkout/success?session_id={CHECKOUT_SESSION_ID}",
+    "CancelUrlPath": "/checkout/cancel"
   }
 }
 ```
@@ -192,6 +203,8 @@ Swagger UI is available at `/swagger` when running in Development mode.
 | `BannersController` | `/api/v1/banners` | Public (read) · Admin (write) |
 | `CartController` | `/api/v1/cart` | User |
 | `OrdersController` | `/api/v1/orders` | User · Admin |
+| `PaymentsController` | `/api/v1/payments/stripe/**` | User (customer) · Admin (refunds) |
+| `PaymentWebhookController` | `/api/v1/payments/stripe/webhook` | Anonymous (Stripe signature verified) |
 | `UsersController` | `/api/v1/users` | User · Admin |
 | `FilesController` | `/api/v1/files` | User |
 
@@ -212,6 +225,86 @@ PENDING ──► CONFIRMED ──► READY_TO_PICKUP ──► IN_DELIVERY ─�
 - `REVIEWED` and `CANCELLED` are terminal states
 - `GET /api/v1/orders/{id}/valid-statuses` returns the valid transitions for a given order
 - `PATCH /api/v1/orders/{id}/status` returns the updated list of valid next statuses after the transition
+
+---
+
+## Payment System (Stripe)
+
+Orders can be placed with two payment methods:
+
+### Cash on Delivery (COD)
+- Traditional payment method: `PaymentStatus = NotRequired`
+- Order can be confirmed immediately
+- No interaction with Stripe API
+
+### Online Card Payment (Stripe)
+- Customer redirected to **Stripe-hosted checkout page** (PCI-DSS compliant)
+- Flow: `POST /api/v1/payments/stripe/checkout-session` → Stripe redirect → `GET /api/v1/payments/by-order/{orderId}`
+
+#### Payment Lifecycle
+
+```
+PENDING ──► PAID ──► (PARTIALLY_REFUNDED) ──► REFUNDED
+   │
+   └──► FAILED (customer can retry or cancel)
+```
+
+**Key constraints:**
+- ✅ Only **PAID** orders can be confirmed for fulfillment (Stripe orders)
+- ✅ COD orders bypass payment checks
+- ✅ Refunds are asynchronous (initiated locally, settled via webhook)
+- ✅ All webhook events are verified with HMAC-SHA256 signature
+- ✅ Webhook processing is idempotent (same event processed only once)
+
+#### API Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/v1/payments/stripe/checkout-session` | Create Stripe Checkout Session, returns redirect URL |
+| `GET /api/v1/payments/by-order/{orderId}` | Get payment status & refund history for an order |
+| `POST /api/v1/payments/{orderId}/refund` | Issue full/partial refund (admin only) |
+| `POST /api/v1/payments/stripe/webhook` | Receive Stripe webhooks (anonymous, signature-verified) |
+
+#### Configuration
+
+```bash
+# Required environment variables for Stripe
+export Stripe__SecretKey="sk_live_..."  # or sk_test_... for development
+export Stripe__PublishableKey="pk_live_..."
+export Stripe__WebhookSigningSecret="whsec_..."
+```
+
+The `IsLiveMode` property is automatically detected from the secret key prefix (`sk_live_` vs `sk_test_`). A startup health check emits a log line indicating the mode.
+
+#### Frontend Integration
+
+Comprehensive integration guide: **[FRONTEND_INTEGRATION_GUIDE.md](specs/011-stripe-payment/FRONTEND_INTEGRATION_GUIDE.md)**
+
+Quick reference:
+```typescript
+// 1. Create checkout session
+const res = await fetch("/api/v1/payments/stripe/checkout-session", {
+  method: "POST",
+  body: JSON.stringify({ orderId })
+});
+const { checkoutUrl } = await res.json();
+
+// 2. Redirect to Stripe
+window.location.href = checkoutUrl;
+
+// 3. After redirect back, check payment status
+const payment = await fetch(`/api/v1/payments/by-order/${orderId}`).then(r => r.json());
+console.log(payment.paymentStatus); // "Paid" | "Failed" | "Pending"
+```
+
+#### Testing in Development
+
+**Stripe test cards:**
+- ✅ Success: `4242 4242 4242 4242`
+- ❌ Declined: `4000 0000 0000 0002`
+- 3D Secure: `4000 0025 0000 3155`
+
+Use `exp: 12/26` and any 3-digit CVC. All test payments succeed instantly; webhooks are delivered to the registered webhook URL.
 
 ---
 
