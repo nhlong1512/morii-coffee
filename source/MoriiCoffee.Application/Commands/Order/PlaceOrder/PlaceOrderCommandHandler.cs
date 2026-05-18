@@ -1,10 +1,12 @@
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.Exceptions;
+using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
+using MoriiCoffee.Domain.Shared.Settings;
 using Microsoft.EntityFrameworkCore;
 using OrderDto = MoriiCoffee.Application.SeedWork.DTOs.Order.OrderDto;
 using OrderEntity = MoriiCoffee.Domain.Aggregates.OrderAggregate.Order;
@@ -21,16 +23,19 @@ public class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand, Order
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICartService _cartService;
     private readonly IOrderIdGenerator _orderIdGenerator;
+    private readonly string? _cdnBaseUrl;
 
     /// <summary>Initialises the handler with its required dependencies.</summary>
     public PlaceOrderCommandHandler(
         IUnitOfWork unitOfWork,
         ICartService cartService,
-        IOrderIdGenerator orderIdGenerator)
+        IOrderIdGenerator orderIdGenerator,
+        AwsS3Settings s3Settings)
     {
         _unitOfWork = unitOfWork;
         _cartService = cartService;
         _orderIdGenerator = orderIdGenerator;
+        _cdnBaseUrl = s3Settings.CdnBaseUrl;
     }
 
     /// <inheritdoc />
@@ -107,10 +112,11 @@ public class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand, Order
     {
         var cartItemImageMap = cartItems.ToDictionary(
             item => (item.ProductId, item.VariantId),
-            item => item.ImageUrl);
+            item => CdnUrlHelper.Resolve(item.ImageUrl, _cdnBaseUrl));
 
         var missingProductIds = order.Items
-            .Where(item => !cartItemImageMap.ContainsKey((item.ProductId, item.VariantId)))
+            .Where(item => !cartItemImageMap.TryGetValue((item.ProductId, item.VariantId), out var imageUrl)
+                || string.IsNullOrWhiteSpace(imageUrl))
             .Select(item => item.ProductId)
             .Distinct()
             .ToList();
@@ -147,8 +153,9 @@ public class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand, Order
                 VariantId = i.VariantId,
                 VariantLabel = i.VariantLabel,
                 ImageUrl = cartItemImageMap.TryGetValue((i.ProductId, i.VariantId), out var imageUrl)
+                    && !string.IsNullOrWhiteSpace(imageUrl)
                     ? imageUrl
-                    : productImageMap.GetValueOrDefault(i.ProductId),
+                    : CdnUrlHelper.Resolve(productImageMap.GetValueOrDefault(i.ProductId), _cdnBaseUrl),
                 UnitPrice = i.UnitPrice,
                 Quantity = i.Quantity,
                 LineTotal = i.LineTotal

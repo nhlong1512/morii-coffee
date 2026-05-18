@@ -8,6 +8,7 @@ using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Enums.Order;
+using MoriiCoffee.Domain.Shared.Settings;
 using Xunit;
 using OrderEntity = MoriiCoffee.Domain.Aggregates.OrderAggregate.Order;
 
@@ -19,6 +20,7 @@ public class GetOrderByIdQueryHandlerTests
     private readonly Mock<IOrderRepository> _ordersRepo = new();
     private readonly Mock<IProductsRepository> _productsRepo = new();
     private readonly GetOrderByIdQueryHandler _handler;
+    private static readonly AwsS3Settings S3Settings = new() { CdnBaseUrl = "https://cdn.test" };
 
     public GetOrderByIdQueryHandlerTests()
     {
@@ -27,7 +29,7 @@ public class GetOrderByIdQueryHandlerTests
         _productsRepo
             .Setup(r => r.FindByCondition(It.IsAny<System.Linq.Expressions.Expression<Func<Domain.Aggregates.ProductAggregate.Product, bool>>>(), false))
             .Returns(new List<Domain.Aggregates.ProductAggregate.Product>().BuildMock());
-        _handler = new GetOrderByIdQueryHandler(_unitOfWork.Object);
+        _handler = new GetOrderByIdQueryHandler(_unitOfWork.Object, S3Settings);
     }
 
     [Fact]
@@ -88,12 +90,39 @@ public class GetOrderByIdQueryHandlerTests
         result.Id.Should().Be(order.Id);
     }
 
-    private static OrderEntity BuildOrder(Guid userId)
+    [Fact]
+    public async Task Handle_ProductThumbnailStorageKey_ResolvesToCdnUrl()
+    {
+        var ownerId = Guid.NewGuid();
+        var productId = Guid.NewGuid();
+        var order = BuildOrder(ownerId, productId);
+        var products = new List<Domain.Aggregates.ProductAggregate.Product>
+        {
+            new()
+            {
+                Id = productId,
+                ThumbnailUrl = "products/abc/123-photo.png"
+            }
+        };
+
+        _ordersRepo.Setup(r => r.GetByIdWithItemsAsync(order.Id)).ReturnsAsync(order);
+        _productsRepo
+            .Setup(r => r.FindByCondition(It.IsAny<System.Linq.Expressions.Expression<Func<Domain.Aggregates.ProductAggregate.Product, bool>>>(), false))
+            .Returns(products.BuildMock());
+
+        var result = await _handler.Handle(
+            new GetOrderByIdQuery(order.Id, ownerId, false),
+            CancellationToken.None);
+
+        result.Items.Single().ImageUrl.Should().Be("https://cdn.test/products/abc/123-photo.png");
+    }
+
+    private static OrderEntity BuildOrder(Guid userId, Guid? productId = null)
     {
         var delivery = new DeliveryInfo("Test User", "0901234567", "123 Test St");
         var items = new List<OrderItem>
         {
-            OrderItem.Create(Guid.NewGuid(), "Cà phê sữa", 45_000, 1, null, null)
+            OrderItem.Create(productId ?? Guid.NewGuid(), "Cà phê sữa", 45_000, 1, null, null)
         };
         return OrderEntity.Create("MRC-TEST-001", userId, delivery, items, EPaymentMethod.COD);
     }
