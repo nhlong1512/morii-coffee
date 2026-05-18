@@ -1,5 +1,6 @@
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Application.SeedWork.Helpers;
+using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.SeedWork.Query;
 using MoriiCoffee.Domain.Shared.Settings;
@@ -54,6 +55,9 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDt
                 .FindByCondition(p => productIds.Contains(p.Id), false)
                 .ToDictionaryAsync(p => p.Id, p => p.ThumbnailUrl, cancellationToken);
 
+        var payments = await _unitOfWork.Payments.ListByOrderIdAsync(order.Id);
+        var latestPayment = payments.FirstOrDefault();
+
         return new OrderDto
         {
             Id = order.Id,
@@ -70,6 +74,18 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDt
             Discount = order.Discount,
             Total = order.Total,
             OrderStatus = order.OrderStatus,
+            PaymentInfo = new OrderPaymentInfoDto
+            {
+                PaymentStatus = order.PaymentStatus,
+                AttemptCount = payments.Count,
+                LatestPaymentId = latestPayment?.Id,
+                LatestAttemptStatus = latestPayment?.Status,
+                StripeSessionId = latestPayment?.StripeSessionId,
+                StripePaymentIntentId = latestPayment?.StripePaymentIntentId ?? order.StripePaymentIntentId,
+                StripeChargeId = latestPayment?.StripeChargeId ?? order.StripeChargeId,
+                FailureReason = latestPayment?.FailureReason,
+                LatestAttemptCreatedAt = latestPayment?.CreatedAt
+            },
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt,
             Items = order.Items.Select(i => new OrderItemDto

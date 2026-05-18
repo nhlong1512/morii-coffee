@@ -70,6 +70,8 @@ public class PlaceOrderCommandHandlerTests
 
         result.Should().NotBeNull();
         result.OrderNumber.Should().Be("MRC-20260502-001");
+        result.PaymentInfo.PaymentStatus.Should().Be(EPaymentStatus.NotRequired);
+        result.PaymentInfo.AttemptCount.Should().Be(0);
         _cartService.Verify(c => c.ClearCartAsync(userId), Times.Once);
         _unitOfWork.Verify(u => u.ExecuteInTransactionAsync(It.IsAny<Func<Task>>()), Times.Once);
     }

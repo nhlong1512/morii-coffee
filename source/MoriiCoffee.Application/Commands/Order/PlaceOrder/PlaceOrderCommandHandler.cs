@@ -1,4 +1,5 @@
 using MoriiCoffee.Application.SeedWork.Abstractions;
+using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
@@ -143,6 +144,18 @@ public class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand, Order
             Discount = order.Discount,
             Total = order.Total,
             OrderStatus = order.OrderStatus,
+            PaymentInfo = new OrderPaymentInfoDto
+            {
+                PaymentStatus = order.PaymentStatus,
+                AttemptCount = 0,
+                LatestPaymentId = null,
+                LatestAttemptStatus = null,
+                StripeSessionId = null,
+                StripePaymentIntentId = order.StripePaymentIntentId,
+                StripeChargeId = order.StripeChargeId,
+                FailureReason = null,
+                LatestAttemptCreatedAt = null
+            },
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt,
             Items = order.Items.Select(i => new OrderItemDto

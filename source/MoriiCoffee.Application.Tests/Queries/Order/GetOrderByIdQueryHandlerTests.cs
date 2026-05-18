@@ -11,6 +11,7 @@ using MoriiCoffee.Domain.Shared.Enums.Order;
 using MoriiCoffee.Domain.Shared.Settings;
 using Xunit;
 using OrderEntity = MoriiCoffee.Domain.Aggregates.OrderAggregate.Order;
+using PaymentEntity = MoriiCoffee.Domain.Aggregates.PaymentAggregate.Payment;
 
 namespace MoriiCoffee.Application.Tests.Queries.Order;
 
@@ -19,6 +20,7 @@ public class GetOrderByIdQueryHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IOrderRepository> _ordersRepo = new();
     private readonly Mock<IProductsRepository> _productsRepo = new();
+    private readonly Mock<IPaymentRepository> _paymentsRepo = new();
     private readonly GetOrderByIdQueryHandler _handler;
     private static readonly AwsS3Settings S3Settings = new() { CdnBaseUrl = "https://cdn.test" };
 
@@ -26,9 +28,13 @@ public class GetOrderByIdQueryHandlerTests
     {
         _unitOfWork.Setup(u => u.Orders).Returns(_ordersRepo.Object);
         _unitOfWork.Setup(u => u.Products).Returns(_productsRepo.Object);
+        _unitOfWork.Setup(u => u.Payments).Returns(_paymentsRepo.Object);
         _productsRepo
             .Setup(r => r.FindByCondition(It.IsAny<System.Linq.Expressions.Expression<Func<Domain.Aggregates.ProductAggregate.Product, bool>>>(), false))
             .Returns(new List<Domain.Aggregates.ProductAggregate.Product>().BuildMock());
+        _paymentsRepo
+            .Setup(r => r.ListByOrderIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync([]);
         _handler = new GetOrderByIdQueryHandler(_unitOfWork.Object, S3Settings);
     }
 
@@ -73,6 +79,7 @@ public class GetOrderByIdQueryHandlerTests
         result.Should().NotBeNull();
         result.Id.Should().Be(order.Id);
         result.UserId.Should().Be(ownerId);
+        result.PaymentInfo.PaymentStatus.Should().Be(EPaymentStatus.NotRequired);
     }
 
     [Fact]
@@ -115,6 +122,35 @@ public class GetOrderByIdQueryHandlerTests
             CancellationToken.None);
 
         result.Items.Single().ImageUrl.Should().Be("https://cdn.test/products/abc/123-photo.png");
+    }
+
+    [Fact]
+    public async Task Handle_OrderHasPaymentAttempts_ReturnsEmbeddedPaymentInfo()
+    {
+        var ownerId = Guid.NewGuid();
+        var order = BuildOrder(ownerId);
+        var payment1 = PaymentEntity.Create(order.Id, "cs_old", 137000m, "vnd");
+        payment1.MarkFailed("Card declined");
+        var payment2 = PaymentEntity.Create(order.Id, "cs_new", 137000m, "vnd");
+        payment2.MarkSucceeded("pi_paid", "ch_paid");
+
+        _ordersRepo.Setup(r => r.GetByIdWithItemsAsync(order.Id)).ReturnsAsync(order);
+        _paymentsRepo
+            .Setup(r => r.ListByOrderIdAsync(order.Id))
+            .ReturnsAsync([payment2, payment1]);
+
+        var result = await _handler.Handle(
+            new GetOrderByIdQuery(order.Id, ownerId, false),
+            CancellationToken.None);
+
+        result.PaymentInfo.PaymentStatus.Should().Be(EPaymentStatus.NotRequired);
+        result.PaymentInfo.AttemptCount.Should().Be(2);
+        result.PaymentInfo.LatestPaymentId.Should().Be(payment2.Id);
+        result.PaymentInfo.LatestAttemptStatus.Should().Be(EPaymentTransactionStatus.Succeeded);
+        result.PaymentInfo.StripeSessionId.Should().Be("cs_new");
+        result.PaymentInfo.StripePaymentIntentId.Should().Be("pi_paid");
+        result.PaymentInfo.StripeChargeId.Should().Be("ch_paid");
+        result.PaymentInfo.FailureReason.Should().BeNull();
     }
 
     private static OrderEntity BuildOrder(Guid userId, Guid? productId = null)

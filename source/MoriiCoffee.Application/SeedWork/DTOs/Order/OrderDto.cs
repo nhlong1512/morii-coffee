@@ -1,4 +1,5 @@
 using MoriiCoffee.Domain.Shared.Enums.Order;
+using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 
 namespace MoriiCoffee.Application.SeedWork.DTOs.Order;
 
@@ -49,6 +50,9 @@ public class OrderDto
 
     /// <summary>Current lifecycle status of the order.</summary>
     public EOrderStatus OrderStatus { get; set; }
+
+    /// <summary>Payment-related state and latest Stripe attempt details for this order.</summary>
+    public OrderPaymentInfoDto PaymentInfo { get; set; } = new();
 
     /// <summary>All line items belonging to this order.</summary>
     public List<OrderItemDto> Items { get; set; } = [];
