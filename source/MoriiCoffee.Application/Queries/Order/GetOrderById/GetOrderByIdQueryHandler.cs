@@ -1,6 +1,8 @@
 using MoriiCoffee.Application.SeedWork.Exceptions;
+using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.SeedWork.Query;
+using MoriiCoffee.Domain.Shared.Settings;
 using Microsoft.EntityFrameworkCore;
 using OrderDto = MoriiCoffee.Application.SeedWork.DTOs.Order.OrderDto;
 using OrderEntity = MoriiCoffee.Domain.Aggregates.OrderAggregate.Order;
@@ -15,11 +17,13 @@ namespace MoriiCoffee.Application.Queries.Order.GetOrderById;
 public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDto>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly string? _cdnBaseUrl;
 
     /// <summary>Initialises the handler with its required dependency.</summary>
-    public GetOrderByIdQueryHandler(IUnitOfWork unitOfWork)
+    public GetOrderByIdQueryHandler(IUnitOfWork unitOfWork, AwsS3Settings s3Settings)
     {
         _unitOfWork = unitOfWork;
+        _cdnBaseUrl = s3Settings.CdnBaseUrl;
     }
 
     /// <inheritdoc />
@@ -75,7 +79,7 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDt
                 ProductName = i.ProductName,
                 VariantId = i.VariantId,
                 VariantLabel = i.VariantLabel,
-                ImageUrl = productImageMap.GetValueOrDefault(i.ProductId),
+                ImageUrl = CdnUrlHelper.Resolve(productImageMap.GetValueOrDefault(i.ProductId), _cdnBaseUrl),
                 UnitPrice = i.UnitPrice,
                 Quantity = i.Quantity,
                 LineTotal = i.LineTotal

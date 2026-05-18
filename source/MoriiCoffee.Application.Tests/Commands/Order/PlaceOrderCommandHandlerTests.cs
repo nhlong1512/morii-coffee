@@ -8,6 +8,8 @@ using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Enums.Order;
+using MoriiCoffee.Domain.Shared.Settings;
+using MockQueryable;
 using Xunit;
 using OrderEntity = MoriiCoffee.Domain.Aggregates.OrderAggregate.Order;
 
@@ -20,20 +22,27 @@ public class PlaceOrderCommandHandlerTests
     private readonly Mock<IOrderIdGenerator> _orderIdGenerator = new();
     private readonly Mock<IOrderRepository> _ordersRepo = new();
     private readonly Mock<IUserDeliveryProfileRepository> _profilesRepo = new();
+    private readonly Mock<IProductsRepository> _productsRepo = new();
     private readonly PlaceOrderCommandHandler _handler;
+    private static readonly AwsS3Settings S3Settings = new() { CdnBaseUrl = "https://cdn.test" };
 
     public PlaceOrderCommandHandlerTests()
     {
         _unitOfWork.Setup(u => u.Orders).Returns(_ordersRepo.Object);
         _unitOfWork.Setup(u => u.UserDeliveryProfiles).Returns(_profilesRepo.Object);
+        _unitOfWork.Setup(u => u.Products).Returns(_productsRepo.Object);
         _unitOfWork
             .Setup(u => u.ExecuteInTransactionAsync(It.IsAny<Func<Task>>()))
             .Returns<Func<Task>>(fn => fn());
+        _productsRepo
+            .Setup(r => r.FindByCondition(It.IsAny<System.Linq.Expressions.Expression<Func<MoriiCoffee.Domain.Aggregates.ProductAggregate.Product, bool>>>(), false))
+            .Returns(new List<MoriiCoffee.Domain.Aggregates.ProductAggregate.Product>().BuildMock());
 
         _handler = new PlaceOrderCommandHandler(
             _unitOfWork.Object,
             _cartService.Object,
-            _orderIdGenerator.Object);
+            _orderIdGenerator.Object,
+            S3Settings);
     }
 
     [Fact]
@@ -99,14 +108,42 @@ public class PlaceOrderCommandHandlerTests
             Times.Once);
     }
 
-    private static CartDto BuildCart() => new()
+    [Fact]
+    public async Task Handle_CartItemMissingImage_FallsBackToResolvedProductThumbnail()
+    {
+        var userId = Guid.NewGuid();
+        var productId = Guid.NewGuid();
+        var cart = BuildCart(productId, imageUrl: null);
+        var products = new List<MoriiCoffee.Domain.Aggregates.ProductAggregate.Product>
+        {
+            new()
+            {
+                Id = productId,
+                ThumbnailUrl = "products/abc/123-photo.png"
+            }
+        };
+
+        _cartService.Setup(c => c.GetCartAsync(userId)).ReturnsAsync(cart);
+        _orderIdGenerator.Setup(g => g.GenerateAsync()).ReturnsAsync("MRC-20260502-001");
+        _ordersRepo.Setup(r => r.CreateAsync(It.IsAny<OrderEntity>())).Returns(Task.CompletedTask);
+        _productsRepo
+            .Setup(r => r.FindByCondition(It.IsAny<System.Linq.Expressions.Expression<Func<MoriiCoffee.Domain.Aggregates.ProductAggregate.Product, bool>>>(), false))
+            .Returns(products.BuildMock());
+
+        var result = await _handler.Handle(BuildCommand(userId), CancellationToken.None);
+
+        result.Items.Single().ImageUrl.Should().Be("https://cdn.test/products/abc/123-photo.png");
+    }
+
+    private static CartDto BuildCart(Guid? productId = null, string? imageUrl = null) => new()
     {
         Items =
         [
             new CartItemDto
             {
-                ProductId = Guid.NewGuid(),
+                ProductId = productId ?? Guid.NewGuid(),
                 ProductName = "Cà phê sữa",
+                ImageUrl = imageUrl,
                 UnitPrice = 45_000,
                 Quantity = 2
             }

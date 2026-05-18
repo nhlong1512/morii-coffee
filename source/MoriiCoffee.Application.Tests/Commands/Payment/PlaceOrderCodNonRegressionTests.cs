@@ -1,11 +1,13 @@
 using FluentAssertions;
 using Moq;
+using MockQueryable;
 using MoriiCoffee.Application.Commands.Order.PlaceOrder;
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Cart;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Enums.Order;
+using MoriiCoffee.Domain.Shared.Settings;
 using Xunit;
 using OrderEntity = MoriiCoffee.Domain.Aggregates.OrderAggregate.Order;
 
@@ -26,20 +28,27 @@ public class PlaceOrderCodNonRegressionTests
     private readonly Mock<IOrderIdGenerator> _orderIdGenerator = new();
     private readonly Mock<IOrderRepository> _ordersRepo = new();
     private readonly Mock<IUserDeliveryProfileRepository> _profilesRepo = new();
+    private readonly Mock<IProductsRepository> _productsRepo = new();
     private readonly PlaceOrderCommandHandler _handler;
+    private static readonly AwsS3Settings S3Settings = new() { CdnBaseUrl = "https://cdn.test" };
 
     public PlaceOrderCodNonRegressionTests()
     {
         _unitOfWork.Setup(u => u.Orders).Returns(_ordersRepo.Object);
         _unitOfWork.Setup(u => u.UserDeliveryProfiles).Returns(_profilesRepo.Object);
+        _unitOfWork.Setup(u => u.Products).Returns(_productsRepo.Object);
         _unitOfWork
             .Setup(u => u.ExecuteInTransactionAsync(It.IsAny<Func<Task>>()))
             .Returns<Func<Task>>(fn => fn());
+        _productsRepo
+            .Setup(r => r.FindByCondition(It.IsAny<System.Linq.Expressions.Expression<Func<MoriiCoffee.Domain.Aggregates.ProductAggregate.Product, bool>>>(), false))
+            .Returns(new List<MoriiCoffee.Domain.Aggregates.ProductAggregate.Product>().BuildMock());
 
         _handler = new PlaceOrderCommandHandler(
             _unitOfWork.Object,
             _cartService.Object,
-            _orderIdGenerator.Object);
+            _orderIdGenerator.Object,
+            S3Settings);
     }
 
     [Fact]
