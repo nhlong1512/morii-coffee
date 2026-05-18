@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MoriiCoffee.Application.Commands.Payment.HandleWebhookEvent;
 using MoriiCoffee.Application.SeedWork.Abstractions;
+using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
 using MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities;
@@ -25,6 +26,7 @@ public class HandleWebhookEventCompletedTests
     private readonly Mock<IOrderRepository> _ordersRepo = new();
     private readonly Mock<IPaymentRepository> _paymentsRepo = new();
     private readonly Mock<IPaymentWebhookEventRepository> _webhookRepo = new();
+    private readonly Mock<IStripeCheckoutDraftService> _draftService = new();
     private readonly HandleWebhookEventCommandHandler _handler;
 
     public HandleWebhookEventCompletedTests()
@@ -39,6 +41,7 @@ public class HandleWebhookEventCompletedTests
 
         _handler = new HandleWebhookEventCommandHandler(
             _unitOfWork.Object,
+            _draftService.Object,
             NullLogger<HandleWebhookEventCommandHandler>.Instance);
     }
 
@@ -77,6 +80,7 @@ public class HandleWebhookEventCompletedTests
 
         order.PaymentStatus.Should().Be(EPaymentStatus.Paid);
         order.StripePaymentIntentId.Should().Be("pi_test_a");
+        order.OrderStatus.Should().Be(EOrderStatus.PENDING);
 
         _ordersRepo.Verify(r => r.Update(order), Times.Once);
         _paymentsRepo.Verify(r => r.Update(payment), Times.Once);
@@ -87,6 +91,8 @@ public class HandleWebhookEventCompletedTests
     {
         _paymentsRepo.Setup(r => r.GetBySessionIdAsync(It.IsAny<string>()))
             .ReturnsAsync((PaymentEntity?)null);
+        _draftService.Setup(s => s.GetBySessionIdAsync(It.IsAny<string>()))
+            .ReturnsAsync((StripeCheckoutDraftCacheDto?)null);
 
         var command = new HandleWebhookEventCommand
         {
@@ -102,6 +108,55 @@ public class HandleWebhookEventCompletedTests
 
         var result = await _handler.Handle(command, CancellationToken.None);
         result.Result.Should().Be(EPaymentWebhookProcessingResult.OrderNotFound);
+    }
+
+    [Fact]
+    public async Task Handle_DraftSessionCompleted_FinalizesDraftIntoOrder()
+    {
+        var draft = new StripeCheckoutDraftCacheDto
+        {
+            DraftId = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            SessionId = "cs_draft_paid"
+        };
+
+        _paymentsRepo.Setup(r => r.GetBySessionIdAsync("cs_draft_paid"))
+            .ReturnsAsync((PaymentEntity?)null);
+        _draftService.Setup(s => s.GetBySessionIdAsync("cs_draft_paid"))
+            .ReturnsAsync(draft);
+        _draftService.Setup(s => s.FinalizeSucceededAsync(
+                draft,
+                "pi_draft_paid",
+                "ch_draft_paid",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FinalizeStripeCheckoutResultDto
+            {
+                OrderId = Guid.NewGuid(),
+                OrderNumber = "MRC-20260518-001",
+                PaymentId = Guid.NewGuid(),
+                PaymentStatus = EPaymentStatus.Paid,
+                SessionId = draft.SessionId
+            });
+
+        var result = await _handler.Handle(new HandleWebhookEventCommand
+        {
+            Envelope = new WebhookEventEnvelope
+            {
+                EventId = "evt_draft_completed",
+                EventType = "checkout.session.completed",
+                RawBody = "{}",
+                ProviderSessionId = "cs_draft_paid",
+                ProviderPaymentId = "pi_draft_paid",
+                ProviderChargeId = "ch_draft_paid"
+            }
+        }, CancellationToken.None);
+
+        result.Result.Should().Be(EPaymentWebhookProcessingResult.Processed);
+        _draftService.Verify(s => s.FinalizeSucceededAsync(
+            draft,
+            "pi_draft_paid",
+            "ch_draft_paid",
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static OrderEntity BuildStripeOrder(Guid userId)

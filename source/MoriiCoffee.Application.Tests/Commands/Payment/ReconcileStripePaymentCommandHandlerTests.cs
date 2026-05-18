@@ -2,6 +2,7 @@ using FluentAssertions;
 using Moq;
 using MoriiCoffee.Application.Commands.Payment.ReconcileStripePayment;
 using MoriiCoffee.Application.SeedWork.Abstractions;
+using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
@@ -20,97 +21,148 @@ public class ReconcileStripePaymentCommandHandlerTests
     private readonly Mock<IOrderRepository> _ordersRepo = new();
     private readonly Mock<IPaymentRepository> _paymentsRepo = new();
     private readonly Mock<IPaymentGateway> _paymentGateway = new();
+    private readonly Mock<IStripeCheckoutDraftService> _draftService = new();
     private readonly ReconcileStripePaymentCommandHandler _handler;
 
     public ReconcileStripePaymentCommandHandlerTests()
     {
         _unitOfWork.Setup(u => u.Orders).Returns(_ordersRepo.Object);
         _unitOfWork.Setup(u => u.Payments).Returns(_paymentsRepo.Object);
-        _unitOfWork.Setup(u => u.CommitAsync()).ReturnsAsync(1);
 
         _handler = new ReconcileStripePaymentCommandHandler(
             _unitOfWork.Object,
-            _paymentGateway.Object);
+            _paymentGateway.Object,
+            _draftService.Object);
     }
 
     [Fact]
-    public async Task Handle_PaidSession_FlipsLocalPaymentAndOrderToPaid()
+    public async Task Handle_FinalizedSession_ReturnsExistingOrderState()
     {
         var userId = Guid.NewGuid();
         var order = BuildStripeOrder(userId);
+        order.MarkPaymentPaid("pi_paid", "ch_paid");
         var payment = PaymentEntity.Create(order.Id, "cs_paid", 45_000m, "vnd");
+        payment.MarkSucceeded("pi_paid", "ch_paid");
 
+        _paymentsRepo.Setup(r => r.GetBySessionIdAsync("cs_paid")).ReturnsAsync(payment);
         _ordersRepo.Setup(r => r.GetByIdAsync(order.Id)).ReturnsAsync(order);
-        _paymentsRepo.Setup(r => r.GetLatestPendingByOrderIdAsync(order.Id)).ReturnsAsync(payment);
-        _paymentsRepo.Setup(r => r.ListByOrderIdAsync(order.Id)).ReturnsAsync([payment]);
-        _paymentGateway
-            .Setup(g => g.GetCheckoutSessionStatusAsync("cs_paid", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CheckoutSessionStatusResult
-            {
-                SessionId = "cs_paid",
-                State = CheckoutSessionState.Paid,
-                PaymentIntentId = "pi_paid",
-                ChargeId = "ch_paid"
-            });
 
         var result = await _handler.Handle(new ReconcileStripePaymentCommand
         {
-            OrderId = order.Id,
+            SessionId = "cs_paid",
             RequestingUserId = userId,
             IsAdmin = false
         }, CancellationToken.None);
 
+        result.OrderId.Should().Be(order.Id);
+        result.OrderNumber.Should().Be(order.OrderNumber);
         result.PaymentStatus.Should().Be(EPaymentStatus.Paid);
-        result.Payments.Single().Status.Should().Be(EPaymentTransactionStatus.Succeeded);
-        result.Payments.Single().StripePaymentIntentId.Should().Be("pi_paid");
-        payment.Status.Should().Be(EPaymentTransactionStatus.Succeeded);
-        order.PaymentStatus.Should().Be(EPaymentStatus.Paid);
-
-        _paymentsRepo.Verify(r => r.Update(payment), Times.Once);
-        _ordersRepo.Verify(r => r.Update(order), Times.Once);
-        _unitOfWork.Verify(u => u.CommitAsync(), Times.Once);
+        result.SessionId.Should().Be("cs_paid");
     }
 
     [Fact]
-    public async Task Handle_ExpiredSession_MarksLocalStateAsFailed()
+    public async Task Handle_PaidDraft_FinalizesAndReturnsCreatedOrder()
     {
-        var userId = Guid.NewGuid();
-        var order = BuildStripeOrder(userId);
-        var payment = PaymentEntity.Create(order.Id, "cs_expired", 45_000m, "vnd");
+        var draft = new StripeCheckoutDraftCacheDto
+        {
+            DraftId = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            SessionId = "cs_draft_paid",
+            ExpiresAtUtc = DateTime.UtcNow.AddHours(1)
+        };
 
-        _ordersRepo.Setup(r => r.GetByIdAsync(order.Id)).ReturnsAsync(order);
-        _paymentsRepo.Setup(r => r.GetLatestPendingByOrderIdAsync(order.Id)).ReturnsAsync(payment);
-        _paymentsRepo.Setup(r => r.ListByOrderIdAsync(order.Id)).ReturnsAsync([payment]);
-        _paymentGateway
-            .Setup(g => g.GetCheckoutSessionStatusAsync("cs_expired", It.IsAny<CancellationToken>()))
+        _paymentsRepo.Setup(r => r.GetBySessionIdAsync("cs_draft_paid"))
+            .ReturnsAsync((PaymentEntity?)null);
+        _draftService.Setup(s => s.GetBySessionIdAsync("cs_draft_paid"))
+            .ReturnsAsync(draft);
+        _paymentGateway.Setup(g => g.GetCheckoutSessionStatusAsync("cs_draft_paid", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CheckoutSessionStatusResult
             {
-                SessionId = "cs_expired",
-                State = CheckoutSessionState.Expired
+                SessionId = "cs_draft_paid",
+                State = ECheckoutSessionState.Paid,
+                PaymentIntentId = "pi_draft_paid",
+                ChargeId = "ch_draft_paid"
+            });
+        _draftService.Setup(s => s.FinalizeSucceededAsync(
+                draft,
+                "pi_draft_paid",
+                "ch_draft_paid",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FinalizeStripeCheckoutResultDto
+            {
+                OrderId = Guid.NewGuid(),
+                OrderNumber = "MRC-20260518-001",
+                PaymentId = Guid.NewGuid(),
+                PaymentStatus = EPaymentStatus.Paid,
+                SessionId = "cs_draft_paid"
             });
 
         var result = await _handler.Handle(new ReconcileStripePaymentCommand
         {
-            OrderId = order.Id,
-            RequestingUserId = userId,
+            SessionId = "cs_draft_paid",
+            RequestingUserId = draft.UserId,
             IsAdmin = false
         }, CancellationToken.None);
 
-        result.PaymentStatus.Should().Be(EPaymentStatus.Failed);
-        result.Payments.Single().Status.Should().Be(EPaymentTransactionStatus.Expired);
-        payment.Status.Should().Be(EPaymentTransactionStatus.Expired);
-        order.PaymentStatus.Should().Be(EPaymentStatus.Failed);
+        result.OrderId.Should().NotBeNull();
+        result.OrderNumber.Should().Be("MRC-20260518-001");
+        result.PaymentStatus.Should().Be(EPaymentStatus.Paid);
+        result.CheckoutDraftId.Should().Be(draft.DraftId);
     }
 
     [Fact]
-    public async Task Handle_ForeignOrder_ThrowsUnauthorized()
+    public async Task Handle_ExpiredDraft_ReturnsFailedWithoutOrder()
     {
-        var order = BuildStripeOrder(Guid.NewGuid());
-        _ordersRepo.Setup(r => r.GetByIdAsync(order.Id)).ReturnsAsync(order);
+        var draft = new StripeCheckoutDraftCacheDto
+        {
+            DraftId = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            SessionId = "cs_draft_expired",
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30),
+            PaymentStatus = EPaymentStatus.Pending
+        };
+
+        _paymentsRepo.Setup(r => r.GetBySessionIdAsync("cs_draft_expired"))
+            .ReturnsAsync((PaymentEntity?)null);
+        _draftService.Setup(s => s.GetBySessionIdAsync("cs_draft_expired"))
+            .ReturnsAsync(draft);
+        _paymentGateway.Setup(g => g.GetCheckoutSessionStatusAsync("cs_draft_expired", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CheckoutSessionStatusResult
+            {
+                SessionId = "cs_draft_expired",
+                State = ECheckoutSessionState.Expired
+            });
+
+        var result = await _handler.Handle(new ReconcileStripePaymentCommand
+        {
+            SessionId = "cs_draft_expired",
+            RequestingUserId = draft.UserId,
+            IsAdmin = false
+        }, CancellationToken.None);
+
+        result.OrderId.Should().BeNull();
+        result.PaymentStatus.Should().Be(EPaymentStatus.Failed);
+        _draftService.Verify(s => s.MarkExpiredAsync(draft), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ForeignDraft_ThrowsUnauthorized()
+    {
+        var draft = new StripeCheckoutDraftCacheDto
+        {
+            DraftId = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            SessionId = "cs_foreign"
+        };
+
+        _paymentsRepo.Setup(r => r.GetBySessionIdAsync("cs_foreign"))
+            .ReturnsAsync((PaymentEntity?)null);
+        _draftService.Setup(s => s.GetBySessionIdAsync("cs_foreign"))
+            .ReturnsAsync(draft);
 
         var act = () => _handler.Handle(new ReconcileStripePaymentCommand
         {
-            OrderId = order.Id,
+            SessionId = "cs_foreign",
             RequestingUserId = Guid.NewGuid(),
             IsAdmin = false
         }, CancellationToken.None);

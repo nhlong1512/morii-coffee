@@ -59,6 +59,24 @@ public class PlaceOrderCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_StripePaymentMethod_ThrowsBadRequestException()
+    {
+        var userId = Guid.NewGuid();
+
+        var act = () => _handler.Handle(new PlaceOrderCommand
+        {
+            UserId = userId,
+            FullName = "Nguyễn Văn A",
+            PhoneNumber = "0901234567",
+            Address = "123 Đường ABC, Quận 1",
+            PaymentMethod = EPaymentMethod.STRIPE
+        }, CancellationToken.None);
+
+        await act.Should().ThrowAsync<BadRequestException>()
+            .WithMessage("*payment-first flow*");
+    }
+
+    [Fact]
     public async Task Handle_ValidCart_CreatesOrderAndClearsCart()
     {
         var userId = Guid.NewGuid();

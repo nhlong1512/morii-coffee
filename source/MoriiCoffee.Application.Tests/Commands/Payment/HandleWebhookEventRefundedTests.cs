@@ -25,6 +25,7 @@ public class HandleWebhookEventRefundedTests
     private readonly Mock<IOrderRepository> _ordersRepo = new();
     private readonly Mock<IPaymentRepository> _paymentsRepo = new();
     private readonly Mock<IPaymentWebhookEventRepository> _webhookRepo = new();
+    private readonly Mock<IStripeCheckoutDraftService> _draftService = new();
     private readonly HandleWebhookEventCommandHandler _handler;
 
     public HandleWebhookEventRefundedTests()
@@ -37,6 +38,7 @@ public class HandleWebhookEventRefundedTests
 
         _handler = new HandleWebhookEventCommandHandler(
             _unitOfWork.Object,
+            _draftService.Object,
             NullLogger<HandleWebhookEventCommandHandler>.Instance);
     }
 

@@ -7,10 +7,19 @@ public class CreateCheckoutSessionCommandValidator : AbstractValidator<CreateChe
 {
     public CreateCheckoutSessionCommandValidator()
     {
-        RuleFor(x => x.OrderId)
-            .NotEmpty().WithMessage("OrderId is required.");
-
         RuleFor(x => x.UserId)
             .NotEmpty().WithMessage("UserId is required.");
+
+        RuleFor(x => x.FullName)
+            .NotEmpty().MaximumLength(100);
+
+        RuleFor(x => x.PhoneNumber)
+            .NotEmpty().MaximumLength(20);
+
+        RuleFor(x => x.Address)
+            .NotEmpty().MaximumLength(300);
+
+        RuleFor(x => x.Notes)
+            .MaximumLength(500);
     }
 }

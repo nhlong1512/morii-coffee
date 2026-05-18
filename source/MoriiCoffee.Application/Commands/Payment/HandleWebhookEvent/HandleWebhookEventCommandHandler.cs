@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using MoriiCoffee.Application.SeedWork.Abstractions;
+using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Domain.Aggregates.PaymentAggregate;
 using MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities;
 using MoriiCoffee.Domain.SeedWork.Command;
@@ -28,13 +29,16 @@ public class HandleWebhookEventCommandHandler
     : ICommandHandler<HandleWebhookEventCommand, HandleWebhookEventResult>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IStripeCheckoutDraftService _draftService;
     private readonly ILogger<HandleWebhookEventCommandHandler> _logger;
 
     public HandleWebhookEventCommandHandler(
         IUnitOfWork unitOfWork,
+        IStripeCheckoutDraftService draftService,
         ILogger<HandleWebhookEventCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
+        _draftService = draftService;
         _logger = logger;
     }
 
@@ -154,10 +158,29 @@ public class HandleWebhookEventCommandHandler
         var payment = await _unitOfWork.Payments.GetBySessionIdAsync(envelope.ProviderSessionId);
         if (payment is null)
         {
-            _logger.LogWarning(
-                "checkout.session.completed event {EventId} refers to unknown session {SessionId}",
-                envelope.EventId, envelope.ProviderSessionId);
-            return (EPaymentWebhookProcessingResult.OrderNotFound, null);
+            var draft = await ResolveDraftAsync(envelope);
+            if (draft is null)
+            {
+                _logger.LogWarning(
+                    "checkout.session.completed event {EventId} refers to unknown session {SessionId}",
+                    envelope.EventId, envelope.ProviderSessionId);
+                return (EPaymentWebhookProcessingResult.OrderNotFound, null);
+            }
+
+            var chargeIdFromDraftFlow = envelope.ProviderChargeId ?? envelope.ProviderPaymentId;
+            var finalized = await _draftService.FinalizeSucceededAsync(
+                draft,
+                envelope.ProviderPaymentId,
+                chargeIdFromDraftFlow,
+                CancellationToken.None);
+
+            _logger.LogInformation(
+                "Stripe checkout draft {DraftId} finalized into order {OrderId} via webhook {EventId}",
+                draft.DraftId,
+                finalized.OrderId,
+                envelope.EventId);
+
+            return (EPaymentWebhookProcessingResult.Processed, finalized.PaymentId);
         }
 
         var order = await _unitOfWork.Orders.GetByIdAsync(payment.OrderId);
@@ -197,7 +220,14 @@ public class HandleWebhookEventCommandHandler
 
         var payment = await _unitOfWork.Payments.GetBySessionIdAsync(envelope.ProviderSessionId);
         if (payment is null)
-            return (EPaymentWebhookProcessingResult.OrderNotFound, null);
+        {
+            var draft = await ResolveDraftAsync(envelope);
+            if (draft is null)
+                return (EPaymentWebhookProcessingResult.OrderNotFound, null);
+
+            await _draftService.MarkExpiredAsync(draft);
+            return (EPaymentWebhookProcessingResult.Processed, null);
+        }
 
         // If the payment already succeeded (the customer paid and then the expiry event arrived
         // out of order — rare but possible), do not regress it.
@@ -239,7 +269,14 @@ public class HandleWebhookEventCommandHandler
 
         var payment = await _unitOfWork.Payments.GetByPaymentIntentIdAsync(envelope.ProviderPaymentId);
         if (payment is null)
-            return (EPaymentWebhookProcessingResult.OrderNotFound, null);
+        {
+            var draft = await ResolveDraftAsync(envelope);
+            if (draft is null)
+                return (EPaymentWebhookProcessingResult.OrderNotFound, null);
+
+            await _draftService.MarkFailedAsync(draft, envelope.FailureReason);
+            return (EPaymentWebhookProcessingResult.Processed, null);
+        }
 
         if (payment.Status == EPaymentTransactionStatus.Succeeded)
         {
@@ -328,6 +365,21 @@ public class HandleWebhookEventCommandHandler
         var bytes = Encoding.UTF8.GetBytes(rawBody);
         var hash = SHA256.HashData(bytes);
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private async Task<StripeCheckoutDraftCacheDto?> ResolveDraftAsync(WebhookEventEnvelope envelope)
+    {
+        if (!string.IsNullOrWhiteSpace(envelope.ProviderSessionId))
+        {
+            var bySession = await _draftService.GetBySessionIdAsync(envelope.ProviderSessionId);
+            if (bySession is not null)
+                return bySession;
+        }
+
+        if (envelope.MetadataCheckoutDraftId is Guid draftId && draftId != Guid.Empty)
+            return await _draftService.GetByDraftIdAsync(draftId);
+
+        return null;
     }
 
     /// <summary>

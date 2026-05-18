@@ -1,45 +1,44 @@
 using Microsoft.Extensions.Logging;
 using MoriiCoffee.Application.SeedWork.Abstractions;
+using MoriiCoffee.Application.SeedWork.DTOs.Cart;
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.SeedWork.Command;
-using MoriiCoffee.Domain.SeedWork.Persistence;
-using MoriiCoffee.Domain.Shared.Enums.Order;
 using MoriiCoffee.Domain.Shared.Settings;
-// Alias avoids a name collision between this Application.Commands.Payment namespace and the
-// Domain Payment aggregate root type.
-using PaymentEntity = MoriiCoffee.Domain.Aggregates.PaymentAggregate.Payment;
 
 namespace MoriiCoffee.Application.Commands.Payment.CreateCheckoutSession;
 
 /// <summary>
-/// Creates a Stripe Checkout Session for the customer's order. Steps:
+/// Creates a Stripe Checkout Session for the customer's current cart. Steps:
 /// <list type="number">
-/// <item>Load order, assert ownership + <c>PaymentMethod == STRIPE</c> + <c>PaymentStatus == Pending</c>.</item>
+/// <item>Load the customer's current cart and validate it is not empty.</item>
+/// <item>Snapshot delivery info + cart items into a cached checkout draft.</item>
 /// <item>Build line items + the Stripe-required success/cancel URLs.</item>
 /// <item>Call <see cref="IPaymentGateway.CreateCheckoutSessionAsync"/>.</item>
-/// <item>Persist a <see cref="Payment"/> row in <c>Created</c> status with the returned session id.</item>
+/// <item>Persist the draft in cache so webhook/reconcile can finalize it into an order after payment succeeds.</item>
 /// </list>
-/// Wrapped in a transaction so a failed Stripe call leaves no orphan rows.
 /// </summary>
 public class CreateCheckoutSessionCommandHandler
     : ICommandHandler<CreateCheckoutSessionCommand, CheckoutSessionResponseDto>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly ICartService _cartService;
     private readonly IPaymentGateway _gateway;
+    private readonly IStripeCheckoutDraftService _draftService;
     private readonly StripeSettings _stripeSettings;
     private readonly EmailSettings _emailSettings;
     private readonly ILogger<CreateCheckoutSessionCommandHandler> _logger;
 
     public CreateCheckoutSessionCommandHandler(
-        IUnitOfWork unitOfWork,
+        ICartService cartService,
         IPaymentGateway gateway,
+        IStripeCheckoutDraftService draftService,
         StripeSettings stripeSettings,
         EmailSettings emailSettings,
         ILogger<CreateCheckoutSessionCommandHandler> logger)
     {
-        _unitOfWork = unitOfWork;
+        _cartService = cartService;
         _gateway = gateway;
+        _draftService = draftService;
         _stripeSettings = stripeSettings;
         _emailSettings = emailSettings;
         _logger = logger;
@@ -50,41 +49,25 @@ public class CreateCheckoutSessionCommandHandler
         CreateCheckoutSessionCommand command,
         CancellationToken cancellationToken)
     {
-        // 1. Load order and verify caller is owner.
-        var order = await _unitOfWork.Orders.GetByIdWithItemsAsync(command.OrderId);
-        if (order is null)
-            throw new NotFoundException("Order", command.OrderId);
-
-        if (order.UserId != command.UserId)
-            throw new UnauthorizedException("You are not authorized to pay for this order.");
-
-        // 2. Pre-conditions: must be STRIPE + Pending + not cancelled.
-        if (order.PaymentMethod != EPaymentMethod.STRIPE)
-            throw new BadRequestException(
-                $"This endpoint only supports Stripe payment orders (current method: {order.PaymentMethod}). " +
-                "Orders with other payment methods (COD, MOMO, VNPAY) must use their respective endpoints.");
-
-        if (order.PaymentStatus != EPaymentStatus.Pending)
-            throw new BadRequestException(
-                $"Order is not awaiting payment (current status: {order.PaymentStatus}).");
-
-        if (order.OrderStatus == EOrderStatus.CANCELLED)
-            throw new BadRequestException("Cannot pay for a cancelled order.");
-
-        // 3. Build the gateway request. The internal Payment.Id is reserved here so we can echo
-        //    it in Stripe metadata for the webhook to find us. The Payment row is persisted only
-        //    after Stripe accepts the session, so a failed Stripe call leaves nothing behind.
-        var reservedPaymentId = Guid.NewGuid();
+        var cart = await _cartService.GetCartAsync(command.UserId);
+        if (cart.Items.Count == 0)
+            throw new BadRequestException("Cart is empty.");
 
         var storefrontUrl = _emailSettings.StorefrontUrl?.TrimEnd('/') ?? string.Empty;
+        var draftId = Guid.NewGuid();
+        var amount = cart.Items.Sum(item => item.UnitPrice * item.Quantity);
 
         var request = new CreateCheckoutSessionRequest
         {
-            OrderId = order.Id,
-            PaymentId = reservedPaymentId,
-            TotalAmount = (long)order.Total,
+            ClientReferenceId = draftId.ToString(),
+            Metadata = new Dictionary<string, string>
+            {
+                ["checkoutDraftId"] = draftId.ToString(),
+                ["userId"] = command.UserId.ToString()
+            },
+            TotalAmount = (long)amount,
             Currency = _stripeSettings.Currency,
-            Items = order.Items
+            Items = cart.Items
                 .Select(i => new CheckoutLineItem
                 {
                     Name = string.IsNullOrWhiteSpace(i.VariantLabel)
@@ -98,37 +81,51 @@ public class CreateCheckoutSessionCommandHandler
             CancelUrl = $"{storefrontUrl}{_stripeSettings.CancelUrlPath}"
         };
 
-        // 4. Call Stripe, then persist Payment row in a single DB transaction. If the Stripe call
-        //    throws we never touch the DB, so there is no orphan row to clean up.
         var sessionResult = await _gateway.CreateCheckoutSessionAsync(request, cancellationToken);
-
-        PaymentEntity paymentRow = null!;
-        await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        await _draftService.StoreAsync(new StripeCheckoutDraftCacheDto
         {
-            paymentRow = PaymentEntity.Create(
-                order.Id,
-                sessionResult.SessionId,
-                order.Total,
-                _stripeSettings.Currency,
-                reservedPaymentId);
-
-            await _unitOfWork.Payments.CreateAsync(paymentRow);
+            DraftId = draftId,
+            UserId = command.UserId,
+            FullName = command.FullName.Trim(),
+            PhoneNumber = command.PhoneNumber.Trim(),
+            Address = command.Address.Trim(),
+            Notes = string.IsNullOrWhiteSpace(command.Notes) ? null : command.Notes.Trim(),
+            SaveDeliveryProfile = command.SaveDeliveryProfile,
+            Items = cart.Items.Select(CloneCartItem).ToList(),
+            Amount = amount,
+            Currency = _stripeSettings.Currency,
+            SessionId = sessionResult.SessionId,
+            ExpiresAtUtc = sessionResult.ExpiresAtUtc
         });
 
         _logger.LogInformation(
-            "Created Stripe Checkout Session {SessionId} for Order {OrderId} (payment {PaymentId})",
-            sessionResult.SessionId, order.Id, paymentRow.Id);
+            "Created Stripe Checkout Session {SessionId} for draft {DraftId} and user {UserId}",
+            sessionResult.SessionId, draftId, command.UserId);
 
         return new CheckoutSessionResponseDto
         {
             SessionId = sessionResult.SessionId,
             CheckoutUrl = sessionResult.Url,
             ExpiresAtUtc = sessionResult.ExpiresAtUtc,
-            PaymentId = paymentRow.Id,
-            OrderId = order.Id,
-            Amount = (long)order.Total,
+            CheckoutDraftId = draftId,
+            Amount = (long)amount,
             Currency = _stripeSettings.Currency,
             PublishableKey = _gateway.PublishableKey
+        };
+    }
+
+    private static CartItemDto CloneCartItem(CartItemDto item)
+    {
+        return new CartItemDto
+        {
+            ProductId = item.ProductId,
+            VariantId = item.VariantId,
+            VariantLabel = item.VariantLabel,
+            ProductName = item.ProductName,
+            UnitPrice = item.UnitPrice,
+            Quantity = item.Quantity,
+            ImageUrl = item.ImageUrl,
+            AddedAt = item.AddedAt
         };
     }
 }

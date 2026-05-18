@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MoriiCoffee.Application.Commands.Payment.HandleWebhookEvent;
 using MoriiCoffee.Application.SeedWork.Abstractions;
+using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
 using MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities;
@@ -24,6 +25,7 @@ public class HandleWebhookEventExpiredTests
     private readonly Mock<IOrderRepository> _ordersRepo = new();
     private readonly Mock<IPaymentRepository> _paymentsRepo = new();
     private readonly Mock<IPaymentWebhookEventRepository> _webhookRepo = new();
+    private readonly Mock<IStripeCheckoutDraftService> _draftService = new();
     private readonly HandleWebhookEventCommandHandler _handler;
 
     public HandleWebhookEventExpiredTests()
@@ -36,6 +38,7 @@ public class HandleWebhookEventExpiredTests
 
         _handler = new HandleWebhookEventCommandHandler(
             _unitOfWork.Object,
+            _draftService.Object,
             NullLogger<HandleWebhookEventCommandHandler>.Instance);
     }
 
@@ -64,6 +67,7 @@ public class HandleWebhookEventExpiredTests
         result.Result.Should().Be(EPaymentWebhookProcessingResult.Processed);
         payment.Status.Should().Be(EPaymentTransactionStatus.Expired);
         order.PaymentStatus.Should().Be(EPaymentStatus.Failed);
+        order.OrderStatus.Should().Be(EOrderStatus.PENDING);
     }
 
     [Fact]
@@ -95,6 +99,36 @@ public class HandleWebhookEventExpiredTests
         result.Result.Should().Be(EPaymentWebhookProcessingResult.Processed);
         payment.Status.Should().Be(EPaymentTransactionStatus.Succeeded); // unchanged
         order.PaymentStatus.Should().Be(EPaymentStatus.Paid); // unchanged
+    }
+
+    [Fact]
+    public async Task Handle_DraftSessionExpired_MarksDraftFailed()
+    {
+        var draft = new StripeCheckoutDraftCacheDto
+        {
+            DraftId = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            SessionId = "cs_draft_expired"
+        };
+
+        _paymentsRepo.Setup(r => r.GetBySessionIdAsync("cs_draft_expired"))
+            .ReturnsAsync((PaymentEntity?)null);
+        _draftService.Setup(s => s.GetBySessionIdAsync("cs_draft_expired"))
+            .ReturnsAsync(draft);
+
+        var result = await _handler.Handle(new HandleWebhookEventCommand
+        {
+            Envelope = new WebhookEventEnvelope
+            {
+                EventId = "evt_draft_expired",
+                EventType = "checkout.session.expired",
+                RawBody = "{}",
+                ProviderSessionId = "cs_draft_expired"
+            }
+        }, CancellationToken.None);
+
+        result.Result.Should().Be(EPaymentWebhookProcessingResult.Processed);
+        _draftService.Verify(s => s.MarkExpiredAsync(draft), Times.Once);
     }
 
     private static OrderEntity BuildStripeOrder()

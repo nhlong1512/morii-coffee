@@ -39,7 +39,8 @@ public class OrdersController : ControllerBase
 
     /// <summary>
     /// Place a new order from the current user's cart.
-    /// The cart must not be empty. The cart is cleared after successful placement.
+    /// This endpoint is intended for payment methods that create an order immediately, such as COD.
+    /// Stripe checkout now uses a payment-first flow via <c>POST /api/v1/payments/stripe/checkout-session</c>.
     /// </summary>
     [HttpPost]
     [SwaggerOperation(Summary = "Place a new order from cart")]

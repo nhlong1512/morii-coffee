@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MoriiCoffee.Application.Commands.Payment.HandleWebhookEvent;
 using MoriiCoffee.Application.SeedWork.Abstractions;
+using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
 using MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities;
@@ -22,6 +23,7 @@ public class HandleWebhookEventPaymentFailedTests
     private readonly Mock<IOrderRepository> _ordersRepo = new();
     private readonly Mock<IPaymentRepository> _paymentsRepo = new();
     private readonly Mock<IPaymentWebhookEventRepository> _webhookRepo = new();
+    private readonly Mock<IStripeCheckoutDraftService> _draftService = new();
     private readonly HandleWebhookEventCommandHandler _handler;
 
     public HandleWebhookEventPaymentFailedTests()
@@ -34,6 +36,7 @@ public class HandleWebhookEventPaymentFailedTests
 
         _handler = new HandleWebhookEventCommandHandler(
             _unitOfWork.Object,
+            _draftService.Object,
             NullLogger<HandleWebhookEventCommandHandler>.Instance);
     }
 
@@ -65,6 +68,39 @@ public class HandleWebhookEventPaymentFailedTests
         payment.Status.Should().Be(EPaymentTransactionStatus.Failed);
         payment.FailureReason.Should().Be("Your card was declined.");
         order.PaymentStatus.Should().Be(EPaymentStatus.Failed);
+        order.OrderStatus.Should().Be(EOrderStatus.PENDING);
+    }
+
+    [Fact]
+    public async Task Handle_DraftPaymentFailed_MarksDraftFailed()
+    {
+        var draft = new StripeCheckoutDraftCacheDto
+        {
+            DraftId = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            SessionId = "cs_failed",
+        };
+
+        _paymentsRepo.Setup(r => r.GetByPaymentIntentIdAsync("pi_failed_draft"))
+            .ReturnsAsync((PaymentEntity?)null);
+        _draftService.Setup(s => s.GetByDraftIdAsync(draft.DraftId))
+            .ReturnsAsync(draft);
+
+        var result = await _handler.Handle(new HandleWebhookEventCommand
+        {
+            Envelope = new WebhookEventEnvelope
+            {
+                EventId = "evt_pi_failed_draft",
+                EventType = "payment_intent.payment_failed",
+                RawBody = "{}",
+                ProviderPaymentId = "pi_failed_draft",
+                MetadataCheckoutDraftId = draft.DraftId,
+                FailureReason = "Card declined."
+            }
+        }, CancellationToken.None);
+
+        result.Result.Should().Be(EPaymentWebhookProcessingResult.Processed);
+        _draftService.Verify(s => s.MarkFailedAsync(draft, "Card declined."), Times.Once);
     }
 
     private static OrderEntity BuildStripeOrder()

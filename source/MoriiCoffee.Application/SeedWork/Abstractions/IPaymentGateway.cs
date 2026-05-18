@@ -1,3 +1,5 @@
+using MoriiCoffee.Domain.Shared.Enums.Order;
+
 namespace MoriiCoffee.Application.SeedWork.Abstractions;
 
 /// <summary>
@@ -56,11 +58,17 @@ public interface IPaymentGateway
 /// <summary>Input for <see cref="IPaymentGateway.CreateCheckoutSessionAsync"/>.</summary>
 public class CreateCheckoutSessionRequest
 {
-    /// <summary>Internal Morii Coffee Order id this session pays for.</summary>
-    public Guid OrderId { get; set; }
+    /// <summary>
+    /// Optional client-facing correlation id displayed in the provider dashboard search.
+    /// For payment-first Stripe this is the checkout draft id; for legacy flows it can be an order id.
+    /// </summary>
+    public string? ClientReferenceId { get; set; }
 
-    /// <summary>Internal Morii Coffee Payment id (the row we created in our DB for this attempt).</summary>
-    public Guid PaymentId { get; set; }
+    /// <summary>
+    /// Arbitrary metadata echoed back by the provider on webhook events.
+    /// Used to correlate a hosted session to internal drafts/orders/payments.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
     /// One line item per <c>OrderItem</c>. The provider draws the line items on the checkout page,
@@ -114,14 +122,6 @@ public class CheckoutSessionResult
     public DateTime ExpiresAtUtc { get; set; }
 }
 
-/// <summary>Normalized state of a provider checkout session at reconciliation time.</summary>
-public enum CheckoutSessionState
-{
-    Pending = 1,
-    Paid = 2,
-    Expired = 3
-}
-
 /// <summary>Output of <see cref="IPaymentGateway.GetCheckoutSessionStatusAsync"/>.</summary>
 public class CheckoutSessionStatusResult
 {
@@ -129,7 +129,7 @@ public class CheckoutSessionStatusResult
     public string SessionId { get; set; } = null!;
 
     /// <summary>Current provider-side state of the checkout session.</summary>
-    public CheckoutSessionState State { get; set; }
+    public ECheckoutSessionState State { get; set; }
 
     /// <summary>Provider payment intent identifier, when payment has been created.</summary>
     public string? PaymentIntentId { get; set; }
@@ -203,6 +203,12 @@ public class WebhookEventEnvelope
 
     /// <summary>Our internal payment id, extracted from provider metadata when we created the session.</summary>
     public Guid? MetadataPaymentId { get; set; }
+
+    /// <summary>
+    /// Internal checkout draft id for payment-first flows. Present when the checkout session was
+    /// created before any order existed locally.
+    /// </summary>
+    public Guid? MetadataCheckoutDraftId { get; set; }
 
     // ─── Provider Transaction Identifiers ────────────────────────────────────────────────────
     // These are mapped from provider-specific fields during envelope construction.

@@ -25,6 +25,7 @@ public class OrderPaymentStatusTests
     {
         var order = Build(EPaymentMethod.STRIPE);
         order.PaymentStatus.Should().Be(EPaymentStatus.Pending);
+        order.OrderStatus.Should().Be(EOrderStatus.PENDING);
     }
 
     [Fact]
@@ -37,6 +38,7 @@ public class OrderPaymentStatusTests
         order.PaymentStatus.Should().Be(EPaymentStatus.Paid);
         order.StripePaymentIntentId.Should().Be("pi_abc");
         order.StripeChargeId.Should().Be("ch_abc");
+        order.OrderStatus.Should().Be(EOrderStatus.PENDING);
     }
 
     [Fact]

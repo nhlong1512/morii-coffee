@@ -13,156 +13,132 @@ namespace MoriiCoffee.Application.Commands.Payment.ReconcileStripePayment;
 /// authoritative webhook is delayed or missed.
 /// </summary>
 public class ReconcileStripePaymentCommandHandler
-    : ICommandHandler<ReconcileStripePaymentCommand, OrderPaymentSummaryDto>
+    : ICommandHandler<ReconcileStripePaymentCommand, ReconcileStripePaymentResponseDto>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPaymentGateway _paymentGateway;
+    private readonly IStripeCheckoutDraftService _draftService;
 
     public ReconcileStripePaymentCommandHandler(
         IUnitOfWork unitOfWork,
-        IPaymentGateway paymentGateway)
+        IPaymentGateway paymentGateway,
+        IStripeCheckoutDraftService draftService)
     {
         _unitOfWork = unitOfWork;
         _paymentGateway = paymentGateway;
+        _draftService = draftService;
     }
 
-    public async Task<OrderPaymentSummaryDto> Handle(
+    public async Task<ReconcileStripePaymentResponseDto> Handle(
         ReconcileStripePaymentCommand command,
         CancellationToken cancellationToken)
     {
-        var order = await _unitOfWork.Orders.GetByIdAsync(command.OrderId);
-        if (order is null)
-            throw new NotFoundException("Order", command.OrderId);
+        if (string.IsNullOrWhiteSpace(command.SessionId) && command.CheckoutDraftId is null)
+            throw new BadRequestException("Either SessionId or CheckoutDraftId is required.");
 
-        if (!command.IsAdmin && order.UserId != command.RequestingUserId)
-            throw new UnauthorizedException(
-                "You are not authorized to reconcile payment details for this order.");
-
-        if (order.PaymentMethod != EPaymentMethod.STRIPE)
-            throw new BadRequestException("Only Stripe-payment orders can be reconciled.");
-
-        var payment = await ResolvePaymentAttemptAsync(order.Id, command.SessionId);
-        if (payment is not null)
+        if (!string.IsNullOrWhiteSpace(command.SessionId))
         {
-            var providerState = await _paymentGateway.GetCheckoutSessionStatusAsync(
-                payment.StripeSessionId,
-                cancellationToken);
-
-            await ApplyProviderStateAsync(order, payment, providerState);
+            var finalizedPayment = await _unitOfWork.Payments.GetBySessionIdAsync(command.SessionId);
+            if (finalizedPayment is not null)
+                return await BuildFinalizedResponseAsync(finalizedPayment, command);
         }
 
-        var payments = await _unitOfWork.Payments.ListByOrderIdAsync(order.Id);
-        return MapToSummary(order.Id, order.PaymentStatus, payments);
-    }
+        var draft = await ResolveDraftAsync(command);
+        if (draft is null)
+            throw new NotFoundException(
+                "Stripe checkout draft",
+                command.CheckoutDraftId?.ToString() ?? command.SessionId!);
 
-    private async Task<PaymentEntity?> ResolvePaymentAttemptAsync(Guid orderId, string? sessionId)
-    {
-        if (!string.IsNullOrWhiteSpace(sessionId))
-        {
-            var paymentBySession = await _unitOfWork.Payments.GetBySessionIdAsync(sessionId);
-            if (paymentBySession is null || paymentBySession.OrderId != orderId)
-                throw new NotFoundException("Stripe checkout session", sessionId);
-            return paymentBySession;
-        }
+        EnsureAuthorized(draft.UserId, command);
 
-        var pendingPayment = await _unitOfWork.Payments.GetLatestPendingByOrderIdAsync(orderId);
-        if (pendingPayment is not null)
-            return pendingPayment;
-
-        return await _unitOfWork.Payments.GetLatestSucceededByOrderIdAsync(orderId);
-    }
-
-    private async Task ApplyProviderStateAsync(
-        Domain.Aggregates.OrderAggregate.Order order,
-        PaymentEntity payment,
-        CheckoutSessionStatusResult providerState)
-    {
-        var hasChanges = false;
+        var providerState = await _paymentGateway.GetCheckoutSessionStatusAsync(
+            draft.SessionId,
+            cancellationToken);
 
         switch (providerState.State)
         {
-            case CheckoutSessionState.Paid:
-                if (payment.Status != EPaymentTransactionStatus.Succeeded)
+            case ECheckoutSessionState.Paid:
+                if (string.IsNullOrWhiteSpace(providerState.PaymentIntentId) ||
+                    string.IsNullOrWhiteSpace(providerState.ChargeId))
                 {
-                    if (string.IsNullOrWhiteSpace(providerState.PaymentIntentId) ||
-                        string.IsNullOrWhiteSpace(providerState.ChargeId))
-                    {
-                        throw new InvalidOperationException(
-                            "Stripe reported the session as paid but did not include payment identifiers.");
-                    }
-
-                    payment.MarkSucceeded(providerState.PaymentIntentId, providerState.ChargeId);
-                    await _unitOfWork.Payments.Update(payment);
-                    hasChanges = true;
+                    throw new InvalidOperationException(
+                        "Stripe reported the session as paid but did not return payment identifiers.");
                 }
 
-                if (order.PaymentStatus == EPaymentStatus.Pending)
+                var finalized = await _draftService.FinalizeSucceededAsync(
+                    draft,
+                    providerState.PaymentIntentId,
+                    providerState.ChargeId,
+                    cancellationToken);
+
+                return new ReconcileStripePaymentResponseDto
                 {
-                    order.MarkPaymentPaid(
-                        providerState.PaymentIntentId ?? payment.StripePaymentIntentId!,
-                        providerState.ChargeId ?? payment.StripeChargeId!);
-                    await _unitOfWork.Orders.Update(order);
-                    hasChanges = true;
-                }
+                    CheckoutDraftId = draft.DraftId,
+                    SessionId = draft.SessionId,
+                    OrderId = finalized.OrderId,
+                    OrderNumber = finalized.OrderNumber,
+                    PaymentStatus = finalized.PaymentStatus,
+                    FailureReason = null,
+                    ExpiresAtUtc = draft.ExpiresAtUtc
+                };
+
+            case ECheckoutSessionState.Expired:
+                await _draftService.MarkExpiredAsync(draft);
+                draft.PaymentStatus = EPaymentStatus.Failed;
+                draft.FailureReason = "Stripe checkout session expired before payment was completed.";
                 break;
 
-            case CheckoutSessionState.Expired:
-                if (payment.Status == EPaymentTransactionStatus.Created)
-                {
-                    payment.MarkExpired();
-                    await _unitOfWork.Payments.Update(payment);
-                    hasChanges = true;
-                }
-
-                if (order.PaymentStatus == EPaymentStatus.Pending)
-                {
-                    order.MarkPaymentFailed();
-                    await _unitOfWork.Orders.Update(order);
-                    hasChanges = true;
-                }
-                break;
-
-            case CheckoutSessionState.Pending:
+            case ECheckoutSessionState.Pending:
             default:
                 break;
         }
 
-        if (hasChanges)
-            await _unitOfWork.CommitAsync();
+        return new ReconcileStripePaymentResponseDto
+        {
+            CheckoutDraftId = draft.DraftId,
+            SessionId = draft.SessionId,
+            OrderId = null,
+            OrderNumber = null,
+            PaymentStatus = draft.PaymentStatus,
+            FailureReason = draft.FailureReason ?? providerState.FailureReason,
+            ExpiresAtUtc = providerState.ExpiresAtUtc ?? draft.ExpiresAtUtc
+        };
     }
 
-    private static OrderPaymentSummaryDto MapToSummary(
-        Guid orderId,
-        EPaymentStatus paymentStatus,
-        IReadOnlyList<PaymentEntity> payments)
+    private async Task<StripeCheckoutDraftCacheDto?> ResolveDraftAsync(ReconcileStripePaymentCommand command)
     {
-        return new OrderPaymentSummaryDto
+        if (command.CheckoutDraftId is Guid draftId && draftId != Guid.Empty)
+            return await _draftService.GetByDraftIdAsync(draftId);
+
+        return await _draftService.GetBySessionIdAsync(command.SessionId!);
+    }
+
+    private async Task<ReconcileStripePaymentResponseDto> BuildFinalizedResponseAsync(
+        PaymentEntity payment,
+        ReconcileStripePaymentCommand command)
+    {
+        var order = await _unitOfWork.Orders.GetByIdAsync(payment.OrderId)
+            ?? throw new InvalidOperationException(
+                $"Payment {payment.Id} exists for session {payment.StripeSessionId} but its order is missing.");
+
+        EnsureAuthorized(order.UserId, command);
+
+        return new ReconcileStripePaymentResponseDto
         {
-            OrderId = orderId,
-            PaymentStatus = paymentStatus,
-            Payments = payments.Select(p => new PaymentDto
-            {
-                Id = p.Id,
-                StripeSessionId = p.StripeSessionId,
-                StripePaymentIntentId = p.StripePaymentIntentId,
-                Amount = p.Amount,
-                Currency = p.Currency,
-                Status = p.Status,
-                FailureReason = p.FailureReason,
-                CreatedAt = p.CreatedAt,
-                Refunds = p.Refunds
-                    .OrderByDescending(r => r.CreatedAt)
-                    .Select(r => new RefundDto
-                    {
-                        Id = r.Id,
-                        StripeRefundId = r.StripeRefundId,
-                        Amount = r.Amount,
-                        Reason = r.Reason,
-                        Status = r.Status,
-                        CreatedAt = r.CreatedAt
-                    })
-                    .ToList()
-            }).ToList()
+            CheckoutDraftId = null,
+            SessionId = payment.StripeSessionId,
+            OrderId = order.Id,
+            OrderNumber = order.OrderNumber,
+            PaymentStatus = order.PaymentStatus,
+            FailureReason = payment.FailureReason,
+            ExpiresAtUtc = null
         };
+    }
+
+    private static void EnsureAuthorized(Guid ownerUserId, ReconcileStripePaymentCommand command)
+    {
+        if (!command.IsAdmin && ownerUserId != command.RequestingUserId)
+            throw new UnauthorizedException(
+                "You are not authorized to reconcile this Stripe checkout session.");
     }
 }

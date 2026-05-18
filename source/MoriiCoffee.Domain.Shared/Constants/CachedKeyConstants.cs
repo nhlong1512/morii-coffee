@@ -9,6 +9,7 @@ public static class CachedKeyConstants
     public const string BANNERS = "banners";
     public const string PRODUCTS = "products";
     public const string CART = "cart";
+    public const string STRIPE_CHECKOUT_DRAFT = "stripe-checkout-draft";
 
     public static string All(string resource)
     {
@@ -53,6 +54,16 @@ public static class CachedKeyConstants
     public static string GuestCart(string sessionId)
     {
         return $"{CART}:guest:{sessionId}";
+    }
+
+    public static string StripeCheckoutDraftById(Guid draftId)
+    {
+        return ById(STRIPE_CHECKOUT_DRAFT, draftId);
+    }
+
+    public static string StripeCheckoutDraftBySession(string sessionId)
+    {
+        return $"{STRIPE_CHECKOUT_DRAFT}:session:{sessionId}";
     }
 
     public static string EntityById<T>(Guid id)

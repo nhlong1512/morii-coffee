@@ -34,12 +34,12 @@ public class PaymentsController : ControllerBase
     }
 
     /// <summary>
-    /// Create a Stripe-hosted Checkout Session for an order whose payment is still <c>Pending</c>.
+    /// Create a Stripe-hosted Checkout Session from the authenticated user's current cart.
     /// The frontend should redirect the browser to <see cref="CheckoutSessionResponseDto.CheckoutUrl"/>.
-    /// Order must have <c>PaymentMethod = STRIPE</c>.
+    /// No order is created yet; the backend finalizes the order only after Stripe confirms payment.
     /// </summary>
     [HttpPost("stripe/checkout-session")]
-    [SwaggerOperation(Summary = "[Stripe] Create a Checkout Session for a Stripe-payment order")]
+    [SwaggerOperation(Summary = "[Stripe] Create a Checkout Session from cart")]
     [SwaggerResponse(201, SwaggerResponseMessages.CreatedSuccessfully, typeof(CheckoutSessionResponseDto))]
     [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
@@ -48,8 +48,12 @@ public class PaymentsController : ControllerBase
     {
         var result = await _mediator.Send(new CreateCheckoutSessionCommand
         {
-            OrderId = dto.OrderId,
-            UserId = GetCurrentUserId()
+            UserId = GetCurrentUserId(),
+            FullName = dto.FullName,
+            PhoneNumber = dto.PhoneNumber,
+            Address = dto.Address,
+            Notes = dto.Notes,
+            SaveDeliveryProfile = dto.SaveDeliveryProfile
         });
 
         return StatusCode(201, new ApiCreatedResponse(result));
@@ -61,16 +65,16 @@ public class PaymentsController : ControllerBase
     /// </summary>
     [HttpPost("stripe/reconcile")]
     [SwaggerOperation(Summary = "[Stripe] Reconcile a Stripe payment after success redirect")]
-    [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(OrderPaymentSummaryDto))]
+    [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(ReconcileStripePaymentResponseDto))]
     [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
     [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
     public async Task<IActionResult> ReconcileStripePayment([FromBody] ReconcileStripePaymentDto dto)
     {
-        var result = await _mediator.Send(new ReconcileStrPaymentWebhookipePaymentCommand
+        var result = await _mediator.Send(new ReconcileStripePaymentCommand
         {
-            OrderId = dto.OrderId,
             SessionId = dto.SessionId,
+            CheckoutDraftId = dto.CheckoutDraftId,
             RequestingUserId = GetCurrentUserId(),
             IsAdmin = IsAdmin()
         });

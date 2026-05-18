@@ -3,6 +3,13 @@ namespace MoriiCoffee.Application.SeedWork.DTOs.Payment;
 /// <summary>Request body for <c>POST /api/v1/payments/checkout-session</c>.</summary>
 public class CreateCheckoutSessionDto
 {
-    /// <summary>Id of the Order to create a Stripe Checkout Session for.</summary>
-    public Guid OrderId { get; set; }
+    public string FullName { get; set; } = null!;
+
+    public string PhoneNumber { get; set; } = null!;
+
+    public string Address { get; set; } = null!;
+
+    public string? Notes { get; set; }
+
+    public bool SaveDeliveryProfile { get; set; }
 }

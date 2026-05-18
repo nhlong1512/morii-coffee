@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Logging;
 using MoriiCoffee.Application.SeedWork.Abstractions;
+using MoriiCoffee.Domain.Shared.Enums.Order;
 using MoriiCoffee.Domain.Shared.Settings;
 using Stripe;
 using Stripe.Checkout;
+using System.Linq;
 
 namespace MoriiCoffee.Infrastructure.Services.Payment;
 
@@ -87,23 +89,19 @@ public class StripePaymentGateway : IPaymentGateway
                 },
                 Quantity = line.Quantity
             }).ToList(),
-            // ClientReferenceId surfaces in the Stripe dashboard's search bar — operators paste an
-            // order id and immediately see the corresponding session.
-            ClientReferenceId = request.OrderId.ToString(),
-            // Metadata is the durable channel for our internal ids — Stripe echoes it back on the
-            // webhook event, so we never need an extra round-trip to correlate event → Payment.
-            Metadata = new Dictionary<string, string>
+            ClientReferenceId = request.ClientReferenceId,
+            Metadata = request.Metadata.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            PaymentIntentData = new SessionPaymentIntentDataOptions
             {
-                ["orderId"] = request.OrderId.ToString(),
-                ["paymentId"] = request.PaymentId.ToString()
+                Metadata = request.Metadata.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
             },
             SuccessUrl = request.SuccessUrl,
             CancelUrl = request.CancelUrl
         };
 
         _logger.LogInformation(
-            "Creating Stripe Checkout Session for Order {OrderId} amount {Amount} {Currency}",
-            request.OrderId, request.TotalAmount, request.Currency);
+            "Creating Stripe Checkout Session {ClientReferenceId} amount {Amount} {Currency}",
+            request.ClientReferenceId, request.TotalAmount, request.Currency);
 
         var session = await _sessionService.CreateAsync(options, cancellationToken: cancellationToken);
 
@@ -146,10 +144,10 @@ public class StripePaymentGateway : IPaymentGateway
         }
 
         var state = session.Status == "expired"
-            ? CheckoutSessionState.Expired
+            ? ECheckoutSessionState.Expired
             : string.Equals(session.PaymentStatus, "paid", StringComparison.OrdinalIgnoreCase)
-                ? CheckoutSessionState.Paid
-                : CheckoutSessionState.Pending;
+                ? ECheckoutSessionState.Paid
+                : ECheckoutSessionState.Pending;
 
         return new CheckoutSessionStatusResult
         {
@@ -256,6 +254,9 @@ public class StripePaymentGateway : IPaymentGateway
                     envelope.ProviderPaymentId = session.PaymentIntentId;
                     if (session.Metadata is not null)
                     {
+                        if (session.Metadata.TryGetValue("checkoutDraftId", out var draftIdStr) &&
+                            Guid.TryParse(draftIdStr, out var draftId))
+                            envelope.MetadataCheckoutDraftId = draftId;
                         if (session.Metadata.TryGetValue("orderId", out var orderIdStr) &&
                             Guid.TryParse(orderIdStr, out var orderId))
                             envelope.MetadataOrderId = orderId;
@@ -271,6 +272,18 @@ public class StripePaymentGateway : IPaymentGateway
                 {
                     envelope.ProviderPaymentId = intent.Id;
                     envelope.FailureReason = intent.LastPaymentError?.Message;
+                    if (intent.Metadata is not null)
+                    {
+                        if (intent.Metadata.TryGetValue("checkoutDraftId", out var draftIdStr) &&
+                            Guid.TryParse(draftIdStr, out var draftId))
+                            envelope.MetadataCheckoutDraftId = draftId;
+                        if (intent.Metadata.TryGetValue("orderId", out var orderIdStr) &&
+                            Guid.TryParse(orderIdStr, out var orderId))
+                            envelope.MetadataOrderId = orderId;
+                        if (intent.Metadata.TryGetValue("paymentId", out var paymentIdStr) &&
+                            Guid.TryParse(paymentIdStr, out var paymentId))
+                            envelope.MetadataPaymentId = paymentId;
+                    }
                 }
                 break;
 

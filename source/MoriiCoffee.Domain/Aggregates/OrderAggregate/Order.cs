@@ -161,6 +161,7 @@ public class Order : AggregateRoot
         PaymentStatus = EPaymentStatus.Paid;
         StripePaymentIntentId = stripePaymentIntentId.Trim();
         StripeChargeId = stripeChargeId.Trim();
+
     }
 
     /// <summary>
@@ -204,8 +205,6 @@ public class Order : AggregateRoot
 
     public void Confirm()
     {
-        EnsureCanAdvanceTo(EOrderStatus.CONFIRMED);
-
         // FR-013: an online-paid order MUST NOT be confirmed for fulfilment until payment is
         // settled. COD orders bypass this guard (PaymentStatus == NotRequired).
         if (PaymentMethod != EPaymentMethod.COD &&
@@ -214,6 +213,8 @@ public class Order : AggregateRoot
             throw new InvalidOperationException(
                 $"Cannot confirm an order whose payment status is {PaymentStatus}.");
         }
+
+        EnsureCanAdvanceTo(EOrderStatus.CONFIRMED);
 
         OrderStatus = EOrderStatus.CONFIRMED;
     }

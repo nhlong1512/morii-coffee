@@ -16,11 +16,8 @@ public class CheckoutSessionResponseDto
     /// <summary>UTC time at which the session expires at Stripe (default 24 h from creation).</summary>
     public DateTime ExpiresAtUtc { get; set; }
 
-    /// <summary>Internal Payment row id created server-side for this attempt.</summary>
-    public Guid PaymentId { get; set; }
-
-    /// <summary>The Order id this session pays for.</summary>
-    public Guid OrderId { get; set; }
+    /// <summary>Internal checkout draft id used to finalize the order after payment succeeds.</summary>
+    public Guid CheckoutDraftId { get; set; }
 
     /// <summary>Amount in VND (zero-decimal: integer == đồng).</summary>
     public long Amount { get; set; }

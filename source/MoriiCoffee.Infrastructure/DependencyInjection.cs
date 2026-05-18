@@ -9,6 +9,7 @@ using MoriiCoffee.Infrastructure.Services.Cart;
 using MoriiCoffee.Infrastructure.Services.Email;
 using MoriiCoffee.Infrastructure.Services.Order;
 using MoriiCoffee.Infrastructure.Services.Payment;
+using MoriiCoffee.Application.Services;
 
 namespace MoriiCoffee.Infrastructure;
 
@@ -53,6 +54,7 @@ public static class DependencyInjection
         services.AddScoped<IFileService, AwsS3FileService>();
         services.AddScoped<ICartService, RedisCartService>();
         services.AddScoped<IOrderIdGenerator, OrderIdGenerator>();
+        services.AddScoped<IStripeCheckoutDraftService, StripeCheckoutDraftService>();
         services.AddScoped<IPaymentGateway, StripePaymentGateway>();
         return services;
     }
