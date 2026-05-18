@@ -18,6 +18,15 @@ public interface IPaymentGateway
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves the current state of a hosted checkout session from the payment provider. Used
+    /// by reconciliation flows to self-heal when the success redirect reaches the frontend before
+    /// the webhook has updated local state.
+    /// </summary>
+    Task<CheckoutSessionStatusResult> GetCheckoutSessionStatusAsync(
+        string sessionId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Verifies the cryptographic signature on a raw webhook body and returns a strongly-typed
     /// envelope. Throws <see cref="PaymentGatewaySignatureException"/> when the signature header
     /// is missing or does not match the body and shared signing secret.
@@ -103,6 +112,36 @@ public class CheckoutSessionResult
 
     /// <summary>UTC time at which the session expires at Stripe (default 24 h from creation).</summary>
     public DateTime ExpiresAtUtc { get; set; }
+}
+
+/// <summary>Normalized state of a provider checkout session at reconciliation time.</summary>
+public enum CheckoutSessionState
+{
+    Pending = 1,
+    Paid = 2,
+    Expired = 3
+}
+
+/// <summary>Output of <see cref="IPaymentGateway.GetCheckoutSessionStatusAsync"/>.</summary>
+public class CheckoutSessionStatusResult
+{
+    /// <summary>Provider checkout session identifier.</summary>
+    public string SessionId { get; set; } = null!;
+
+    /// <summary>Current provider-side state of the checkout session.</summary>
+    public CheckoutSessionState State { get; set; }
+
+    /// <summary>Provider payment intent identifier, when payment has been created.</summary>
+    public string? PaymentIntentId { get; set; }
+
+    /// <summary>Provider charge identifier, when available.</summary>
+    public string? ChargeId { get; set; }
+
+    /// <summary>Best-effort provider failure reason when payment failed.</summary>
+    public string? FailureReason { get; set; }
+
+    /// <summary>UTC session expiry timestamp, when surfaced by the provider.</summary>
+    public DateTime? ExpiresAtUtc { get; set; }
 }
 
 /// <summary>Input for <see cref="IPaymentGateway.CreateRefundAsync"/>.</summary>

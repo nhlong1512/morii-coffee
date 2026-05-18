@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoriiCoffee.Application.Commands.Payment.CreateCheckoutSession;
+using MoriiCoffee.Application.Commands.Payment.ReconcileStripePayment;
 using MoriiCoffee.Application.Commands.Payment.RefundPayment;
 using MoriiCoffee.Application.Queries.Payment.GetPaymentByOrderId;
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
@@ -52,6 +53,29 @@ public class PaymentsController : ControllerBase
         });
 
         return StatusCode(201, new ApiCreatedResponse(result));
+    }
+
+    /// <summary>
+    /// Re-checks the Stripe Checkout Session against Stripe and synchronizes local state when the
+    /// success redirect returns before the webhook updates the order.
+    /// </summary>
+    [HttpPost("stripe/reconcile")]
+    [SwaggerOperation(Summary = "[Stripe] Reconcile a Stripe payment after success redirect")]
+    [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(OrderPaymentSummaryDto))]
+    [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    public async Task<IActionResult> ReconcileStripePayment([FromBody] ReconcileStripePaymentDto dto)
+    {
+        var result = await _mediator.Send(new ReconcileStrPaymentWebhookipePaymentCommand
+        {
+            OrderId = dto.OrderId,
+            SessionId = dto.SessionId,
+            RequestingUserId = GetCurrentUserId(),
+            IsAdmin = IsAdmin()
+        });
+
+        return Ok(new ApiOkResponse(result));
     }
 
     /// <summary>

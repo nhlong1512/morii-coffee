@@ -151,8 +151,8 @@ Previous documents in `/specs/011-stripe-payment/`:
 - ✅ `data-model.md` — Database schema, enums, state machines
 - ✅ `contracts/` — Detailed API contract specs
 - ✅ `plan.md` — Implementation plan
-- ✅ [PAYMENT_ARCHITECTURE_REVIEW.md](PAYMENT_ARCHITECTURE_REVIEW.md) — Architecture assessment
-- ✅ [PAYMENT_REFACTORING_SUMMARY.md](PAYMENT_REFACTORING_SUMMARY.md) — Refactoring details (WebhookEventEnvelope generalization)
+- ✅ [PAYMENT_ARCHITECTURE_REVIEW.md](docs/features/stripe-checkout/PAYMENT_ARCHITECTURE_REVIEW.md) — Architecture assessment
+- ✅ [PAYMENT_REFACTORING_SUMMARY.md](docs/features/stripe-checkout/PAYMENT_REFACTORING_SUMMARY.md) — Refactoring details (WebhookEventEnvelope generalization)
 
 ---
 
@@ -208,8 +208,8 @@ specs/011-stripe-payment/
 docs/
 └── explainations/                    # (Future: implementation summaries)
 
-PAYMENT_ARCHITECTURE_REVIEW.md         # Architecture analysis + extensibility
-PAYMENT_REFACTORING_SUMMARY.md         # Code refactoring details
+docs/features/stripe-checkout/PAYMENT_ARCHITECTURE_REVIEW.md  # Architecture analysis + extensibility
+docs/features/stripe-checkout/PAYMENT_REFACTORING_SUMMARY.md  # Code refactoring details
 README.md                              # (Updated with Payment section)
 ```
 
@@ -243,8 +243,8 @@ README.md                              # (Updated with Payment section)
 5. Reference: Keep Quick Reference section handy
 
 **For Backend Developers**:
-1. Architecture: [PAYMENT_ARCHITECTURE_REVIEW.md](PAYMENT_ARCHITECTURE_REVIEW.md)
-2. Refactoring: [PAYMENT_REFACTORING_SUMMARY.md](PAYMENT_REFACTORING_SUMMARY.md)
+1. Architecture: [PAYMENT_ARCHITECTURE_REVIEW.md](docs/features/stripe-checkout/PAYMENT_ARCHITECTURE_REVIEW.md)
+2. Refactoring: [PAYMENT_REFACTORING_SUMMARY.md](docs/features/stripe-checkout/PAYMENT_REFACTORING_SUMMARY.md)
 3. Details: [specs/011-stripe-payment/spec.md](specs/011-stripe-payment/spec.md)
 4. Schema: [specs/011-stripe-payment/data-model.md](specs/011-stripe-payment/data-model.md)
 5. Code: Review StripePaymentGateway, HandleWebhookEventCommandHandler

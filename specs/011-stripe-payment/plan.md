@@ -184,8 +184,8 @@ source/
             └── GetPaymentByOrderIdQueryHandlerTests.cs
 
 docs/
-├── stripe-integration-guide-ENG.md                # NEW: beginner-friendly end-to-end guide (FR-022)
-├── stripe-integration-guide-VN.md                 # NEW: same content in Vietnamese
+├── docs/features/stripe-checkout/stripe-integration-guide-ENG.md  # NEW: beginner-friendly end-to-end guide (FR-022)
+├── docs/features/stripe-checkout/stripe-integration-guide-VN.md   # NEW: same content in Vietnamese
 └── explainations/
     ├── summary-stripe-payment-ENG.md              # NEW: final summary (FR-023) per CLAUDE.md §7
     └── summary-stripe-payment-VN.md               # NEW

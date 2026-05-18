@@ -2,7 +2,7 @@
 
 **Feature**: 011-stripe-payment
 
-This is the **engineer onboarding** doc for the feature. It complements the customer-facing user guides in `docs/stripe-integration-guide-{ENG,VN}.md` (which target the project owner / beginner). This file is short, terminal-focused, and assumes you already cloned the repo.
+This is the **engineer onboarding** doc for the feature. It complements the customer-facing user guides in `docs/features/stripe-checkout/stripe-integration-guide-{ENG,VN}.md` (which target the project owner / beginner). This file is short, terminal-focused, and assumes you already cloned the repo.
 
 ## 1. Prerequisites
 

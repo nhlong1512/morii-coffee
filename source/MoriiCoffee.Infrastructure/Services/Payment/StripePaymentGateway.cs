@@ -28,6 +28,7 @@ public class StripePaymentGateway : IPaymentGateway
     private readonly ILogger<StripePaymentGateway> _logger;
     private readonly StripeClient _client;
     private readonly SessionService _sessionService;
+    private readonly PaymentIntentService _paymentIntentService;
     private readonly RefundService _refundService;
 
     /// <summary>
@@ -45,6 +46,7 @@ public class StripePaymentGateway : IPaymentGateway
 
         _client = new StripeClient(_settings.SecretKey);
         _sessionService = new SessionService(_client);
+        _paymentIntentService = new PaymentIntentService(_client);
         _refundService = new RefundService(_client);
     }
 
@@ -109,6 +111,53 @@ public class StripePaymentGateway : IPaymentGateway
         {
             SessionId = session.Id,
             Url = session.Url,
+            ExpiresAtUtc = session.ExpiresAt
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<CheckoutSessionStatusResult> GetCheckoutSessionStatusAsync(
+        string sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+
+        var session = await _sessionService.GetAsync(
+            sessionId,
+            new SessionGetOptions(),
+            cancellationToken: cancellationToken);
+
+        string? paymentIntentId = session.PaymentIntentId;
+        string? chargeId = null;
+        string? failureReason = null;
+
+        if (!string.IsNullOrWhiteSpace(paymentIntentId))
+        {
+            var paymentIntent = await _paymentIntentService.GetAsync(
+                paymentIntentId,
+                new PaymentIntentGetOptions
+                {
+                    Expand = ["latest_charge"]
+                },
+                cancellationToken: cancellationToken);
+
+            chargeId = paymentIntent.LatestChargeId;
+            failureReason = paymentIntent.LastPaymentError?.Message;
+        }
+
+        var state = session.Status == "expired"
+            ? CheckoutSessionState.Expired
+            : string.Equals(session.PaymentStatus, "paid", StringComparison.OrdinalIgnoreCase)
+                ? CheckoutSessionState.Paid
+                : CheckoutSessionState.Pending;
+
+        return new CheckoutSessionStatusResult
+        {
+            SessionId = session.Id,
+            State = state,
+            PaymentIntentId = paymentIntentId,
+            ChargeId = chargeId,
+            FailureReason = failureReason,
             ExpiresAtUtc = session.ExpiresAt
         };
     }
