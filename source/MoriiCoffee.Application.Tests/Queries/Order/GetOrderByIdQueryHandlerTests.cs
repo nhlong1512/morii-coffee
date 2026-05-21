@@ -5,6 +5,7 @@ using MoriiCoffee.Application.Queries.Order.GetOrderById;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
+using MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Enums.Order;
@@ -153,6 +154,28 @@ public class GetOrderByIdQueryHandlerTests
         result.PaymentInfo.FailureReason.Should().BeNull();
     }
 
+    [Fact]
+    public async Task Handle_OrderSummaryIsStale_ResolvesRefundedStatusFromPaymentHistory()
+    {
+        var ownerId = Guid.NewGuid();
+        var order = BuildStripeOrder(ownerId);
+        var payment = PaymentEntity.Create(order.Id, "cs_refunded", 45_000m, "vnd");
+        payment.MarkSucceeded("pi_refunded", "ch_refunded");
+        payment.AddRefund(RefundRecord.Create(payment.Id, "re_refunded", 45_000m, Guid.NewGuid(), "sync"));
+        payment.Refunds.Single().MarkSucceeded();
+
+        _ordersRepo.Setup(r => r.GetByIdWithItemsAsync(order.Id)).ReturnsAsync(order);
+        _paymentsRepo
+            .Setup(r => r.ListByOrderIdAsync(order.Id))
+            .ReturnsAsync([payment]);
+
+        var result = await _handler.Handle(
+            new GetOrderByIdQuery(order.Id, ownerId, false),
+            CancellationToken.None);
+
+        result.PaymentInfo.PaymentStatus.Should().Be(EPaymentStatus.Refunded);
+    }
+
     private static OrderEntity BuildOrder(Guid userId, Guid? productId = null)
     {
         var delivery = new DeliveryInfo("Test User", "0901234567", "123 Test St");
@@ -161,5 +184,18 @@ public class GetOrderByIdQueryHandlerTests
             OrderItem.Create(productId ?? Guid.NewGuid(), "Cà phê sữa", 45_000, 1, null, null)
         };
         return OrderEntity.Create("MRC-TEST-001", userId, delivery, items, EPaymentMethod.COD);
+    }
+
+    private static OrderEntity BuildStripeOrder(Guid userId)
+    {
+        var delivery = new DeliveryInfo("Test User", "0901234567", "123 Test St");
+        var items = new List<OrderItem>
+        {
+            OrderItem.Create(Guid.NewGuid(), "A-Mê Classic", 45_000, 1, null, null)
+        };
+
+        var order = OrderEntity.Create("MRC-TEST-002", userId, delivery, items, EPaymentMethod.STRIPE);
+        order.MarkPaymentPaid("pi_stale_summary", "ch_stale_summary");
+        return order;
     }
 }

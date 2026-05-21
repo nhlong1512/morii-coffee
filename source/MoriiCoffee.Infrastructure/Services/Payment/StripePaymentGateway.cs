@@ -32,6 +32,7 @@ public class StripePaymentGateway : IPaymentGateway
     private readonly SessionService _sessionService;
     private readonly PaymentIntentService _paymentIntentService;
     private readonly RefundService _refundService;
+    private readonly ChargeService _chargeService;
 
     /// <summary>
     /// Constructs the gateway. Built around a per-instance <see cref="StripeClient"/> so future
@@ -50,6 +51,7 @@ public class StripePaymentGateway : IPaymentGateway
         _sessionService = new SessionService(_client);
         _paymentIntentService = new PaymentIntentService(_client);
         _refundService = new RefundService(_client);
+        _chargeService = new ChargeService(_client);
     }
 
     /// <inheritdoc />
@@ -220,12 +222,78 @@ public class StripePaymentGateway : IPaymentGateway
             "Creating Stripe Refund for PaymentIntent {Pi} amount {Amount} (order {OrderId}) by admin {AdminId}",
             request.PaymentIntentId, request.Amount, request.OrderId, request.InitiatedByAdminUserId);
 
-        var refund = await _refundService.CreateAsync(options, cancellationToken: cancellationToken);
+        Refund refund;
+        try
+        {
+            refund = await _refundService.CreateAsync(options, cancellationToken: cancellationToken);
+        }
+        catch (StripeException ex) when (string.Equals(
+            ex.StripeError?.Code,
+            "charge_already_refunded",
+            StringComparison.OrdinalIgnoreCase))
+        {
+            throw new PaymentGatewayAlreadyRefundedException(
+                ex.StripeError?.Message ?? "Stripe reports that the charge has already been refunded.",
+                ex);
+        }
 
         return new RefundResult
         {
             RefundId = refund.Id,
             Status = refund.Status ?? "pending"
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<PaymentProviderStatusResult> GetPaymentStatusAsync(
+        string paymentIntentId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(paymentIntentId);
+
+        var paymentIntent = await _paymentIntentService.GetAsync(
+            paymentIntentId,
+            new PaymentIntentGetOptions
+            {
+                Expand = ["latest_charge"]
+            },
+            cancellationToken: cancellationToken);
+
+        var chargeId = paymentIntent.LatestChargeId;
+        if (string.IsNullOrWhiteSpace(chargeId))
+        {
+            return new PaymentProviderStatusResult
+            {
+                PaymentIntentId = paymentIntent.Id,
+                ChargeId = null,
+                AmountRefunded = 0,
+                Refunds = []
+            };
+        }
+
+        var charge = await _chargeService.GetAsync(
+            chargeId,
+            new ChargeGetOptions
+            {
+                Expand = ["refunds"]
+            },
+            cancellationToken: cancellationToken);
+
+        var refunds = charge.Refunds?.Data?
+            .Select(refund => new ProviderRefundStatusResult
+            {
+                RefundId = refund.Id,
+                Amount = refund.Amount,
+                Status = refund.Status ?? "unknown"
+            })
+            .ToList() ?? [];
+
+        return new PaymentProviderStatusResult
+        {
+            PaymentIntentId = paymentIntent.Id,
+            ChargeId = charge.Id,
+            AmountRefunded = charge.AmountRefunded,
+            Refunds = refunds
         };
     }
 

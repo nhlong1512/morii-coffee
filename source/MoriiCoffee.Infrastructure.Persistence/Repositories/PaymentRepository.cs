@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MoriiCoffee.Domain.Aggregates.PaymentAggregate;
+using MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Infrastructure.Persistence.Data;
 using MoriiCoffee.Infrastructure.Persistence.SeedWork.Repository;
@@ -65,5 +66,11 @@ public class PaymentRepository : RepositoryBase<Payment>, IPaymentRepository
             .Where(p => !p.IsDeleted && p.OrderId == orderId)
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public async Task CreateRefundAsync(RefundRecord refund)
+    {
+        await _context.Refunds.AddAsync(refund);
     }
 }

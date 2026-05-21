@@ -1,6 +1,7 @@
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Application.SeedWork.Exceptions;
+using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Enums.Order;
@@ -129,7 +130,7 @@ public class ReconcileStripePaymentCommandHandler
             SessionId = payment.StripeSessionId,
             OrderId = order.Id,
             OrderNumber = order.OrderNumber,
-            PaymentStatus = order.PaymentStatus,
+            PaymentStatus = PaymentStatusResolver.Resolve(order, [payment]),
             FailureReason = payment.FailureReason,
             ExpiresAtUtc = null
         };

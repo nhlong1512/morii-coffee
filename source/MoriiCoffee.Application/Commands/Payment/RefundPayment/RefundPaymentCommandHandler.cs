@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Application.SeedWork.Exceptions;
+using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
@@ -53,6 +54,16 @@ public class RefundPaymentCommandHandler
             throw new BadRequestException(
                 "This order has no successful Stripe payment to refund.");
 
+        var reconciledBeforeRefund = await RefundStateReconciler.ReconcileAsync(
+            _unitOfWork,
+            _gateway,
+            order,
+            payment,
+            command.AdminUserId,
+            cancellationToken);
+        if (reconciledBeforeRefund.Changed)
+            await _unitOfWork.CommitAsync();
+
         // 2. Validate refund amount against remaining unrefunded balance.
         var alreadyReserved = payment.Refunds
             .Where(r => r.Status != ERefundStatus.Failed)
@@ -60,7 +71,7 @@ public class RefundPaymentCommandHandler
         var remaining = payment.Amount - alreadyReserved;
 
         if (remaining <= 0)
-            throw new BadRequestException("This payment has already been fully refunded.");
+            return BuildSynchronizedRefundResponse(order, payment);
 
         var requestedAmount = command.Amount.GetValueOrDefault() <= 0
             ? remaining
@@ -71,14 +82,41 @@ public class RefundPaymentCommandHandler
                 "Refund amount exceeds the remaining unrefunded balance.");
 
         // 3. Call Stripe. If this throws, no local row is persisted.
-        var refundResult = await _gateway.CreateRefundAsync(new RefundRequest
+        RefundResult refundResult;
+        try
         {
-            PaymentIntentId = payment.StripePaymentIntentId!,
-            Amount = (long)requestedAmount,
-            OrderId = order.Id,
-            InitiatedByAdminUserId = command.AdminUserId,
-            Reason = command.Reason
-        }, cancellationToken);
+            refundResult = await _gateway.CreateRefundAsync(new RefundRequest
+            {
+                PaymentIntentId = payment.StripePaymentIntentId!,
+                Amount = (long)requestedAmount,
+                OrderId = order.Id,
+                InitiatedByAdminUserId = command.AdminUserId,
+                Reason = command.Reason
+            }, cancellationToken);
+        }
+        catch (PaymentGatewayAlreadyRefundedException)
+        {
+            var reconciledAfterProviderConflict = await RefundStateReconciler.ReconcileAsync(
+                _unitOfWork,
+                _gateway,
+                order,
+                payment,
+                command.AdminUserId,
+                cancellationToken);
+            if (reconciledAfterProviderConflict.Changed)
+                await _unitOfWork.CommitAsync();
+
+            alreadyReserved = payment.Refunds
+                .Where(r => r.Status != ERefundStatus.Failed)
+                .Sum(r => r.Amount);
+            remaining = payment.Amount - alreadyReserved;
+
+            if (remaining <= 0)
+                return BuildSynchronizedRefundResponse(order, payment);
+
+            throw new BadRequestException(
+                "Stripe reports that this payment has already been refunded in part. Local state was synchronized; please retry with the remaining refundable amount.");
+        }
 
         // 4. Persist the RefundRecord inside a transaction so the local audit row + any future
         //    Order state changes commit atomically.
@@ -93,8 +131,8 @@ public class RefundPaymentCommandHandler
                 command.Reason);
 
             payment.AddRefund(persistedRefund);
+            await _unitOfWork.Payments.CreateRefundAsync(persistedRefund);
             await _unitOfWork.Payments.Update(payment);
-            await Task.CompletedTask;
         });
 
         _logger.LogInformation(
@@ -115,6 +153,27 @@ public class RefundPaymentCommandHandler
             Amount = requestedAmount,
             Status = persistedRefund.Status,
             PaymentStatus = optimisticPaymentStatus
+        };
+    }
+
+    private static RefundResponseDto BuildSynchronizedRefundResponse(
+        Domain.Aggregates.OrderAggregate.Order order,
+        Domain.Aggregates.PaymentAggregate.Payment payment)
+    {
+        var latestRefund = payment.Refunds
+            .OrderByDescending(r => r.CreatedAt)
+            .FirstOrDefault();
+
+        if (latestRefund is null)
+            throw new BadRequestException("This payment has already been fully refunded.");
+
+        return new RefundResponseDto
+        {
+            RefundId = latestRefund.Id,
+            StripeRefundId = latestRefund.StripeRefundId,
+            Amount = latestRefund.Amount,
+            Status = latestRefund.Status,
+            PaymentStatus = order.PaymentStatus
         };
     }
 }

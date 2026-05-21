@@ -31,11 +31,24 @@ public class RefundPaymentCommandHandlerTests
         _unitOfWork
             .Setup(u => u.ExecuteInTransactionAsync(It.IsAny<Func<Task>>()))
             .Returns<Func<Task>>(fn => fn());
+        _paymentsRepo
+            .Setup(r => r.CreateRefundAsync(It.IsAny<MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities.RefundRecord>()))
+            .Returns(Task.CompletedTask);
 
         _handler = new RefundPaymentCommandHandler(
             _unitOfWork.Object,
             _gateway.Object,
             NullLogger<RefundPaymentCommandHandler>.Instance);
+
+        _gateway
+            .Setup(g => g.GetPaymentStatusAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string paymentIntentId, CancellationToken _) => new PaymentProviderStatusResult
+            {
+                PaymentIntentId = paymentIntentId,
+                ChargeId = "ch_paid",
+                AmountRefunded = 0,
+                Refunds = []
+            });
     }
 
     [Fact]
@@ -93,6 +106,7 @@ public class RefundPaymentCommandHandlerTests
         result.Status.Should().Be(ERefundStatus.Pending);
         result.PaymentStatus.Should().Be(EPaymentStatus.Refunded); // optimistic full
         payment.Refunds.Should().ContainSingle();
+        _paymentsRepo.Verify(r => r.CreateRefundAsync(It.IsAny<MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities.RefundRecord>()), Times.Once);
     }
 
     [Fact]
@@ -199,6 +213,151 @@ public class RefundPaymentCommandHandlerTests
 
         await act.Should().ThrowAsync<InvalidOperationException>();
         payment.Refunds.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_StripeAlreadyFullyRefunded_SynchronizesLocalState_AndReturnsSuccess()
+    {
+        var order = BuildPaidOrder();
+        var payment = BuildSucceededPayment(order.Id, amount: 100_000m);
+
+        _ordersRepo.Setup(r => r.GetByIdAsync(order.Id)).ReturnsAsync(order);
+        _paymentsRepo.Setup(r => r.GetLatestSucceededByOrderIdAsync(order.Id)).ReturnsAsync(payment);
+        _gateway
+            .Setup(g => g.GetPaymentStatusAsync(payment.StripePaymentIntentId!, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentProviderStatusResult
+            {
+                PaymentIntentId = payment.StripePaymentIntentId!,
+                ChargeId = "ch_paid",
+                AmountRefunded = 100_000,
+                Refunds =
+                [
+                    new ProviderRefundStatusResult
+                    {
+                        RefundId = "re_synced_full",
+                        Amount = 100_000,
+                        Status = "succeeded"
+                    }
+                ]
+            });
+
+        var result = await _handler.Handle(
+            new RefundPaymentCommand
+            {
+                OrderId = order.Id,
+                AdminUserId = Guid.NewGuid()
+            },
+            CancellationToken.None);
+
+        result.StripeRefundId.Should().Be("re_synced_full");
+        result.Amount.Should().Be(100_000m);
+        result.Status.Should().Be(ERefundStatus.Succeeded);
+        result.PaymentStatus.Should().Be(EPaymentStatus.Refunded);
+        payment.Refunds.Should().ContainSingle(r => r.StripeRefundId == "re_synced_full");
+        _gateway.Verify(
+            g => g.CreateRefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_StripeAlreadyPartiallyRefunded_SynchronizesThenRefundsRemainingBalance()
+    {
+        var order = BuildPaidOrder();
+        var payment = BuildSucceededPayment(order.Id, amount: 100_000m);
+
+        _ordersRepo.Setup(r => r.GetByIdAsync(order.Id)).ReturnsAsync(order);
+        _paymentsRepo.Setup(r => r.GetLatestSucceededByOrderIdAsync(order.Id)).ReturnsAsync(payment);
+        _gateway
+            .Setup(g => g.GetPaymentStatusAsync(payment.StripePaymentIntentId!, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentProviderStatusResult
+            {
+                PaymentIntentId = payment.StripePaymentIntentId!,
+                ChargeId = "ch_paid",
+                AmountRefunded = 30_000,
+                Refunds =
+                [
+                    new ProviderRefundStatusResult
+                    {
+                        RefundId = "re_synced_partial",
+                        Amount = 30_000,
+                        Status = "succeeded"
+                    }
+                ]
+            });
+        _gateway
+            .Setup(g => g.CreateRefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RefundResult { RefundId = "re_new_remaining", Status = "pending" });
+
+        var result = await _handler.Handle(
+            new RefundPaymentCommand
+            {
+                OrderId = order.Id,
+                AdminUserId = Guid.NewGuid(),
+                Amount = null
+            },
+            CancellationToken.None);
+
+        result.StripeRefundId.Should().Be("re_new_remaining");
+        result.Amount.Should().Be(70_000m);
+        result.Status.Should().Be(ERefundStatus.Pending);
+        result.PaymentStatus.Should().Be(EPaymentStatus.Refunded);
+        payment.Refunds.Should().HaveCount(2);
+        payment.Refunds.Should().Contain(r => r.StripeRefundId == "re_synced_partial" && r.Status == ERefundStatus.Succeeded);
+        payment.Refunds.Should().Contain(r => r.StripeRefundId == "re_new_remaining" && r.Status == ERefundStatus.Pending);
+        _paymentsRepo.Verify(
+            r => r.CreateRefundAsync(It.IsAny<MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities.RefundRecord>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task Handle_CreateRefundHitsAlreadyRefundedRace_SynchronizesLocalState_AndReturnsSuccess()
+    {
+        var order = BuildPaidOrder();
+        var payment = BuildSucceededPayment(order.Id, amount: 100_000m);
+
+        _ordersRepo.Setup(r => r.GetByIdAsync(order.Id)).ReturnsAsync(order);
+        _paymentsRepo.Setup(r => r.GetLatestSucceededByOrderIdAsync(order.Id)).ReturnsAsync(payment);
+        _gateway
+            .SetupSequence(g => g.GetPaymentStatusAsync(payment.StripePaymentIntentId!, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentProviderStatusResult
+            {
+                PaymentIntentId = payment.StripePaymentIntentId!,
+                ChargeId = "ch_paid",
+                AmountRefunded = 0,
+                Refunds = []
+            })
+            .ReturnsAsync(new PaymentProviderStatusResult
+            {
+                PaymentIntentId = payment.StripePaymentIntentId!,
+                ChargeId = "ch_paid",
+                AmountRefunded = 100_000,
+                Refunds =
+                [
+                    new ProviderRefundStatusResult
+                    {
+                        RefundId = "re_race_full",
+                        Amount = 100_000,
+                        Status = "succeeded"
+                    }
+                ]
+            });
+        _gateway
+            .Setup(g => g.CreateRefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new PaymentGatewayAlreadyRefundedException("already refunded"));
+
+        var result = await _handler.Handle(
+            new RefundPaymentCommand
+            {
+                OrderId = order.Id,
+                AdminUserId = Guid.NewGuid()
+            },
+            CancellationToken.None);
+
+        result.StripeRefundId.Should().Be("re_race_full");
+        result.Status.Should().Be(ERefundStatus.Succeeded);
+        result.PaymentStatus.Should().Be(EPaymentStatus.Refunded);
+        payment.Refunds.Should().ContainSingle(r => r.StripeRefundId == "re_race_full");
+        _paymentsRepo.Verify(r => r.CreateRefundAsync(It.IsAny<MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities.RefundRecord>()), Times.Once);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────

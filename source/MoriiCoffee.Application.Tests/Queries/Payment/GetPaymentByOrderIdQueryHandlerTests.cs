@@ -4,6 +4,7 @@ using MoriiCoffee.Application.Queries.Payment.GetPaymentByOrderId;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
+using MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Enums.Order;
@@ -92,6 +93,29 @@ public class GetPaymentByOrderIdQueryHandlerTests
 
         result.OrderId.Should().Be(order.Id);
         result.Payments.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_OrderSummaryIsStale_ResolvesRefundedStatusFromPaymentHistory()
+    {
+        var ownerId = Guid.NewGuid();
+        var order = BuildOrder(ownerId);
+        order.MarkPaymentPaid("pi_paid", "ch_paid");
+
+        var payment = PaymentEntity.Create(order.Id, "cs_refunded", 45_000m, "vnd");
+        payment.MarkSucceeded("pi_paid", "ch_paid");
+        payment.AddRefund(RefundRecord.Create(payment.Id, "re_refunded", 45_000m, Guid.NewGuid(), "sync"));
+        payment.Refunds.Single().MarkSucceeded();
+
+        _ordersRepo.Setup(r => r.GetByIdAsync(order.Id)).ReturnsAsync(order);
+        _paymentsRepo.Setup(r => r.ListByOrderIdAsync(order.Id)).ReturnsAsync([payment]);
+
+        var result = await _handler.Handle(
+            new GetPaymentByOrderIdQuery(order.Id, ownerId, isAdmin: false),
+            CancellationToken.None);
+
+        result.PaymentStatus.Should().Be(EPaymentStatus.Refunded);
+        result.Payments.Single().Refunds.Should().ContainSingle(r => r.StripeRefundId == "re_refunded");
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────

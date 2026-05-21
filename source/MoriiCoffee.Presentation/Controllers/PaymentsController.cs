@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoriiCoffee.Application.Commands.Payment.CreateCheckoutSession;
+using MoriiCoffee.Application.Commands.Payment.ReconcileRefundPayment;
 using MoriiCoffee.Application.Commands.Payment.ReconcileStripePayment;
 using MoriiCoffee.Application.Commands.Payment.RefundPayment;
 using MoriiCoffee.Application.Queries.Payment.GetPaymentByOrderId;
@@ -121,6 +122,29 @@ public class PaymentsController : ControllerBase
             AdminUserId = GetCurrentUserId(),
             Amount = dto.Amount,
             Reason = dto.Reason
+        });
+
+        return Ok(new ApiOkResponse(result));
+    }
+
+    /// <summary>
+    /// [Admin] Reconcile refund state for an order by querying Stripe directly and synchronizing
+    /// any missing local refund rows or payment-status transitions.
+    /// </summary>
+    [HttpPost("{orderId:guid}/refund/reconcile")]
+    [Authorize(Roles = nameof(ERole.ADMIN))]
+    [SwaggerOperation(Summary = "Reconcile refund state for a paid order (admin)")]
+    [SwaggerResponse(200, SwaggerResponseMessages.UpdatedSuccessfully, typeof(RefundReconcileResponseDto))]
+    [SwaggerResponse(400, SwaggerResponseMessages.BadRequest)]
+    [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
+    [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]
+    [SwaggerResponse(404, SwaggerResponseMessages.NotFound)]
+    public async Task<IActionResult> ReconcileRefund([FromRoute] Guid orderId)
+    {
+        var result = await _mediator.Send(new ReconcileRefundPaymentCommand
+        {
+            OrderId = orderId,
+            AdminUserId = GetCurrentUserId()
         });
 
         return Ok(new ApiOkResponse(result));

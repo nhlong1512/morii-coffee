@@ -1,4 +1,5 @@
 using MoriiCoffee.Domain.Aggregates.PaymentAggregate;
+using MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 
 namespace MoriiCoffee.Domain.Repositories;
@@ -42,4 +43,11 @@ public interface IPaymentRepository : IRepositoryBase<Payment>
     /// <c>GET /payments/by-order/{orderId}</c> endpoint.
     /// </summary>
     Task<IReadOnlyList<Payment>> ListByOrderIdAsync(Guid orderId);
+
+    /// <summary>
+    /// Persists a newly created refund child row for a payment. This is kept explicit because
+    /// refund rows are created asynchronously after a successful provider API call, and relying
+    /// on aggregate graph state alone proved fragile in the real EF tracking flow.
+    /// </summary>
+    Task CreateRefundAsync(RefundRecord refund);
 }

@@ -57,6 +57,7 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDt
 
         var payments = await _unitOfWork.Payments.ListByOrderIdAsync(order.Id);
         var latestPayment = payments.FirstOrDefault();
+        var paymentStatus = PaymentStatusResolver.Resolve(order, payments);
 
         return new OrderDto
         {
@@ -76,7 +77,7 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDt
             OrderStatus = order.OrderStatus,
             PaymentInfo = new OrderPaymentInfoDto
             {
-                PaymentStatus = order.PaymentStatus,
+                PaymentStatus = paymentStatus,
                 AttemptCount = payments.Count,
                 LatestPaymentId = latestPayment?.Id,
                 LatestAttemptStatus = latestPayment?.Status,

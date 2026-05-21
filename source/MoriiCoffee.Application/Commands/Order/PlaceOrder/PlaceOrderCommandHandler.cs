@@ -150,7 +150,7 @@ public class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand, Order
             OrderStatus = order.OrderStatus,
             PaymentInfo = new OrderPaymentInfoDto
             {
-                PaymentStatus = order.PaymentStatus,
+                PaymentStatus = PaymentStatusResolver.Resolve(order, []),
                 AttemptCount = 0,
                 LatestPaymentId = null,
                 LatestAttemptStatus = null,

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
+using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
@@ -140,7 +141,7 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
                     OrderId = order.Id,
                     OrderNumber = order.OrderNumber,
                     PaymentId = payment.Id,
-                    PaymentStatus = order.PaymentStatus,
+                    PaymentStatus = PaymentStatusResolver.Resolve(order, [payment]),
                     SessionId = draft.SessionId
                 };
             });
@@ -178,7 +179,7 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
             OrderId = order.Id,
             OrderNumber = order.OrderNumber,
             PaymentId = payment.Id,
-            PaymentStatus = order.PaymentStatus,
+            PaymentStatus = PaymentStatusResolver.Resolve(order, [payment]),
             SessionId = payment.StripeSessionId
         };
     }

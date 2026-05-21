@@ -1,5 +1,6 @@
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Application.SeedWork.Exceptions;
+using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.SeedWork.Query;
 
@@ -34,11 +35,12 @@ public class GetPaymentByOrderIdQueryHandler
                 "You are not authorized to view payment details for this order.");
 
         var payments = await _unitOfWork.Payments.ListByOrderIdAsync(order.Id);
+        var paymentStatus = PaymentStatusResolver.Resolve(order, payments);
 
         return new OrderPaymentSummaryDto
         {
             OrderId = order.Id,
-            PaymentStatus = order.PaymentStatus,
+            PaymentStatus = paymentStatus,
             Payments = payments.Select(p => new PaymentDto
             {
                 Id = p.Id,

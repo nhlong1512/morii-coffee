@@ -49,6 +49,15 @@ public interface IPaymentGateway
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves the provider-side refund state for a successful payment intent. Used by the
+    /// refund flow to reconcile local state before issuing a new refund and to self-heal when a
+    /// refund was created directly in Stripe or a webhook was missed.
+    /// </summary>
+    Task<PaymentProviderStatusResult> GetPaymentStatusAsync(
+        string paymentIntentId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The Stripe publishable key — safe to expose to the frontend. Returned to the client in
     /// the checkout-session response so future iterations can render Stripe Elements if desired.
     /// </summary>
@@ -171,6 +180,48 @@ public class RefundResult
 
     /// <summary>Refund status string as returned by Stripe (e.g. <c>pending</c>, <c>succeeded</c>).</summary>
     public string Status { get; set; } = null!;
+}
+
+/// <summary>Provider-side refund summary for a successful payment intent.</summary>
+public class PaymentProviderStatusResult
+{
+    /// <summary>The provider payment intent identifier that was queried.</summary>
+    public string PaymentIntentId { get; set; } = null!;
+
+    /// <summary>The provider charge identifier currently associated with the payment intent.</summary>
+    public string? ChargeId { get; set; }
+
+    /// <summary>Total amount already refunded at the provider, in VND.</summary>
+    public long AmountRefunded { get; set; }
+
+    /// <summary>Provider refund rows currently attached to the charge.</summary>
+    public IReadOnlyList<ProviderRefundStatusResult> Refunds { get; set; } = [];
+}
+
+/// <summary>One provider refund row attached to a payment intent's charge.</summary>
+public class ProviderRefundStatusResult
+{
+    /// <summary>Provider refund identifier, e.g. <c>re_...</c>.</summary>
+    public string RefundId { get; set; } = null!;
+
+    /// <summary>Refund amount in VND.</summary>
+    public long Amount { get; set; }
+
+    /// <summary>Raw provider refund status, e.g. <c>pending</c>, <c>succeeded</c>, <c>failed</c>.</summary>
+    public string Status { get; set; } = null!;
+}
+
+/// <summary>
+/// Thrown when the payment provider rejects a refund because the charge has already been
+/// refunded. The application can catch this and reconcile local refund state instead of
+/// surfacing a generic 500.
+/// </summary>
+public class PaymentGatewayAlreadyRefundedException : Exception
+{
+    public PaymentGatewayAlreadyRefundedException(string message, Exception? innerException = null)
+        : base(message, innerException)
+    {
+    }
 }
 
 /// <summary>
