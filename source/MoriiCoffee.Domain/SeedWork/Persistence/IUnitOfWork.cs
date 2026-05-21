@@ -43,6 +43,12 @@ public interface IUnitOfWork : IDisposable
     /// <summary>Repository for managing promotional banners.</summary>
     IBannersRepository Banners { get; }
 
+    /// <summary>Repository for managing blog posts.</summary>
+    IBlogPostsRepository BlogPosts { get; }
+
+    /// <summary>Repository for managing blog categories.</summary>
+    IBlogCategoriesRepository BlogCategories { get; }
+
     /// <summary>Repository for managing customer orders.</summary>
     IOrderRepository Orders { get; }
 

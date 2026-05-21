@@ -181,6 +181,169 @@ namespace MoriiCoffee.Infrastructure.Persistence.Migrations
                     b.ToTable("Banners");
                 });
 
+            modelBuilder.Entity("MoriiCoffee.Domain.Aggregates.BlogCategoryAggregate.BlogCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("BlogCategories");
+                });
+
+            modelBuilder.Entity("MoriiCoffee.Domain.Aggregates.BlogPostAggregate.BlogPost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHtml")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoverImageFileName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("CoverImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Excerpt")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsFeatured")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SeoDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("SeoTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DisplayOrder");
+
+                    b.HasIndex("IsFeatured");
+
+                    b.HasIndex("PublishedAt");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("BlogPosts");
+                });
+
+            modelBuilder.Entity("MoriiCoffee.Domain.Aggregates.BlogPostAggregate.Entities.BlogPostCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BlogCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BlogPostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlogCategoryId");
+
+                    b.HasIndex("BlogPostId", "BlogCategoryId")
+                        .IsUnique();
+
+                    b.ToTable("BlogPostCategories");
+                });
+
             modelBuilder.Entity("MoriiCoffee.Domain.Aggregates.CategoryAggregate.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -958,6 +1121,25 @@ namespace MoriiCoffee.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("MoriiCoffee.Domain.Aggregates.BlogPostAggregate.Entities.BlogPostCategory", b =>
+                {
+                    b.HasOne("MoriiCoffee.Domain.Aggregates.BlogCategoryAggregate.BlogCategory", "BlogCategory")
+                        .WithMany("BlogPostCategories")
+                        .HasForeignKey("BlogCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MoriiCoffee.Domain.Aggregates.BlogPostAggregate.BlogPost", "BlogPost")
+                        .WithMany("BlogPostCategories")
+                        .HasForeignKey("BlogPostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BlogCategory");
+
+                    b.Navigation("BlogPost");
+                });
+
             modelBuilder.Entity("MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities.OrderItem", b =>
                 {
                     b.HasOne("MoriiCoffee.Domain.Aggregates.OrderAggregate.Order", null)
@@ -1081,6 +1263,16 @@ namespace MoriiCoffee.Infrastructure.Persistence.Migrations
                         .HasForeignKey("MoriiCoffee.Domain.Aggregates.UserAggregate.Entities.UserDeliveryProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("MoriiCoffee.Domain.Aggregates.BlogCategoryAggregate.BlogCategory", b =>
+                {
+                    b.Navigation("BlogPostCategories");
+                });
+
+            modelBuilder.Entity("MoriiCoffee.Domain.Aggregates.BlogPostAggregate.BlogPost", b =>
+                {
+                    b.Navigation("BlogPostCategories");
                 });
 
             modelBuilder.Entity("MoriiCoffee.Domain.Aggregates.CategoryAggregate.Category", b =>

@@ -21,6 +21,8 @@ public class UnitOfWork : IUnitOfWork
     private ProductVariantsRepository? _productVariants;
     private ProductImagesRepository? _productImages;
     private BannersRepository? _banners;
+    private BlogPostsRepository? _blogPosts;
+    private BlogCategoriesRepository? _blogCategories;
     private OrdersRepository? _orders;
     private UserDeliveryProfilesRepository? _userDeliveryProfiles;
     private PaymentRepository? _payments;
@@ -45,6 +47,12 @@ public class UnitOfWork : IUnitOfWork
 
     public IBannersRepository Banners =>
         _banners ??= new BannersRepository(_context);
+
+    public IBlogPostsRepository BlogPosts =>
+        _blogPosts ??= new BlogPostsRepository(_context);
+
+    public IBlogCategoriesRepository BlogCategories =>
+        _blogCategories ??= new BlogCategoriesRepository(_context);
 
     public IOrderRepository Orders =>
         _orders ??= new OrdersRepository(_context);

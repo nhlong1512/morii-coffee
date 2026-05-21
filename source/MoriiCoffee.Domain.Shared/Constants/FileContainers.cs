@@ -19,10 +19,13 @@ public static class FileContainers
     /// <summary>Promotional banner images. Public bucket.</summary>
     public const string BANNERS = "banners";
 
+    /// <summary>Blog cover and editorial images. Public bucket.</summary>
+    public const string BLOGS = "blogs";
+
     /// <summary>
     /// Returns <c>true</c> for containers that belong to the public S3 bucket (CDN-served).
     /// Returns <c>false</c> for private containers.
     /// </summary>
     public static bool IsPublicContainer(string container) =>
-        container is PRODUCTS or CATEGORIES or BANNERS or USERS;
+        container is PRODUCTS or CATEGORIES or BANNERS or USERS or BLOGS;
 }
