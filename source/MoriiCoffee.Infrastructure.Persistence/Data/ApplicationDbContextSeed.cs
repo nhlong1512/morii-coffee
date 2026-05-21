@@ -3,12 +3,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MoriiCoffee.Domain.Aggregates.BannerAggregate;
+using MoriiCoffee.Domain.Aggregates.BlogCategoryAggregate;
+using MoriiCoffee.Domain.Aggregates.BlogPostAggregate;
+using MoriiCoffee.Domain.Aggregates.BlogPostAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
 using MoriiCoffee.Domain.Aggregates.UserAggregate;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
+using MoriiCoffee.Domain.Shared.Enums.Blog;
 using MoriiCoffee.Domain.Shared.Enums.Product;
 using MoriiCoffee.Domain.Shared.Enums.User;
 
@@ -46,6 +50,7 @@ public class ApplicationDbContextSeed
         await SeedSampleUsersAsync();
         await SeedCatalogAsync();
         await SeedBannersAsync();
+        await SeedBlogsAsync();
     }
 
     private async Task SeedRolesAsync()
@@ -464,5 +469,322 @@ public class ApplicationDbContextSeed
                 CreatedAt    = now,
             },
         };
+    }
+
+    private async Task SeedBlogsAsync()
+    {
+        if (await _context.BlogCategories.AnyAsync())
+        {
+            _logger.LogInformation("Blog content already seeded. Skipping.");
+            return;
+        }
+
+        _logger.LogInformation("Seeding blog categories and posts...");
+
+        var categories = GetSeedBlogCategories();
+        await _context.BlogCategories.AddRangeAsync(categories);
+        await _context.SaveChangesAsync();
+
+        var posts = GetSeedBlogPosts();
+        await _context.BlogPosts.AddRangeAsync(posts);
+        await _context.SaveChangesAsync();
+
+        var postCategories = GetSeedBlogPostCategories(posts, categories);
+        await _context.Set<BlogPostCategory>().AddRangeAsync(postCategories);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Blog content seeded successfully.");
+    }
+
+    private static List<BlogCategory> GetSeedBlogCategories()
+    {
+        return new List<BlogCategory>
+        {
+            BlogCategory.Create(
+                name: "Coffee Education",
+                slug: "coffee-education",
+                description: "Learn about coffee origins, brewing techniques, and flavor profiles.",
+                displayOrder: 1,
+                isActive: true),
+            BlogCategory.Create(
+                name: "Recipes & Ideas",
+                slug: "recipes-ideas",
+                description: "Discover creative ways to enjoy coffee at home.",
+                displayOrder: 2,
+                isActive: true),
+            BlogCategory.Create(
+                name: "Sustainability",
+                slug: "sustainability",
+                description: "Our commitment to ethical sourcing and environmental responsibility.",
+                displayOrder: 3,
+                isActive: true),
+            BlogCategory.Create(
+                name: "Cafe News",
+                slug: "cafe-news",
+                description: "Latest updates from Morii Coffee locations and events.",
+                displayOrder: 4,
+                isActive: true),
+        };
+    }
+
+    private static List<BlogPost> GetSeedBlogPosts()
+    {
+        var now = DateTime.UtcNow;
+        return new List<BlogPost>
+        {
+            // Coffee Education posts
+            BlogPost.Create(
+                title: "The Art of Espresso Extraction: A Complete Guide",
+                slug: "espresso-extraction-guide",
+                excerpt: "Master the fundamentals of espresso making and discover why timing, pressure, and grind size matter more than you think.",
+                contentJson: null,
+                contentHtml: @"<h2>Understanding Espresso Extraction</h2>
+<p>Espresso is one of the most precise brewing methods in the coffee world. Every variable—from water temperature to grind fineness—plays a crucial role in creating that perfect shot.</p>
+<h3>The Golden Rule: 25-30 Seconds</h3>
+<p>The ideal espresso extraction time is between 25 and 30 seconds. Shots pulled faster than this are considered 'under-extracted' and taste sour and thin. Shots that take longer than 30 seconds are 'over-extracted' and taste bitter and harsh.</p>
+<h3>Variables to Control</h3>
+<ul>
+<li><strong>Grind Size:</strong> Fine but not powdery; consistency is key.</li>
+<li><strong>Tamping Pressure:</strong> Use about 30 pounds of force for a level tamp.</li>
+<li><strong>Water Temperature:</strong> 200-205°F (93-96°C) is optimal.</li>
+<li><strong>Coffee-to-Water Ratio:</strong> Standard is 1:2.5 (18g coffee to 45g liquid).</li>
+</ul>
+<p>Once you master these fundamentals, you'll be able to diagnose and fix any espresso problem that comes your way.</p>",
+                coverImageUrl: "https://images.unsplash.com/photo-1559056199-641a0ac8b3f4?w=800",
+                coverImageFileName: null,
+                seoTitle: "Complete Guide to Espresso Extraction | Morii Coffee",
+                seoDescription: "Learn the science behind perfect espresso. Master timing, pressure, and grind size for consistent, delicious shots.",
+                isFeatured: true,
+                displayOrder: 1,
+                status: EBlogPostStatus.Published),
+
+            BlogPost.Create(
+                title: "Single Origin vs Blend: What's the Difference?",
+                slug: "single-origin-vs-blend",
+                excerpt: "Explore the distinct characteristics of single-origin and blended coffees, and learn which is right for your palate.",
+                contentJson: null,
+                contentHtml: @"<h2>Single Origin Coffee</h2>
+<p>Single-origin coffee comes from a specific region, farm, or even a particular lot within a farm. This traceability allows roasters and coffee enthusiasts to explore the unique terroir—the environmental factors that influence flavor.</p>
+<h3>Characteristics of Single-Origin Coffees</h3>
+<ul>
+<li>Distinctive regional flavor profiles (e.g., Ethiopian naturals have fruity notes)</li>
+<li>Greater complexity and nuance in flavor</li>
+<li>Seasonal variations as harvests differ year to year</li>
+<li>Higher price point due to exclusivity</li>
+</ul>
+<h2>Blended Coffee</h2>
+<p>Blends combine coffees from multiple origins to create a balanced, consistent profile. A skilled blender curates specific ratios to achieve desired flavor goals.</p>
+<h3>Characteristics of Blends</h3>
+<ul>
+<li>Balanced, approachable flavor profiles</li>
+<li>Consistent taste throughout the year</li>
+<li>Often more affordable than single-origins</li>
+<li>Typically well-suited to espresso applications</li>
+</ul>
+<p>Both have their place in the coffee world. Single-origins are perfect for those seeking adventure and discovery, while blends provide reliable, delicious consistency.</p>",
+                coverImageUrl: "https://images.unsplash.com/photo-1559390566-a4f58da3e7d8?w=800",
+                coverImageFileName: null,
+                seoTitle: "Single Origin vs Blended Coffee | Morii Coffee",
+                seoDescription: "Understand the difference between single-origin and blended coffees. Which profile suits your taste?",
+                isFeatured: true,
+                displayOrder: 2,
+                status: EBlogPostStatus.Published),
+
+            // Recipes & Ideas posts
+            BlogPost.Create(
+                title: "5 Viral Coffee Recipes to Make at Home",
+                slug: "viral-coffee-recipes",
+                excerpt: "Try trending coffee drinks that took social media by storm. From cold foam lattes to honey cinnamon coffee, we've got the recipes.",
+                contentJson: null,
+                contentHtml: @"<h2>1. Cold Foam Latte</h2>
+<p>Whip up cold milk with a hand frother until it's airy and bubbly. Pour over a shot of espresso and cold milk for an Instagram-worthy drink.</p>
+<h2>2. Honey Cinnamon Cold Brew</h2>
+<p>Combine cold brew, a drizzle of honey, a pinch of cinnamon, and oat milk. The warmth of cinnamon against the refreshing cold brew is unmatched.</p>
+<h2>3. Affogato with Vanilla Ice Cream</h2>
+<p>Pour a hot shot of espresso over vanilla ice cream. Simple, elegant, and pure joy in a cup.</p>
+<h2>4. Dalgona Coffee (Whipped Coffee)</h2>
+<p>Whip instant coffee, sugar, and hot water until fluffy. Spoon over cold milk for a trendy, frothy drink.</p>
+<h2>5. Cardamom Spiced Latte</h2>
+<p>Add a pinch of ground cardamom to steamed milk and espresso. An aromatic twist on the classic latte.</p>",
+                coverImageUrl: "https://images.unsplash.com/photo-1517668808822-9ebb02ae2a0e?w=800",
+                coverImageFileName: null,
+                seoTitle: "5 Popular Coffee Recipes to Try at Home | Morii Coffee",
+                seoDescription: "Learn how to make viral coffee drinks at home. Easy recipes for cold foam lattes, affogatos, and more.",
+                isFeatured: true,
+                displayOrder: 3,
+                status: EBlogPostStatus.Published),
+
+            BlogPost.Create(
+                title: "The Science of Latte Art: Getting Your Milk Temperature Right",
+                slug: "latte-art-guide",
+                excerpt: "Perfect microfoam and milk temperature are the secrets to café-quality latte art. Learn the science behind the pour.",
+                contentJson: null,
+                contentHtml: @"<h2>Why Temperature Matters</h2>
+<p>The ideal milk temperature for steaming is 150-155°F (65-68°C). Too cold and the milk won't stretch properly. Too hot and you risk burning it and losing its sweetness.</p>
+<h3>The Perfect Microfoam</h3>
+<p>Microfoam is tiny, uniform bubbles that integrate seamlessly with steamed milk. This is what makes latte art possible.</p>
+<h3>How to Steam Milk</h3>
+<ol>
+<li>Fill a pitcher one-third with cold milk.</li>
+<li>Insert the steam wand just below the surface.</li>
+<li>Tilt the pitcher at a 15-degree angle and move it slightly.</li>
+<li>When the milk reaches 150°F, angle the wand deeper for 10 more seconds.</li>
+<li>Remove and tap the pitcher to burst large bubbles.</li>
+</ol>
+<p>With practice, you'll create beautiful, creamy latte art every time.</p>",
+                coverImageUrl: "https://images.unsplash.com/photo-1509785307050-d4066910ec1e?w=800",
+                coverImageFileName: null,
+                seoTitle: "Master Latte Art: Milk Steaming Guide | Morii Coffee",
+                seoDescription: "Learn the temperature and technique secrets for perfect microfoam and café-quality latte art.",
+                isFeatured: false,
+                displayOrder: 4,
+                status: EBlogPostStatus.Published),
+
+            // Sustainability posts
+            BlogPost.Create(
+                title: "Our Journey to 100% Ethically Sourced Coffee",
+                slug: "ethical-sourcing-commitment",
+                excerpt: "Discover how Morii Coffee partners directly with farmers to ensure fair wages and sustainable practices.",
+                contentJson: null,
+                contentHtml: @"<h2>What Does Ethical Sourcing Mean?</h2>
+<p>Ethical sourcing ensures that farmers receive fair compensation for their crops, work in safe conditions, and use sustainable farming practices. At Morii Coffee, this is not just a buzzword—it's foundational to our values.</p>
+<h2>Our Direct Trade Model</h2>
+<p>Rather than buying through middlemen, we purchase directly from coffee farms we've personally visited. This relationship ensures:</p>
+<ul>
+<li>Farmers receive 20-30% more than commodity market prices</li>
+<li>Long-term contracts provide stability and planning security</li>
+<li>We can verify sustainable and fair-labor practices firsthand</li>
+</ul>
+<h2>Environmental Responsibility</h2>
+<p>We prioritize farms that use shade-grown methods, which preserve biodiversity and prevent soil degradation. Many of our partners have moved toward fully organic certification.</p>
+<h2>Our Commitment Moving Forward</h2>
+<p>By 2026, 100% of Morii Coffee beans will be from ethically verified sources. Every cup you drink supports a farmer who is paid fairly and farms responsibly.</p>",
+                coverImageUrl: "https://images.unsplash.com/photo-1559056199-641a0ac8b3f4?w=800",
+                coverImageFileName: null,
+                seoTitle: "Ethical Coffee Sourcing | Morii Coffee Commitment",
+                seoDescription: "Learn how Morii Coffee ensures fair wages, sustainable practices, and direct relationships with coffee farmers worldwide.",
+                isFeatured: true,
+                displayOrder: 5,
+                status: EBlogPostStatus.Published),
+
+            BlogPost.Create(
+                title: "Reducing Waste: Our Reusable Cup Program",
+                slug: "reusable-cup-program",
+                excerpt: "Join our mission to eliminate single-use cups. Learn about our incentive program and environmental impact.",
+                contentJson: null,
+                contentHtml: @"<h2>The Problem with Disposable Cups</h2>
+<p>Over 16 billion disposable coffee cups are used annually worldwide. While paper cups are recyclable, the polyethylene coating often prevents them from being processed in standard recycling facilities.</p>
+<h2>The Morii Reusable Cup Program</h2>
+<p>Starting this month, we're rolling out our reusable cup initiative:</p>
+<ul>
+<li>Bring your own cup and get 10,000 VND off your drink</li>
+<li>Or purchase our branded ceramic mug for 450,000 VND and get unlimited 10% discounts</li>
+<li>All cups are dishwasher safe and built to last years</li>
+</ul>
+<h2>Our Goals</h2>
+<p>We aim to reduce disposable cup usage by 50% within 12 months. If 10,000 customers use reusable cups instead of disposables, we'll prevent 30,000+ cups from entering landfills annually.</p>
+<h2>Join Us</h2>
+<p>Every cup counts. Together, we can make a real difference for our planet.</p>",
+                coverImageUrl: "https://images.unsplash.com/photo-1577720643272-265f434b3eab?w=800",
+                coverImageFileName: null,
+                seoTitle: "Reusable Cup Program | Morii Coffee Sustainability",
+                seoDescription: "Learn about Morii's reusable cup initiative. Reduce waste, save money, and help the environment.",
+                isFeatured: false,
+                displayOrder: 6,
+                status: EBlogPostStatus.Published),
+
+            // Cafe News posts
+            BlogPost.Create(
+                title: "Grand Opening: Morii Coffee District 1 Location",
+                slug: "district-1-grand-opening",
+                excerpt: "We're thrilled to announce the opening of our newest café in the heart of Ho Chi Minh City's District 1. Join us for the opening week festivities!",
+                contentJson: null,
+                contentHtml: @"<h2>Welcome to Morii Coffee District 1</h2>
+<p>After months of careful planning, we're delighted to open our newest location at 123 Dong Khoi Street, District 1, Ho Chi Minh City. This 100-square-meter space combines modern design with a cozy, welcoming atmosphere.</p>
+<h2>Grand Opening Week Events</h2>
+<ul>
+<li><strong>May 21-23:</strong> Free espresso shots with any drink purchase</li>
+<li><strong>May 24:</strong> Live music from local barista-musicians (6 PM - 9 PM)</li>
+<li><strong>May 25:</strong> Coffee tasting masterclass with our head roaster (2 PM)</li>
+</ul>
+<h2>What to Expect</h2>
+<p>Our new café features a professional espresso bar, comfortable seating for 40 guests, complimentary WiFi, and a curated selection of coffee equipment and beans for purchase.</p>
+<h2>Opening Hours</h2>
+<p>Monday - Friday: 7 AM - 8 PM<br>
+Saturday - Sunday: 8 AM - 9 PM</p>
+<p>We can't wait to serve you!</p>",
+                coverImageUrl: "https://images.unsplash.com/photo-1559056199-641a0ac8b3f4?w=800",
+                coverImageFileName: null,
+                seoTitle: "District 1 Café Grand Opening | Morii Coffee",
+                seoDescription: "Celebrate the opening of Morii Coffee's new District 1 location with special events and exclusive offers.",
+                isFeatured: true,
+                displayOrder: 7,
+                status: EBlogPostStatus.Published),
+
+            BlogPost.Create(
+                title: "Summer Seasonal Blends Are Here",
+                slug: "summer-seasonal-blends",
+                excerpt: "Experience our new limited-edition summer blends designed to refresh and invigorate. Now available for a limited time.",
+                contentJson: null,
+                contentHtml: @"<h2>Summer 2026 Limited Editions</h2>
+<p>As temperatures rise, so does the excitement for our new seasonal blends. This summer, we're introducing three exclusive coffees crafted to brighten your season:</p>
+<h3>Tropical Paradise Blend</h3>
+<p>A vibrant blend of Ethiopian Yirgacheffe and Kenyan AA beans. Notes of tropical fruit, jasmine, and a crisp finish. Perfect iced.</p>
+<h3>Morning Sunrise</h3>
+<p>Colombian Geisha meets Brazilian natural process. Floral aromatics with hints of honey and citrus. Great for morning clarity.</p>
+<h3>Sunset Twilight</h3>
+<p>An intriguing blend of Indonesian and Central American origins. Dark chocolate, earthy undertones, and a smooth, velvety body.</p>
+<h2>Availability</h2>
+<p>These blends are available in-café and online from June 1st - August 31st. Limited quantities, so grab yours while supplies last!</p>
+<h2>Special Offer</h2>
+<p>Purchase any 500g bag of seasonal blend this week and get a 200g complementary bag of your choice.</p>",
+                coverImageUrl: "https://images.unsplash.com/photo-1559390566-a4f58da3e7d8?w=800",
+                coverImageFileName: null,
+                seoTitle: "Summer Seasonal Coffee Blends | Morii Coffee 2026",
+                seoDescription: "Explore Morii's new summer seasonal blends. Limited edition coffee with tropical, floral, and rich chocolate notes.",
+                isFeatured: true,
+                displayOrder: 8,
+                status: EBlogPostStatus.Published),
+        };
+    }
+
+    private static List<BlogPostCategory> GetSeedBlogPostCategories(
+        List<BlogPost> posts, List<BlogCategory> categories)
+    {
+        var catBySlug = categories.ToDictionary(c => c.Slug);
+        var result = new List<BlogPostCategory>();
+
+        // Map each post slug to its category
+        var slugToCategories = new Dictionary<string, string[]>
+        {
+            { "espresso-extraction-guide", new[] { "coffee-education" } },
+            { "single-origin-vs-blend", new[] { "coffee-education" } },
+            { "viral-coffee-recipes", new[] { "recipes-ideas" } },
+            { "latte-art-guide", new[] { "recipes-ideas" } },
+            { "ethical-sourcing-commitment", new[] { "sustainability" } },
+            { "reusable-cup-program", new[] { "sustainability" } },
+            { "district-1-grand-opening", new[] { "cafe-news" } },
+            { "summer-seasonal-blends", new[] { "cafe-news" } },
+        };
+
+        foreach (var post in posts)
+        {
+            if (!slugToCategories.TryGetValue(post.Slug, out var categoryNames))
+                continue;
+
+            foreach (var categoryName in categoryNames)
+            {
+                if (!catBySlug.TryGetValue(categoryName, out var category))
+                    continue;
+
+                result.Add(new BlogPostCategory
+                {
+                    BlogPostId = post.Id,
+                    BlogCategoryId = category.Id,
+                });
+            }
+        }
+
+        return result;
     }
 }

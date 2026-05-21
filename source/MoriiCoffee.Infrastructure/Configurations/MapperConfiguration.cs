@@ -18,6 +18,7 @@ public static class MapperConfiguration
             config.AddProfile(new ProductMapper(s3Settings));
             config.AddProfile<UserMapper>();
             config.AddProfile(new BannerMapper(s3Settings));
+            config.AddProfile(new BlogMapper(s3Settings));
         });
 
         return services;

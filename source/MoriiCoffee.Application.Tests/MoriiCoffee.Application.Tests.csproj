@@ -5,6 +5,7 @@
     <ProjectReference Include="..\MoriiCoffee.Domain\MoriiCoffee.Domain.csproj" />
     <ProjectReference Include="..\MoriiCoffee.Domain.Shared\MoriiCoffee.Domain.Shared.csproj" />
     <ProjectReference Include="..\MoriiCoffee.Infrastructure\MoriiCoffee.Infrastructure.csproj" />
+    <ProjectReference Include="..\MoriiCoffee.Presentation\MoriiCoffee.Presentation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MoriiCoffee.Domain.Aggregates.BannerAggregate;
+using MoriiCoffee.Domain.Aggregates.BlogCategoryAggregate;
+using MoriiCoffee.Domain.Aggregates.BlogPostAggregate;
+using MoriiCoffee.Domain.Aggregates.BlogPostAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
@@ -45,6 +48,14 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
     #region BannerAggregate
 
     public DbSet<Banner> Banners { get; set; }
+
+    #endregion
+
+    #region BlogAggregate
+
+    public DbSet<BlogPost> BlogPosts { get; set; }
+    public DbSet<BlogCategory> BlogCategories { get; set; }
+    public DbSet<BlogPostCategory> BlogPostCategories { get; set; }
 
     #endregion
 
