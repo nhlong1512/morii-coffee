@@ -22,4 +22,6 @@ public class ProductDto
     public DateTime? UpdatedAt { get; set; }
     public List<ProductVariantDto> Variants { get; set; } = new();
     public List<ProductImageDto> Images { get; set; } = new();
+    /// <summary>Total units sold across all fulfilled orders.</summary>
+    public int QuantitySold { get; set; }
 }

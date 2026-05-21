@@ -20,7 +20,7 @@ public class GetPaginatedProductsQueryHandler : IQueryHandler<GetPaginatedProduc
         _mapper = mapper;
     }
 
-    public Task<Pagination<ProductSummaryDto>> Handle(GetPaginatedProductsQuery request,
+    public async Task<Pagination<ProductSummaryDto>> Handle(GetPaginatedProductsQuery request,
         CancellationToken cancellationToken)
     {
         IQueryable<ProductEntity> query = _unitOfWork.Products
@@ -39,14 +39,24 @@ public class GetPaginatedProductsQueryHandler : IQueryHandler<GetPaginatedProduc
             query = query.Where(p => p.IsFeatured == request.Filter.IsFeatured.Value);
         }
 
-        var dtoQuery = query
+        var productList = await query
             .OrderBy(p => p.DisplayOrder)
             .ThenBy(p => p.Name)
-            .AsEnumerable()
-            .Select(p => _mapper.Map<ProductSummaryDto>(p))
+            .ToListAsync(cancellationToken);
+
+        var productIds = productList.Select(p => p.Id).ToList();
+        var soldCounts = await _unitOfWork.Orders.GetSoldQuantitiesByProductIdsAsync(productIds);
+
+        var dtoQuery = productList
+            .Select(p =>
+            {
+                var dto = _mapper.Map<ProductSummaryDto>(p);
+                dto.QuantitySold = soldCounts.GetValueOrDefault(p.Id, 0);
+                return dto;
+            })
             .AsQueryable();
 
         var result = PagingHelper.QueryPaginate(request.Filter, dtoQuery);
-        return Task.FromResult(result);
+        return result;
     }
 }
