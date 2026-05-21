@@ -18,4 +18,6 @@ public class ProductSummaryDto
     public bool IsFeatured { get; set; }
     public int DisplayOrder { get; set; }
     public DateTime CreatedAt { get; set; }
+    /// <summary>Total units sold across all fulfilled orders.</summary>
+    public int QuantitySold { get; set; }
 }

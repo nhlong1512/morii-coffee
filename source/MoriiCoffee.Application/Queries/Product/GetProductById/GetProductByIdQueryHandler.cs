@@ -37,6 +37,10 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Pro
             variant.TotalPrice = product.BasePrice + variant.AdditionalPrice;
         }
 
+        // Populate quantity sold
+        var soldCounts = await _unitOfWork.Orders.GetSoldQuantitiesByProductIdsAsync([product.Id]);
+        dto.QuantitySold = soldCounts.GetValueOrDefault(product.Id, 0);
+
         return dto;
     }
 }

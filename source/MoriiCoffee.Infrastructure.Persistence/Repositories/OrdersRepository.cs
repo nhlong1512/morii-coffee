@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate;
+using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Repositories;
+using MoriiCoffee.Domain.Shared.Enums.Order;
 using MoriiCoffee.Infrastructure.Persistence.Data;
 using MoriiCoffee.Infrastructure.Persistence.SeedWork.Repository;
 
@@ -42,5 +44,26 @@ public class OrdersRepository : RepositoryBase<Order>, IOrderRepository
     {
         return await _context.Orders
             .CountAsync(o => !o.IsDeleted && o.OrderNumber.StartsWith(prefix));
+    }
+
+    /// <inheritdoc />
+    public async Task<Dictionary<Guid, int>> GetSoldQuantitiesByProductIdsAsync(IEnumerable<Guid> productIds)
+    {
+        var ids = productIds.ToList();
+        if (ids.Count == 0) return new Dictionary<Guid, int>();
+
+        return await _context.Orders
+            .Where(o => !o.IsDeleted &&
+                        o.OrderStatus != EOrderStatus.PENDING &&
+                        o.OrderStatus != EOrderStatus.CANCELLED)
+            .Join(
+                _context.Set<OrderItem>(),
+                o => o.Id,
+                oi => oi.OrderId,
+                (o, oi) => new { OrderItem = oi })
+            .Where(x => ids.Contains(x.OrderItem.ProductId))
+            .GroupBy(x => x.OrderItem.ProductId)
+            .Select(g => new { ProductId = g.Key, Count = g.Sum(x => x.OrderItem.Quantity) })
+            .ToDictionaryAsync(x => x.ProductId, x => x.Count);
     }
 }

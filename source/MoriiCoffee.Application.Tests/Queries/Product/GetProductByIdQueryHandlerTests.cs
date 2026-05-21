@@ -16,12 +16,14 @@ public class GetProductByIdQueryHandlerTests
 {
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IProductsRepository> _productsRepo = new();
+    private readonly Mock<IOrderRepository> _ordersRepo = new();
     private readonly Mock<IMapper> _mapper = new();
     private readonly GetProductByIdQueryHandler _handler;
 
     public GetProductByIdQueryHandlerTests()
     {
         _unitOfWork.Setup(u => u.Products).Returns(_productsRepo.Object);
+        _unitOfWork.Setup(u => u.Orders).Returns(_ordersRepo.Object);
         _handler = new GetProductByIdQueryHandler(_unitOfWork.Object, _mapper.Object);
     }
 
@@ -37,6 +39,8 @@ public class GetProductByIdQueryHandlerTests
             .Returns(mockData);
         _mapper.Setup(m => m.Map<ProductDto>(product))
             .Returns(new ProductDto { Id = productId, Name = "Iced Latte" });
+        _ordersRepo.Setup(r => r.GetSoldQuantitiesByProductIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+            .ReturnsAsync(new Dictionary<Guid, int>());
 
         var result = await _handler.Handle(new GetProductByIdQuery(productId), CancellationToken.None);
 
@@ -56,5 +60,49 @@ public class GetProductByIdQueryHandlerTests
 
         await _handler.Invoking(h => h.Handle(new GetProductByIdQuery(productId), CancellationToken.None))
             .Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_WithSoldOrders_ReturnsProductWithQuantitySold()
+    {
+        var productId = Guid.NewGuid();
+        var product = new ProductEntity { Id = productId, Name = "Iced Latte", BasePrice = 55_000m };
+        var mockData = new List<ProductEntity> { product }.BuildMock();
+
+        var soldCounts = new Dictionary<Guid, int> { { productId, 127 } };
+
+        _productsRepo.Setup(r => r.FindByCondition(
+                It.IsAny<System.Linq.Expressions.Expression<Func<ProductEntity, bool>>>(), false))
+            .Returns(mockData);
+        _mapper.Setup(m => m.Map<ProductDto>(product))
+            .Returns(new ProductDto { Id = productId, Name = "Iced Latte" });
+        _ordersRepo.Setup(r => r.GetSoldQuantitiesByProductIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+            .ReturnsAsync(soldCounts);
+
+        var result = await _handler.Handle(new GetProductByIdQuery(productId), CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result.QuantitySold.Should().Be(127);
+    }
+
+    [Fact]
+    public async Task Handle_WithNoSoldOrders_ReturnsProductWithZeroQuantitySold()
+    {
+        var productId = Guid.NewGuid();
+        var product = new ProductEntity { Id = productId, Name = "Iced Latte", BasePrice = 55_000m };
+        var mockData = new List<ProductEntity> { product }.BuildMock();
+
+        _productsRepo.Setup(r => r.FindByCondition(
+                It.IsAny<System.Linq.Expressions.Expression<Func<ProductEntity, bool>>>(), false))
+            .Returns(mockData);
+        _mapper.Setup(m => m.Map<ProductDto>(product))
+            .Returns(new ProductDto { Id = productId, Name = "Iced Latte" });
+        _ordersRepo.Setup(r => r.GetSoldQuantitiesByProductIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+            .ReturnsAsync(new Dictionary<Guid, int>());
+
+        var result = await _handler.Handle(new GetProductByIdQuery(productId), CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result.QuantitySold.Should().Be(0);
     }
 }

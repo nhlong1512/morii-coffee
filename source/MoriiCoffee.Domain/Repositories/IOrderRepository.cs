@@ -28,4 +28,13 @@ public interface IOrderRepository : IRepositoryBase<Order>
     /// determine the daily sequence number (e.g., prefix <c>MRC-20260430-</c>).
     /// </summary>
     Task<int> CountByOrderNumberPrefixAsync(string prefix);
+
+    /// <summary>
+    /// Batch-fetches how many units of each product have been sold in fulfilled orders.
+    /// Includes orders in statuses: CONFIRMED, READY_TO_PICKUP, IN_DELIVERY, DELIVERED, REVIEWED.
+    /// Excludes: PENDING, CANCELLED orders.
+    /// Returns a dictionary mapping ProductId → total quantity sold.
+    /// Products with no sold units are not included in the result.
+    /// </summary>
+    Task<Dictionary<Guid, int>> GetSoldQuantitiesByProductIdsAsync(IEnumerable<Guid> productIds);
 }
