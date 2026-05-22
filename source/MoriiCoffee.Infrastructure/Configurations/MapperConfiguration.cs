@@ -5,7 +5,7 @@ using MoriiCoffee.Domain.Shared.Settings;
 
 namespace MoriiCoffee.Infrastructure.Configurations;
 
-/// <summary>Registers all AutoMapper profiles (Category, Product, User, Banner) with the DI container.</summary>
+/// <summary>Registers all AutoMapper profiles (Category, Product, User, Banner, Store) with the DI container.</summary>
 public static class MapperConfiguration
 {
     public static IServiceCollection ConfigureMapper(this IServiceCollection services, IConfiguration configuration)
@@ -19,6 +19,7 @@ public static class MapperConfiguration
             config.AddProfile<UserMapper>();
             config.AddProfile(new BannerMapper(s3Settings));
             config.AddProfile(new BlogMapper(s3Settings));
+            config.AddProfile<StoreMapper>();
         });
 
         return services;

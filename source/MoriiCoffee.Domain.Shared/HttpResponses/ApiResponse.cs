@@ -34,6 +34,7 @@ public class ApiResponse
             401 => "Unauthorized",
             403 => "Forbidden",
             404 => "Resource Not Found",
+            409 => "Conflict",
             500 => "An unhandled error occurred",
             _ => "Unknown"
         };

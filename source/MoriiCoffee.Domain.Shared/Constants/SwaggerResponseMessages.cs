@@ -17,5 +17,6 @@ public static class SwaggerResponseMessages
     public const string Forbidden = "Forbidden - User does not have the required permissions";
     public const string NotFound = "Not Found - Resource with the specified ID not found";
     public const string InternalServerError = "Internal Server Error - An error occurred while processing the request";
+    public const string Conflict = "Conflict - A resource with the same unique key already exists";
 }
 

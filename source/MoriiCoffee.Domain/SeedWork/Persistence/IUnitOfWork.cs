@@ -67,5 +67,8 @@ public interface IUnitOfWork : IDisposable
     /// <summary>Repository for managing user wishlist items.</summary>
     IWishlistItemRepository WishlistItems { get; }
 
+    /// <summary>Repository for managing store locations.</summary>
+    IStoresRepository Stores { get; }
+
     #endregion
 }
