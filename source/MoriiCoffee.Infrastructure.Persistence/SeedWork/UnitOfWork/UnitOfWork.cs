@@ -18,6 +18,7 @@ public class UnitOfWork : IUnitOfWork
 
     private CategoriesRepository? _categories;
     private ProductsRepository? _products;
+    private WishlistItemRepository? _wishlistItems;
     private ProductVariantsRepository? _productVariants;
     private ProductImagesRepository? _productImages;
     private BannersRepository? _banners;
@@ -69,6 +70,9 @@ public class UnitOfWork : IUnitOfWork
 
     public IAdminReportsReadRepository AdminReports =>
         _adminReports ??= new AdminReportsReadRepository(_context);
+
+    public IWishlistItemRepository WishlistItems =>
+        _wishlistItems ??= new WishlistItemRepository(_context);
 
     public async Task<int> CommitAsync() =>
         await _context.SaveChangesAsync();

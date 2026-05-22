@@ -14,6 +14,7 @@ using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
 using MoriiCoffee.Domain.Aggregates.UserAggregate;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
+using MoriiCoffee.Domain.Aggregates.WishlistAggregate;
 
 namespace MoriiCoffee.Infrastructure.Persistence.Data;
 
@@ -80,6 +81,12 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
     public DbSet<Payment> Payments { get; set; }
     public DbSet<RefundRecord> Refunds { get; set; }
     public DbSet<PaymentWebhookEvent> PaymentWebhookEvents { get; set; }
+
+    #endregion
+
+    #region WishlistAggregate
+
+    public DbSet<WishlistItem> WishlistItems { get; set; }
 
     #endregion
 
