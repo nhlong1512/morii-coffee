@@ -10,6 +10,8 @@ using MoriiCoffee.Domain.Aggregates.CategoryAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
+using MoriiCoffee.Domain.Aggregates.StoreAggregate;
+using MoriiCoffee.Domain.Aggregates.StoreAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.UserAggregate;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
 using MoriiCoffee.Domain.Shared.Enums.Blog;
@@ -51,6 +53,7 @@ public class ApplicationDbContextSeed
         await SeedCatalogAsync();
         await SeedBannersAsync();
         await SeedBlogsAsync();
+        await SeedStoresAsync();
     }
 
     private async Task SeedRolesAsync()
@@ -786,5 +789,74 @@ Saturday - Sunday: 8 AM - 9 PM</p>
         }
 
         return result;
+    }
+
+    private async Task SeedStoresAsync()
+    {
+        if (await _context.Stores.AnyAsync())
+        {
+            _logger.LogInformation("Stores already seeded. Skipping.");
+            return;
+        }
+
+        _logger.LogInformation("Seeding store data...");
+        var stores = GetSeedStores();
+        await _context.Stores.AddRangeAsync(stores);
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Stores seeded successfully.");
+    }
+
+    private static List<Store> GetSeedStores()
+    {
+        Func<Guid, List<StoreOpeningHours>> defaultHours = storeId =>
+            Enumerable.Range(0, 7).Select(d =>
+                StoreOpeningHours.Create(storeId, d,
+                    openTime: d == 0 ? "08:00" : "07:00",
+                    closeTime: d is 5 or 6 ? "22:00" : "21:00",
+                    isClosed: false)).ToList();
+
+        var stores = new List<Store>();
+
+        var s1 = Store.Create(new CreateStoreData(
+            "Morii Coffee - District 1", "district-1",
+            "42 Nguyen Hue Boulevard, Ben Nghe Ward", "District 1",
+            "Ho Chi Minh City", null, 10.7739, 106.7029,
+            "+84 28 1234 5678", "d1@moriicoffee.vn", null, true, 1), "district-1");
+        s1.OpeningHours = defaultHours(s1.Id);
+        stores.Add(s1);
+
+        var s2 = Store.Create(new CreateStoreData(
+            "Morii Coffee - District 3", "district-3",
+            "15 Nam Ky Khoi Nghia, Ward 7", "District 3",
+            "Ho Chi Minh City", null, 10.7769, 106.6922,
+            "+84 28 9876 5432", "d3@moriicoffee.vn", null, true, 2), "district-3");
+        s2.OpeningHours = defaultHours(s2.Id);
+        stores.Add(s2);
+
+        var s3 = Store.Create(new CreateStoreData(
+            "Morii Coffee - Thu Duc", "thu-duc",
+            "88 Vo Van Ngan, Binh Tho Ward", "Thu Duc City",
+            "Ho Chi Minh City", null, 10.8560, 106.7715,
+            "+84 28 5555 1234", "thuduc@moriicoffee.vn", null, true, 3), "thu-duc");
+        s3.OpeningHours = defaultHours(s3.Id);
+        stores.Add(s3);
+
+        var s4 = Store.Create(new CreateStoreData(
+            "Morii Coffee - Hoan Kiem", "hoan-kiem",
+            "56 Hang Bai Street, Hoan Kiem District", "Hoan Kiem",
+            "Hanoi", null, 21.0245, 105.8412,
+            "+84 24 6789 0123", "hanoi@moriicoffee.vn", null, true, 4), "hoan-kiem");
+        s4.OpeningHours = defaultHours(s4.Id);
+        stores.Add(s4);
+
+        var s5 = Store.Create(new CreateStoreData(
+            "Morii Coffee - Da Nang", "da-nang",
+            "23 Bach Dang Street, Hai Chau District", "Hai Chau",
+            "Da Nang", null, 16.0471, 108.2062,
+            "+84 236 3456 789", "danang@moriicoffee.vn", null, true, 5), "da-nang");
+        s5.OpeningHours = defaultHours(s5.Id);
+        stores.Add(s5);
+
+        return stores;
     }
 }

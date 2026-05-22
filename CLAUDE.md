@@ -99,6 +99,8 @@ cd deploy && bash run-docker-development.sh
 - PostgreSQL via EF Core 10.0.5 + Npgsql. Two new tables (`Payments`, `Refunds`, `PaymentWebhookEvents`). One column added to `Orders` (`PaymentStatus`). (011-stripe-payment)
 - Stripe.net 47.x, Stripe webhook signature verification, Checkout Sessions (011-stripe-payment)
 - TypeScript 5.x (frontend) / C# .NET 10.0 (backend) (014-my-wishlist)
+- C# / .NET 10.0 (backend), TypeScript (frontend) + ASP.NET Core 10.0.5, EF Core 10.0.5, MediatR 14.1.0, AutoMapper 16.1.1, FluentValidation 12.1.1 (backend); Next.js 16, Tailwind CSS v4, Zustand, next-intl, Radix UI / shadcn, Zod, `@googlemaps/js-api-loader` (frontend) (015-store-management)
+- PostgreSQL via Npgsql + EF Core 10.0.5 — 2 new tables (`Stores`, `StoreOpeningHours`) (015-store-management)
 
 ## Recent Changes
 - 006-dotnet-10-upgrade: Upgraded platform from .NET 8.0 to .NET 10.0, all Microsoft packages to 10.0.5, MediatR to 14.1.0, AutoMapper to 16.1.1, FluentValidation to 12.1.1, Minio to 7.0.0

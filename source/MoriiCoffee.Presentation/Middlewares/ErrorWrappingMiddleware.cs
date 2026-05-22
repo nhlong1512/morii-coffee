@@ -36,6 +36,11 @@ public class ErrorWrappingMiddleware
             _logger.LogWarning(ex, "{Message}", ex.Message);
             await WriteJsonResponse(context, ex.StatusCode, new ApiBadRequestResponse(ex.Message));
         }
+        catch (ConflictException ex)
+        {
+            _logger.LogWarning(ex, "{Message}", ex.Message);
+            await WriteJsonResponse(context, ex.StatusCode, new ApiConflictResponse(ex.Message));
+        }
         catch (UnauthorizedException ex)
         {
             _logger.LogWarning(ex, "{Message}", ex.Message);

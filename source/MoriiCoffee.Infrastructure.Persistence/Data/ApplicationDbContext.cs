@@ -14,6 +14,8 @@ using MoriiCoffee.Domain.Aggregates.ProductAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
 using MoriiCoffee.Domain.Aggregates.UserAggregate;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
+using MoriiCoffee.Domain.Aggregates.StoreAggregate;
+using MoriiCoffee.Domain.Aggregates.StoreAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.WishlistAggregate;
 
 namespace MoriiCoffee.Infrastructure.Persistence.Data;
@@ -87,6 +89,16 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
     #region WishlistAggregate
 
     public DbSet<WishlistItem> WishlistItems { get; set; }
+
+    #endregion
+
+    #region StoreAggregate
+
+    /// <summary>Store locations available on the public store locator.</summary>
+    public DbSet<Store> Stores { get; set; }
+
+    /// <summary>Opening hours records for each store (7 per store, one per day of week).</summary>
+    public DbSet<StoreOpeningHours> StoreOpeningHours { get; set; }
 
     #endregion
 

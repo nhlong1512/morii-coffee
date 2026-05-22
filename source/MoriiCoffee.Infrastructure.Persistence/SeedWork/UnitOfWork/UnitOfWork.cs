@@ -29,6 +29,7 @@ public class UnitOfWork : IUnitOfWork
     private PaymentRepository? _payments;
     private PaymentWebhookEventRepository? _paymentWebhookEvents;
     private AdminReportsReadRepository? _adminReports;
+    private StoresRepository? _stores;
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -73,6 +74,9 @@ public class UnitOfWork : IUnitOfWork
 
     public IWishlistItemRepository WishlistItems =>
         _wishlistItems ??= new WishlistItemRepository(_context);
+
+    public IStoresRepository Stores =>
+        _stores ??= new StoresRepository(_context);
 
     public async Task<int> CommitAsync() =>
         await _context.SaveChangesAsync();
