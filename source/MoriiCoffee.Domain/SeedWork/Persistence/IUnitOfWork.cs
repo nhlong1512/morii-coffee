@@ -64,5 +64,8 @@ public interface IUnitOfWork : IDisposable
     /// <summary>Read-only repository for admin reporting aggregates.</summary>
     IAdminReportsReadRepository AdminReports { get; }
 
+    /// <summary>Repository for managing user wishlist items.</summary>
+    IWishlistItemRepository WishlistItems { get; }
+
     #endregion
 }

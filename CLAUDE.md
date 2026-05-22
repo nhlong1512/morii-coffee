@@ -98,6 +98,7 @@ cd deploy && bash run-docker-development.sh
 - C# / .NET 10.0 (`net10.0`) — confirmed in `MoriiCoffee.Presentation.csproj`. The constitution mentions .NET 8 but the repo has already migrated (feature `006-dotnet-10-upgrade`). (011-stripe-payment)
 - PostgreSQL via EF Core 10.0.5 + Npgsql. Two new tables (`Payments`, `Refunds`, `PaymentWebhookEvents`). One column added to `Orders` (`PaymentStatus`). (011-stripe-payment)
 - Stripe.net 47.x, Stripe webhook signature verification, Checkout Sessions (011-stripe-payment)
+- TypeScript 5.x (frontend) / C# .NET 10.0 (backend) (014-my-wishlist)
 
 ## Recent Changes
 - 006-dotnet-10-upgrade: Upgraded platform from .NET 8.0 to .NET 10.0, all Microsoft packages to 10.0.5, MediatR to 14.1.0, AutoMapper to 16.1.1, FluentValidation to 12.1.1, Minio to 7.0.0
