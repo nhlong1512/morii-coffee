@@ -27,6 +27,7 @@ public class UnitOfWork : IUnitOfWork
     private UserDeliveryProfilesRepository? _userDeliveryProfiles;
     private PaymentRepository? _payments;
     private PaymentWebhookEventRepository? _paymentWebhookEvents;
+    private AdminReportsReadRepository? _adminReports;
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -65,6 +66,9 @@ public class UnitOfWork : IUnitOfWork
 
     public IPaymentWebhookEventRepository PaymentWebhookEvents =>
         _paymentWebhookEvents ??= new PaymentWebhookEventRepository(_context);
+
+    public IAdminReportsReadRepository AdminReports =>
+        _adminReports ??= new AdminReportsReadRepository(_context);
 
     public async Task<int> CommitAsync() =>
         await _context.SaveChangesAsync();

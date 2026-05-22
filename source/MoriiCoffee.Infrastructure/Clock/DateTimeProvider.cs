@@ -1,11 +1,8 @@
+using MoriiCoffee.Application.SeedWork.Abstractions;
+
 namespace MoriiCoffee.Infrastructure.Clock;
 
-/// <summary>Provides the current UTC date and time. Abstracted for testability.</summary>
-public interface IDateTimeProvider
-{
-    DateTime UtcNow { get; }
-}
-
+/// <summary>Default wall-clock implementation used by infrastructure and application services.</summary>
 public class DateTimeProvider : IDateTimeProvider
 {
     public DateTime UtcNow => DateTime.UtcNow;

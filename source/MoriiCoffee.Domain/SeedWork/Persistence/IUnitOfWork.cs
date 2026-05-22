@@ -61,5 +61,8 @@ public interface IUnitOfWork : IDisposable
     /// <summary>Repository for the PaymentWebhookEvent audit/idempotency table.</summary>
     IPaymentWebhookEventRepository PaymentWebhookEvents { get; }
 
+    /// <summary>Read-only repository for admin reporting aggregates.</summary>
+    IAdminReportsReadRepository AdminReports { get; }
+
     #endregion
 }
