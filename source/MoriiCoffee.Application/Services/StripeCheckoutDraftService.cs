@@ -3,8 +3,6 @@ using Microsoft.Extensions.Logging;
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Application.SeedWork.Helpers;
-using MoriiCoffee.Application.SeedWork.DTOs.Shipping;
-using MoriiCoffee.Application.Services.Shipping;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
@@ -27,8 +25,6 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
     private readonly IOrderIdGenerator _orderIdGenerator;
     private readonly ICartService _cartService;
     private readonly ILogger<StripeCheckoutDraftService> _logger;
-    private readonly ShippingPackageMetricsService _packageMetricsService;
-    private readonly ShippingQuoteValidationService _quoteValidationService;
     private readonly ShipmentLifecycleService? _shipmentLifecycleService;
 
     public StripeCheckoutDraftService(
@@ -37,9 +33,7 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
         IOrderIdGenerator orderIdGenerator,
         ICartService cartService,
         ILogger<StripeCheckoutDraftService> logger,
-        ShipmentLifecycleService? shipmentLifecycleService = null,
-        ShippingPackageMetricsService? packageMetricsService = null,
-        ShippingQuoteValidationService? quoteValidationService = null)
+        ShipmentLifecycleService? shipmentLifecycleService = null)
     {
         _cacheService = cacheService;
         _unitOfWork = unitOfWork;
@@ -47,9 +41,6 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
         _cartService = cartService;
         _logger = logger;
         _shipmentLifecycleService = shipmentLifecycleService;
-        _packageMetricsService = packageMetricsService ?? new ShippingPackageMetricsService();
-        _quoteValidationService = quoteValidationService
-            ?? new ShippingQuoteValidationService(new ShippingQuoteFingerprintService());
     }
 
     public async Task StoreAsync(StripeCheckoutDraftCacheDto draft)
@@ -115,16 +106,6 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
         try
         {
             FinalizeStripeCheckoutResultDto? result = null;
-            if (draft.DeliveryMethod == EDeliveryMethod.GHN_DELIVERY)
-            {
-                var packageMetrics = _packageMetricsService.BuildFromCart(draft.Items);
-                _quoteValidationService.EnsureValid(
-                    BuildQuoteFromDraft(draft, packageMetrics),
-                    draft.DeliveryMethod,
-                    EPaymentMethod.STRIPE,
-                    BuildAddress(draft),
-                    packageMetrics);
-            }
 
             await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
@@ -320,34 +301,4 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
         var ttl = expiresAtUtc - DateTime.UtcNow + DraftRetentionAfterExpiry;
         return ttl < MinimumDraftTtl ? MinimumDraftTtl : ttl;
     }
-
-    private static ShippingAddressDto BuildAddress(StripeCheckoutDraftCacheDto draft) => new()
-    {
-        FullName = draft.FullName,
-        PhoneNumber = draft.PhoneNumber,
-        AddressLine = draft.Address,
-        ProvinceId = draft.ProvinceId,
-        ProvinceName = draft.ProvinceName,
-        DistrictId = draft.DistrictId,
-        DistrictName = draft.DistrictName,
-        WardCode = draft.WardCode,
-        WardName = draft.WardName
-    };
-
-    private static ShippingQuoteDto BuildQuoteFromDraft(StripeCheckoutDraftCacheDto draft, ShippingPackageMetricsDto packageMetrics) => new()
-    {
-        Provider = EShippingProvider.GHN,
-        Environment = draft.ShippingProviderEnvironment ?? "sandbox",
-        Address = BuildAddress(draft),
-        Service = new ShippingServiceOptionDto
-        {
-            ServiceId = draft.ShippingServiceId ?? 0,
-            ServiceTypeId = draft.ShippingServiceTypeId,
-            DisplayName = draft.ShippingServiceLabel ?? $"GHN Service {draft.ShippingServiceId}",
-            ShortName = draft.ShippingServiceLabel ?? $"GHN Service {draft.ShippingServiceId}"
-        },
-        PackageMetrics = packageMetrics,
-        QuoteExpiresAt = draft.ShippingQuoteExpiresAt ?? DateTime.UtcNow,
-        QuoteFingerprint = draft.ShippingQuoteFingerprint ?? string.Empty
-    };
 }
