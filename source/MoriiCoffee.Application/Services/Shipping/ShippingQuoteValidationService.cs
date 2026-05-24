@@ -27,6 +27,10 @@ public class ShippingQuoteValidationService
         if (quote.QuoteExpiresAt <= DateTime.UtcNow)
             throw new InvalidOperationException("The shipping quote has expired. Please refresh the quote and try again.");
 
+        var utcExpiry = quote.QuoteExpiresAt.ToUniversalTime();
+        var expirySeconds = new DateTime(utcExpiry.Year, utcExpiry.Month, utcExpiry.Day,
+            utcExpiry.Hour, utcExpiry.Minute, utcExpiry.Second, DateTimeKind.Utc);
+
         var expected = _fingerprintService.Generate(
             deliveryMethod,
             paymentMethod,
@@ -34,7 +38,7 @@ public class ShippingQuoteValidationService
             packageMetrics,
             quote.Service.ServiceId,
             quote.Service.ServiceTypeId,
-            quote.QuoteExpiresAt.ToUniversalTime());
+            expirySeconds);
 
         if (!string.Equals(expected, quote.QuoteFingerprint, StringComparison.Ordinal))
             throw new InvalidOperationException("The shipping quote is no longer valid for the current checkout data.");
