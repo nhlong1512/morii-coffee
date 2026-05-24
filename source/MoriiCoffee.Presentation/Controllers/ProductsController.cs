@@ -63,7 +63,7 @@ public class ProductsController : ControllerBase
     [HttpGet]
     [SwaggerOperation(
         Summary = "Get paginated products",
-        Description = "Returns a paginated list of products. Supports filtering by categoryId and isFeatured. Results are ordered by displayOrder then name.")]
+        Description = "Returns a paginated list of products. Supports filtering by multiple categoryIds and isFeatured. Results are ordered by displayOrder then name.")]
     [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(ProductDto))]
     [SwaggerResponse(401, SwaggerResponseMessages.Unauthorized)]
     [SwaggerResponse(403, SwaggerResponseMessages.Forbidden)]

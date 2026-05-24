@@ -7,6 +7,7 @@ using MoriiCoffee.Application.SeedWork.DTOs.Product;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.SeedWork;
+using MoriiCoffee.Domain.Aggregates.ProductAggregate.ValueObjects;
 using Xunit;
 using ProductEntity = MoriiCoffee.Domain.Aggregates.ProductAggregate.Product;
 
@@ -134,5 +135,41 @@ public class GetPaginatedProductsQueryHandlerTests
         result.Items.Should().HaveCount(2);
         result.Items[0].QuantitySold.Should().Be(42);
         result.Items[1].QuantitySold.Should().Be(15);
+    }
+
+    [Fact]
+    public async Task Handle_WithMultipleCategoryIds_ReturnsFilteredProducts()
+    {
+        var categoryId1 = Guid.NewGuid();
+        var categoryId2 = Guid.NewGuid();
+        var categoryId3 = Guid.NewGuid();
+
+        var product1 = new ProductEntity { Id = Guid.NewGuid(), Name = "Latte", DisplayOrder = 1 };
+        var product2 = new ProductEntity { Id = Guid.NewGuid(), Name = "Espresso", DisplayOrder = 2 };
+        var product3 = new ProductEntity { Id = Guid.NewGuid(), Name = "Cappuccino", DisplayOrder = 3 };
+
+        product1.ProductCategories.Add(new ProductCategory { CategoryId = categoryId1, ProductId = product1.Id });
+        product2.ProductCategories.Add(new ProductCategory { CategoryId = categoryId2, ProductId = product2.Id });
+        product3.ProductCategories.Add(new ProductCategory { CategoryId = categoryId3, ProductId = product3.Id });
+
+        var products = new List<ProductEntity> { product1, product2, product3 }.BuildMock();
+
+        _productsRepo.Setup(r => r.FindAll(false)).Returns(products);
+        _mapper.Setup(m => m.Map<ProductSummaryDto>(It.IsAny<ProductEntity>()))
+            .Returns((ProductEntity p) => new ProductSummaryDto { Id = p.Id, Name = p.Name });
+        _ordersRepo.Setup(r => r.GetSoldQuantitiesByProductIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+            .ReturnsAsync(new Dictionary<Guid, int>());
+
+        var filter = new ProductPaginationFilter
+        {
+            TakeAll = true,
+            CategoryIds = new List<Guid> { categoryId1, categoryId2 }
+        };
+        var query = new GetPaginatedProductsQuery(filter);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result.Items.Should().HaveCount(2);
+        result.Items.Select(i => i.Name).Should().Contain("Latte").And.Contain("Espresso");
+        result.Items.Select(i => i.Name).Should().NotContain("Cappuccino");
     }
 }

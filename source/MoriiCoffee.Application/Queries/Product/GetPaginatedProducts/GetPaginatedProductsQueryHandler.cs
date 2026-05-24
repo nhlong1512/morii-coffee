@@ -29,9 +29,9 @@ public class GetPaginatedProductsQueryHandler : IQueryHandler<GetPaginatedProduc
                 .ThenInclude(pc => pc.Category);
 
         // Apply optional filters
-        if (request.Filter.CategoryId.HasValue)
+        if (request.Filter.CategoryIds is { Count: > 0 })
         {
-            query = query.Where(p => p.ProductCategories.Any(pc => pc.CategoryId == request.Filter.CategoryId.Value));
+            query = query.Where(p => p.ProductCategories.Any(pc => request.Filter.CategoryIds.Contains(pc.CategoryId)));
         }
 
         if (request.Filter.IsFeatured.HasValue)

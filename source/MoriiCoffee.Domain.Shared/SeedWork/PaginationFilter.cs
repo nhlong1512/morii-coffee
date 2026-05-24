@@ -78,8 +78,8 @@ public class Search
 /// <summary>Extended pagination filter for products with category and status filtering.</summary>
 public class ProductPaginationFilter : PaginationFilter
 {
-    [FromQuery(Name = "categoryId")]
-    public Guid? CategoryId { get; set; }
+    [FromQuery(Name = "categoryIds")]
+    public List<Guid>? CategoryIds { get; set; }
 
     [FromQuery(Name = "isFeatured")]
     public bool? IsFeatured { get; set; }
