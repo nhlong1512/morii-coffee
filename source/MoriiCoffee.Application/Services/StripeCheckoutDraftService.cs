@@ -3,12 +3,15 @@ using Microsoft.Extensions.Logging;
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
 using MoriiCoffee.Application.SeedWork.Helpers;
+using MoriiCoffee.Application.SeedWork.DTOs.Shipping;
+using MoriiCoffee.Application.Services.Shipping;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Constants;
 using MoriiCoffee.Domain.Shared.Enums.Order;
+using MoriiCoffee.Domain.Shared.Enums.Shipping;
 using OrderEntity = MoriiCoffee.Domain.Aggregates.OrderAggregate.Order;
 using PaymentEntity = MoriiCoffee.Domain.Aggregates.PaymentAggregate.Payment;
 
@@ -24,19 +27,29 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
     private readonly IOrderIdGenerator _orderIdGenerator;
     private readonly ICartService _cartService;
     private readonly ILogger<StripeCheckoutDraftService> _logger;
+    private readonly ShippingPackageMetricsService _packageMetricsService;
+    private readonly ShippingQuoteValidationService _quoteValidationService;
+    private readonly ShipmentLifecycleService? _shipmentLifecycleService;
 
     public StripeCheckoutDraftService(
         ICacheService cacheService,
         IUnitOfWork unitOfWork,
         IOrderIdGenerator orderIdGenerator,
         ICartService cartService,
-        ILogger<StripeCheckoutDraftService> logger)
+        ILogger<StripeCheckoutDraftService> logger,
+        ShipmentLifecycleService? shipmentLifecycleService = null,
+        ShippingPackageMetricsService? packageMetricsService = null,
+        ShippingQuoteValidationService? quoteValidationService = null)
     {
         _cacheService = cacheService;
         _unitOfWork = unitOfWork;
         _orderIdGenerator = orderIdGenerator;
         _cartService = cartService;
         _logger = logger;
+        _shipmentLifecycleService = shipmentLifecycleService;
+        _packageMetricsService = packageMetricsService ?? new ShippingPackageMetricsService();
+        _quoteValidationService = quoteValidationService
+            ?? new ShippingQuoteValidationService(new ShippingQuoteFingerprintService());
     }
 
     public async Task StoreAsync(StripeCheckoutDraftCacheDto draft)
@@ -102,6 +115,16 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
         try
         {
             FinalizeStripeCheckoutResultDto? result = null;
+            if (draft.DeliveryMethod == EDeliveryMethod.GHN_DELIVERY)
+            {
+                var packageMetrics = _packageMetricsService.BuildFromCart(draft.Items);
+                _quoteValidationService.EnsureValid(
+                    BuildQuoteFromDraft(draft),
+                    draft.DeliveryMethod,
+                    EPaymentMethod.STRIPE,
+                    BuildAddress(draft),
+                    packageMetrics);
+            }
 
             await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
@@ -117,10 +140,33 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
                 var order = OrderEntity.Create(
                     orderNumber,
                     draft.UserId,
-                    new DeliveryInfo(draft.FullName, draft.PhoneNumber, draft.Address),
+                    new DeliveryInfo(
+                        draft.FullName,
+                        draft.PhoneNumber,
+                        draft.Address,
+                        draft.ProvinceId,
+                        draft.ProvinceName,
+                        draft.DistrictId,
+                        draft.DistrictName,
+                        draft.WardCode,
+                        draft.WardName),
                     orderItems,
                     EPaymentMethod.STRIPE,
-                    draft.Notes);
+                    draft.Notes,
+                    deliveryMethod: draft.DeliveryMethod);
+
+                if (draft.DeliveryMethod == EDeliveryMethod.GHN_DELIVERY)
+                {
+                    order.ApplyShippingQuote(
+                        EShippingProvider.GHN,
+                        draft.ShippingQuoteFingerprint!,
+                        draft.ShippingServiceId!.Value,
+                        draft.ShippingServiceTypeId,
+                        draft.ShippingServiceLabel,
+                        draft.ShippingProviderEnvironment!,
+                        draft.ShippingQuoteExpiresAt!.Value,
+                        draft.ShippingFee ?? 0);
+                }
 
                 order.MarkPaymentPaid(paymentIntentId, chargeId);
                 await _unitOfWork.Orders.CreateAsync(order);
@@ -145,6 +191,13 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
                     SessionId = draft.SessionId
                 };
             });
+
+            if (draft.DeliveryMethod == EDeliveryMethod.GHN_DELIVERY && _shipmentLifecycleService is not null)
+            {
+                var createdOrder = await _unitOfWork.Orders.GetByIdWithItemsAsync(result!.OrderId);
+                if (createdOrder is not null)
+                    await _shipmentLifecycleService.TryCreateForOrderAsync(createdOrder, cancellationToken);
+            }
 
             await CleanupAfterSuccessAsync(draft);
             return result!;
@@ -194,12 +247,27 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
                 draft.UserId,
                 draft.FullName,
                 draft.PhoneNumber,
-                draft.Address);
+                draft.Address,
+                draft.ProvinceId,
+                draft.ProvinceName,
+                draft.DistrictId,
+                draft.DistrictName,
+                draft.WardCode,
+                draft.WardName);
             await _unitOfWork.UserDeliveryProfiles.UpsertAsync(newProfile);
             return;
         }
 
-        existingProfile.Update(draft.FullName, draft.PhoneNumber, draft.Address);
+        existingProfile.Update(
+            draft.FullName,
+            draft.PhoneNumber,
+            draft.Address,
+            draft.ProvinceId,
+            draft.ProvinceName,
+            draft.DistrictId,
+            draft.DistrictName,
+            draft.WardCode,
+            draft.WardName);
         await _unitOfWork.UserDeliveryProfiles.UpsertAsync(existingProfile);
     }
 
@@ -252,4 +320,34 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
         var ttl = expiresAtUtc - DateTime.UtcNow + DraftRetentionAfterExpiry;
         return ttl < MinimumDraftTtl ? MinimumDraftTtl : ttl;
     }
+
+    private static ShippingAddressDto BuildAddress(StripeCheckoutDraftCacheDto draft) => new()
+    {
+        FullName = draft.FullName,
+        PhoneNumber = draft.PhoneNumber,
+        AddressLine = draft.Address,
+        ProvinceId = draft.ProvinceId,
+        ProvinceName = draft.ProvinceName,
+        DistrictId = draft.DistrictId,
+        DistrictName = draft.DistrictName,
+        WardCode = draft.WardCode,
+        WardName = draft.WardName
+    };
+
+    private static ShippingQuoteDto BuildQuoteFromDraft(StripeCheckoutDraftCacheDto draft) => new()
+    {
+        Provider = EShippingProvider.GHN,
+        Environment = draft.ShippingProviderEnvironment ?? "sandbox",
+        Address = BuildAddress(draft),
+        Service = new ShippingServiceOptionDto
+        {
+            ServiceId = draft.ShippingServiceId ?? 0,
+            ServiceTypeId = draft.ShippingServiceTypeId,
+            DisplayName = draft.ShippingServiceLabel ?? $"GHN Service {draft.ShippingServiceId}",
+            ShortName = draft.ShippingServiceLabel ?? $"GHN Service {draft.ShippingServiceId}"
+        },
+        PackageMetrics = new ShippingPackageMetricsDto(),
+        QuoteExpiresAt = draft.ShippingQuoteExpiresAt ?? DateTime.UtcNow,
+        QuoteFingerprint = draft.ShippingQuoteFingerprint ?? string.Empty
+    };
 }

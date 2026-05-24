@@ -34,7 +34,9 @@ public class SaveDeliveryProfileCommandHandlerTests
             It.Is<UserDeliveryProfile>(p =>
                 p.UserId == userId &&
                 p.FullName == "Nguyễn Văn A" &&
-                p.PhoneNumber == "0901234567")),
+                p.PhoneNumber == "0901234567" &&
+                p.ProvinceId == 79 &&
+                p.WardCode == "26734")),
             Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(), Times.Once);
         result.FullName.Should().Be("Nguyễn Văn A");
@@ -51,7 +53,10 @@ public class SaveDeliveryProfileCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         _profilesRepo.Verify(r => r.UpsertAsync(
-            It.Is<UserDeliveryProfile>(p => p.FullName == "New Name" && p.PhoneNumber == "0912345678")),
+            It.Is<UserDeliveryProfile>(p =>
+                p.FullName == "New Name" &&
+                p.PhoneNumber == "0912345678" &&
+                p.DistrictId == 760)),
             Times.Once);
         result.FullName.Should().Be("New Name");
         result.PhoneNumber.Should().Be("0912345678");
@@ -67,6 +72,9 @@ public class SaveDeliveryProfileCommandHandlerTests
         var result = await _handler.Handle(BuildCommand(userId), CancellationToken.None);
 
         result.Address.Should().Be("123 Đường ABC, Quận 1");
+        result.ProvinceName.Should().Be("Ho Chi Minh");
+        result.DistrictName.Should().Be("District 1");
+        result.WardCode.Should().Be("26734");
     }
 
     private static SaveDeliveryProfileCommand BuildCommand(
@@ -77,6 +85,12 @@ public class SaveDeliveryProfileCommandHandlerTests
         UserId = userId,
         FullName = fullName,
         PhoneNumber = phone,
-        Address = "123 Đường ABC, Quận 1"
+        Address = "123 Đường ABC, Quận 1",
+        ProvinceId = 79,
+        ProvinceName = "Ho Chi Minh",
+        DistrictId = 760,
+        DistrictName = "District 1",
+        WardCode = "26734",
+        WardName = "Ben Nghe"
     };
 }

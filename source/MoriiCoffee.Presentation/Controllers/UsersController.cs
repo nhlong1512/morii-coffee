@@ -119,7 +119,13 @@ public class UsersController : ControllerBase
             UserId = GetCurrentUserId(),
             FullName = dto.FullName,
             PhoneNumber = dto.PhoneNumber,
-            Address = dto.Address
+            Address = dto.Address,
+            ProvinceId = dto.ProvinceId,
+            ProvinceName = dto.ProvinceName,
+            DistrictId = dto.DistrictId,
+            DistrictName = dto.DistrictName,
+            WardCode = dto.WardCode,
+            WardName = dto.WardName
         });
         return Ok(new ApiOkResponse(result));
     }

@@ -5,6 +5,7 @@ using MoriiCoffee.Domain.Aggregates.OrderAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.OrderAggregate.ValueObjects;
 using MoriiCoffee.Domain.SeedWork.AggregateRoot;
 using MoriiCoffee.Domain.Shared.Enums.Order;
+using MoriiCoffee.Domain.Shared.Enums.Shipping;
 
 namespace MoriiCoffee.Domain.Aggregates.OrderAggregate;
 
@@ -32,6 +33,28 @@ public class Order : AggregateRoot
 
     [Required]
     public DeliveryInfo DeliveryInfo { get; private set; } = null!;
+
+    [Required]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public EDeliveryMethod DeliveryMethod { get; private set; } = EDeliveryMethod.GHN_DELIVERY;
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public EShippingProvider? ShippingProvider { get; private set; }
+
+    [MaxLength(100)]
+    public string? ShippingQuoteFingerprint { get; private set; }
+
+    public int? ShippingServiceId { get; private set; }
+
+    public int? ShippingServiceTypeId { get; private set; }
+
+    [MaxLength(200)]
+    public string? ShippingServiceLabel { get; private set; }
+
+    [MaxLength(50)]
+    public string? ShippingProviderEnvironment { get; private set; }
+
+    public DateTime? ShippingQuoteExpiresAt { get; private set; }
 
     [MaxLength(500)]
     public string? Notes { get; private set; }
@@ -88,7 +111,15 @@ public class Order : AggregateRoot
         string? notes = null,
         decimal tax = 0,
         decimal shipping = 0,
-        decimal discount = 0) // NOSONAR
+        decimal discount = 0,
+        EDeliveryMethod deliveryMethod = EDeliveryMethod.GHN_DELIVERY,
+        EShippingProvider? shippingProvider = null,
+        string? shippingQuoteFingerprint = null,
+        int? shippingServiceId = null,
+        int? shippingServiceTypeId = null,
+        string? shippingServiceLabel = null,
+        string? shippingProviderEnvironment = null,
+        DateTime? shippingQuoteExpiresAt = null) // NOSONAR
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(orderNumber);
         ArgumentNullException.ThrowIfNull(deliveryInfo);
@@ -116,6 +147,14 @@ public class Order : AggregateRoot
             OrderNumber = orderNumber.Trim(),
             UserId = userId,
             DeliveryInfo = deliveryInfo,
+            DeliveryMethod = deliveryMethod,
+            ShippingProvider = shippingProvider,
+            ShippingQuoteFingerprint = string.IsNullOrWhiteSpace(shippingQuoteFingerprint) ? null : shippingQuoteFingerprint.Trim(),
+            ShippingServiceId = shippingServiceId,
+            ShippingServiceTypeId = shippingServiceTypeId,
+            ShippingServiceLabel = string.IsNullOrWhiteSpace(shippingServiceLabel) ? null : shippingServiceLabel.Trim(),
+            ShippingProviderEnvironment = string.IsNullOrWhiteSpace(shippingProviderEnvironment) ? null : shippingProviderEnvironment.Trim(),
+            ShippingQuoteExpiresAt = shippingQuoteExpiresAt,
             Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
             PaymentMethod = paymentMethod,
             Subtotal = subtotal,
@@ -133,6 +172,31 @@ public class Order : AggregateRoot
 
         order._items.AddRange(orderItems.Select(item => item.AssignToOrder(order.Id)));
         return order;
+    }
+
+    public void ApplyShippingQuote(
+        EShippingProvider shippingProvider,
+        string shippingQuoteFingerprint,
+        int serviceId,
+        int? serviceTypeId,
+        string? serviceLabel,
+        string providerEnvironment,
+        DateTime quoteExpiresAtUtc,
+        decimal shippingFee)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(shippingQuoteFingerprint);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerEnvironment);
+        ArgumentOutOfRangeException.ThrowIfNegative(shippingFee);
+
+        ShippingProvider = shippingProvider;
+        ShippingQuoteFingerprint = shippingQuoteFingerprint.Trim();
+        ShippingServiceId = serviceId;
+        ShippingServiceTypeId = serviceTypeId;
+        ShippingServiceLabel = string.IsNullOrWhiteSpace(serviceLabel) ? null : serviceLabel.Trim();
+        ShippingProviderEnvironment = providerEnvironment.Trim();
+        ShippingQuoteExpiresAt = quoteExpiresAtUtc;
+        Shipping = shippingFee;
+        Total = Subtotal + Tax + Shipping - Discount;
     }
 
     /// <summary>

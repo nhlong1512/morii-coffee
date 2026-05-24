@@ -4,12 +4,14 @@ using Moq;
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Cart;
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
+using MoriiCoffee.Application.Services.Shipping;
 using MoriiCoffee.Application.Services;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Constants;
 using MoriiCoffee.Domain.Shared.Enums.Order;
+using MoriiCoffee.Domain.Shared.Enums.Shipping;
 using Xunit;
 using OrderEntity = MoriiCoffee.Domain.Aggregates.OrderAggregate.Order;
 using PaymentEntity = MoriiCoffee.Domain.Aggregates.PaymentAggregate.Payment;
@@ -133,6 +135,67 @@ public class StripeCheckoutDraftServiceTests
         _paymentsRepo.Verify(r => r.CreateAsync(It.IsAny<PaymentEntity>()), Times.Never);
     }
 
+    [Fact]
+    public async Task FinalizeSucceededAsync_GhnDraft_PreservesShippingSnapshot()
+    {
+        var userId = Guid.NewGuid();
+        var productId = Guid.NewGuid();
+        var variantId = Guid.NewGuid();
+        var draft = BuildDraft(userId, productId, variantId);
+        draft.DeliveryMethod = EDeliveryMethod.GHN_DELIVERY;
+        draft.ShippingServiceId = 53320;
+        draft.ShippingServiceTypeId = 2;
+        draft.ShippingServiceLabel = "GHN Chuẩn";
+        draft.ShippingFee = 15_000m;
+        draft.ShippingQuoteExpiresAt = DateTime.UtcNow.AddMinutes(15);
+        draft.ShippingProviderEnvironment = "sandbox";
+        draft.ProvinceId = 79;
+        draft.ProvinceName = "Ho Chi Minh";
+        draft.DistrictId = 760;
+        draft.DistrictName = "District 1";
+        draft.WardCode = "26734";
+        draft.WardName = "Ben Nghe";
+        draft.ShippingQuoteFingerprint = new ShippingQuoteFingerprintService().Generate(
+            EDeliveryMethod.GHN_DELIVERY,
+            EPaymentMethod.STRIPE,
+            new MoriiCoffee.Application.SeedWork.DTOs.Shipping.ShippingAddressDto
+            {
+                FullName = draft.FullName,
+                PhoneNumber = draft.PhoneNumber,
+                AddressLine = draft.Address,
+                ProvinceId = draft.ProvinceId,
+                ProvinceName = draft.ProvinceName,
+                DistrictId = draft.DistrictId,
+                DistrictName = draft.DistrictName,
+                WardCode = draft.WardCode,
+                WardName = draft.WardName
+            },
+            new ShippingPackageMetricsService().BuildFromCart(draft.Items),
+            draft.ShippingServiceId.Value,
+            draft.ShippingServiceTypeId,
+            draft.ShippingQuoteExpiresAt.Value);
+
+        _orderIdGenerator.Setup(g => g.GenerateAsync()).ReturnsAsync("MRC-20260518-010");
+        _paymentsRepo.Setup(r => r.GetBySessionIdAsync(draft.SessionId)).ReturnsAsync((PaymentEntity?)null);
+        _profilesRepo.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync((UserDeliveryProfile?)null);
+        _cartService.Setup(c => c.GetCartAsync(userId)).ReturnsAsync(new CartDto { Items = [] });
+
+        OrderEntity? createdOrder = null;
+        _ordersRepo.Setup(r => r.CreateAsync(It.IsAny<OrderEntity>()))
+            .Callback<OrderEntity>(order => createdOrder = order)
+            .Returns(Task.CompletedTask);
+        _paymentsRepo.Setup(r => r.CreateAsync(It.IsAny<PaymentEntity>())).Returns(Task.CompletedTask);
+        _cacheService.Setup(c => c.RemoveDataAsync(It.IsAny<string>())).ReturnsAsync(true);
+
+        await _service.FinalizeSucceededAsync(draft, "pi_shipping", "ch_shipping", CancellationToken.None);
+
+        createdOrder.Should().NotBeNull();
+        createdOrder!.DeliveryMethod.Should().Be(EDeliveryMethod.GHN_DELIVERY);
+        createdOrder.ShippingProvider.Should().Be(EShippingProvider.GHN);
+        createdOrder.ShippingServiceId.Should().Be(53320);
+        createdOrder.Shipping.Should().Be(15_000m);
+    }
+
     private static StripeCheckoutDraftCacheDto BuildDraft(Guid userId, Guid productId, Guid variantId) => new()
     {
         DraftId = Guid.NewGuid(),
@@ -142,6 +205,7 @@ public class StripeCheckoutDraftServiceTests
         Address = "1170/61 3 Tháng 2, ward 8, district 11",
         Notes = "No ice",
         SaveDeliveryProfile = true,
+        DeliveryMethod = MoriiCoffee.Domain.Shared.Enums.Shipping.EDeliveryMethod.PICKUP,
         Items =
         [
             new CartItemDto

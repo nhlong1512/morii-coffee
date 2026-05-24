@@ -26,11 +26,37 @@ public class UserDeliveryProfile : EntityBase
     [MaxLength(500)]
     public string Address { get; private set; } = null!;
 
+    public int? ProvinceId { get; private set; }
+
+    [MaxLength(200)]
+    public string? ProvinceName { get; private set; }
+
+    public int? DistrictId { get; private set; }
+
+    [MaxLength(200)]
+    public string? DistrictName { get; private set; }
+
+    [MaxLength(50)]
+    public string? WardCode { get; private set; }
+
+    [MaxLength(200)]
+    public string? WardName { get; private set; }
+
     private UserDeliveryProfile()
     {
     }
 
-    public static UserDeliveryProfile Create(Guid userId, string fullName, string phoneNumber, string address)
+    public static UserDeliveryProfile Create(
+        Guid userId,
+        string fullName,
+        string phoneNumber,
+        string address,
+        int? provinceId = null,
+        string? provinceName = null,
+        int? districtId = null,
+        string? districtName = null,
+        string? wardCode = null,
+        string? wardName = null)
     {
         if (userId == Guid.Empty)
         {
@@ -48,11 +74,26 @@ public class UserDeliveryProfile : EntityBase
                 : phoneNumber.Trim(),
             Address = string.IsNullOrWhiteSpace(address)
                 ? throw new ArgumentException("Address is required.", nameof(address))
-                : address.Trim()
+                : address.Trim(),
+            ProvinceId = provinceId,
+            ProvinceName = string.IsNullOrWhiteSpace(provinceName) ? null : provinceName.Trim(),
+            DistrictId = districtId,
+            DistrictName = string.IsNullOrWhiteSpace(districtName) ? null : districtName.Trim(),
+            WardCode = string.IsNullOrWhiteSpace(wardCode) ? null : wardCode.Trim(),
+            WardName = string.IsNullOrWhiteSpace(wardName) ? null : wardName.Trim()
         };
     }
 
-    public void Update(string fullName, string phoneNumber, string address)
+    public void Update(
+        string fullName,
+        string phoneNumber,
+        string address,
+        int? provinceId = null,
+        string? provinceName = null,
+        int? districtId = null,
+        string? districtName = null,
+        string? wardCode = null,
+        string? wardName = null)
     {
         FullName = string.IsNullOrWhiteSpace(fullName)
             ? throw new ArgumentException("Full name is required.", nameof(fullName))
@@ -63,5 +104,11 @@ public class UserDeliveryProfile : EntityBase
         Address = string.IsNullOrWhiteSpace(address)
             ? throw new ArgumentException("Address is required.", nameof(address))
             : address.Trim();
+        ProvinceId = provinceId;
+        ProvinceName = string.IsNullOrWhiteSpace(provinceName) ? null : provinceName.Trim();
+        DistrictId = districtId;
+        DistrictName = string.IsNullOrWhiteSpace(districtName) ? null : districtName.Trim();
+        WardCode = string.IsNullOrWhiteSpace(wardCode) ? null : wardCode.Trim();
+        WardName = string.IsNullOrWhiteSpace(wardName) ? null : wardName.Trim();
     }
 }

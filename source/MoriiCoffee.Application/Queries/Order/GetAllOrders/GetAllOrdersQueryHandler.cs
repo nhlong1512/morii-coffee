@@ -38,6 +38,13 @@ public class GetAllOrdersQueryHandler : IQueryHandler<GetAllOrdersQuery, List<Or
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(cancellationToken);
 
+        var orderIds = orders.Select(o => o.Id).ToList();
+        var shipmentMap = orderIds.Count == 0
+            ? new Dictionary<Guid, MoriiCoffee.Domain.Aggregates.ShippingAggregate.Shipment>()
+            : await _unitOfWork.Shipments
+                .FindByCondition(s => !s.IsDeleted && orderIds.Contains(s.OrderId), false)
+                .ToDictionaryAsync(s => s.OrderId, cancellationToken);
+
         return orders.Select(o => new OrderSummaryDto
         {
             Id = o.Id,
@@ -45,6 +52,10 @@ public class GetAllOrdersQueryHandler : IQueryHandler<GetAllOrdersQuery, List<Or
             Total = o.Total,
             OrderStatus = o.OrderStatus,
             PaymentMethod = o.PaymentMethod,
+            DeliveryMethod = o.DeliveryMethod,
+            ShippingProvider = o.ShippingProvider,
+            ShipmentStatus = shipmentMap.GetValueOrDefault(o.Id)?.Status,
+            ShipmentStatusLabel = shipmentMap.GetValueOrDefault(o.Id)?.StatusLabel,
             CreatedAt = o.CreatedAt,
             UpdatedAt = o.UpdatedAt
         }).ToList();

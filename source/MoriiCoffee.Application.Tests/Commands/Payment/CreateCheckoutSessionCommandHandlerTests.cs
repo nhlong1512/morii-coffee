@@ -98,6 +98,9 @@ public class CreateCheckoutSessionCommandHandlerTests
         storedDraft.SessionId.Should().Be("cs_test_happy");
         storedDraft.Amount.Should().Be(137_000m);
         storedDraft.Items.Should().HaveCount(2);
+        storedDraft.ProvinceId.Should().Be(79);
+        storedDraft.DistrictName.Should().Be("District 11");
+        storedDraft.WardCode.Should().Be("01001");
 
         _gateway.Verify(g => g.CreateCheckoutSessionAsync(
             It.Is<CreateCheckoutSessionRequest>(request =>
@@ -132,6 +135,12 @@ public class CreateCheckoutSessionCommandHandlerTests
         FullName = "Hữu Long Nguyễn",
         PhoneNumber = "0775504619",
         Address = "1170/61 3 Tháng 2, ward 8, district 11",
+        ProvinceId = 79,
+        ProvinceName = "Ho Chi Minh",
+        DistrictId = 771,
+        DistrictName = "District 11",
+        WardCode = "01001",
+        WardName = "Ward 8",
         Notes = "No ice",
         SaveDeliveryProfile = true
     };

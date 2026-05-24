@@ -70,5 +70,14 @@ public interface IUnitOfWork : IDisposable
     /// <summary>Repository for managing store locations.</summary>
     IStoresRepository Stores { get; }
 
+    /// <summary>Repository for reading cached GHN master data.</summary>
+    IShippingMasterDataRepository ShippingMasterData { get; }
+
+    /// <summary>Repository for normalized shipments linked to orders.</summary>
+    IShipmentRepository Shipments { get; }
+
+    /// <summary>Repository for GHN webhook audit/idempotency rows.</summary>
+    IShipmentWebhookEventRepository ShipmentWebhookEvents { get; }
+
     #endregion
 }

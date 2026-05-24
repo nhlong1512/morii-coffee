@@ -16,6 +16,7 @@ using MoriiCoffee.Domain.Aggregates.UserAggregate;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
 using MoriiCoffee.Domain.Aggregates.StoreAggregate;
 using MoriiCoffee.Domain.Aggregates.StoreAggregate.Entities;
+using MoriiCoffee.Domain.Aggregates.ShippingAggregate;
 using MoriiCoffee.Domain.Aggregates.WishlistAggregate;
 
 namespace MoriiCoffee.Infrastructure.Persistence.Data;
@@ -75,6 +76,11 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
 
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
+    public DbSet<ShippingProvince> ShippingProvinces { get; set; }
+    public DbSet<ShippingDistrict> ShippingDistricts { get; set; }
+    public DbSet<ShippingWard> ShippingWards { get; set; }
+    public DbSet<Shipment> Shipments { get; set; }
+    public DbSet<ShipmentWebhookEvent> ShipmentWebhookEvents { get; set; }
 
     #endregion
 

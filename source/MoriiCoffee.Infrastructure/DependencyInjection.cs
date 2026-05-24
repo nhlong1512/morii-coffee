@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MoriiCoffee.Application.Services.Shipping;
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Infrastructure.Clock;
 using MoriiCoffee.Infrastructure.Configurations;
@@ -9,8 +10,10 @@ using MoriiCoffee.Infrastructure.Services.Cart;
 using MoriiCoffee.Infrastructure.Services.Email;
 using MoriiCoffee.Infrastructure.Services.Order;
 using MoriiCoffee.Infrastructure.Services.Payment;
+using MoriiCoffee.Infrastructure.Services.Shipping;
 using MoriiCoffee.Application.Services;
 using MoriiCoffee.Application.Services.Reports;
+using MoriiCoffee.Domain.Shared.Settings;
 
 namespace MoriiCoffee.Infrastructure;
 
@@ -40,7 +43,33 @@ public static class DependencyInjection
         services.ConfigurePersistenceServices();
         services.ConfigureHangfire(configuration);
         services.ConfigureStripe(configuration);
+        services.ConfigureShippingGateway();
         services.ConfigureDependencyInjection();
+
+        return services;
+    }
+
+    public static IServiceCollection ConfigureShippingGateway(this IServiceCollection services)
+    {
+        services.AddHttpClient<IShippingGateway, GhnShippingGateway>((sp, client) =>
+        {
+            var settings = sp.GetRequiredService<GhnSettings>();
+            if (!string.IsNullOrWhiteSpace(settings.BaseUrl))
+                client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/'));
+
+            client.DefaultRequestHeaders.Add("Token", settings.Token);
+            client.DefaultRequestHeaders.Add("ShopId", settings.ShopId.ToString());
+        })
+        .ConfigurePrimaryHttpMessageHandler(sp =>
+        {
+            var settings = sp.GetRequiredService<GhnSettings>();
+            return new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = settings.SkipTlsCertificateValidation
+                    ? HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                    : null
+            };
+        });
 
         return services;
     }
@@ -57,6 +86,12 @@ public static class DependencyInjection
         services.AddScoped<IOrderIdGenerator, OrderIdGenerator>();
         services.AddScoped<IStripeCheckoutDraftService, StripeCheckoutDraftService>();
         services.AddScoped<IPaymentGateway, StripePaymentGateway>();
+        services.AddScoped<ShippingPackageMetricsService>();
+        services.AddScoped<ShippingQuoteFingerprintService>();
+        services.AddScoped<ShippingQuoteValidationService>();
+        services.AddScoped<ShipmentClientOrderCodeGenerator>();
+        services.AddScoped<ShipmentStatusMapper>();
+        services.AddScoped<ShipmentLifecycleService>();
         services.AddScoped<ComparisonPeriodResolver>();
         services.AddScoped<ReportQueryNormalizer>();
         return services;

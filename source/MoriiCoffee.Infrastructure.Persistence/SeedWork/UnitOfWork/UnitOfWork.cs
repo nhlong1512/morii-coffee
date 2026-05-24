@@ -30,6 +30,9 @@ public class UnitOfWork : IUnitOfWork
     private PaymentWebhookEventRepository? _paymentWebhookEvents;
     private AdminReportsReadRepository? _adminReports;
     private StoresRepository? _stores;
+    private ShippingMasterDataRepository? _shippingMasterData;
+    private ShipmentRepository? _shipments;
+    private ShipmentWebhookEventRepository? _shipmentWebhookEvents;
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -77,6 +80,15 @@ public class UnitOfWork : IUnitOfWork
 
     public IStoresRepository Stores =>
         _stores ??= new StoresRepository(_context);
+
+    public IShippingMasterDataRepository ShippingMasterData =>
+        _shippingMasterData ??= new ShippingMasterDataRepository(_context);
+
+    public IShipmentRepository Shipments =>
+        _shipments ??= new ShipmentRepository(_context);
+
+    public IShipmentWebhookEventRepository ShipmentWebhookEvents =>
+        _shipmentWebhookEvents ??= new ShipmentWebhookEventRepository(_context);
 
     public async Task<int> CommitAsync() =>
         await _context.SaveChangesAsync();

@@ -53,8 +53,22 @@ public class PaymentsController : ControllerBase
             FullName = dto.FullName,
             PhoneNumber = dto.PhoneNumber,
             Address = dto.Address,
+            ProvinceId = dto.ProvinceId,
+            ProvinceName = dto.ProvinceName,
+            DistrictId = dto.DistrictId,
+            DistrictName = dto.DistrictName,
+            WardCode = dto.WardCode,
+            WardName = dto.WardName,
             Notes = dto.Notes,
-            SaveDeliveryProfile = dto.SaveDeliveryProfile
+            SaveDeliveryProfile = dto.SaveDeliveryProfile,
+            DeliveryMethod = dto.DeliveryMethod,
+            ShippingQuoteFingerprint = dto.ShippingQuoteFingerprint,
+            ShippingServiceId = dto.ShippingServiceId,
+            ShippingServiceTypeId = dto.ShippingServiceTypeId,
+            ShippingServiceLabel = dto.ShippingServiceLabel,
+            ShippingFee = dto.ShippingFee,
+            ShippingQuoteExpiresAt = dto.ShippingQuoteExpiresAt,
+            ShippingProviderEnvironment = dto.ShippingProviderEnvironment
         });
 
         return StatusCode(201, new ApiCreatedResponse(result));

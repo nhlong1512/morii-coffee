@@ -36,7 +36,17 @@ public class GetMyDeliveryProfileQueryHandlerTests
     public async Task Handle_ProfileExists_ReturnsDto()
     {
         var userId = Guid.NewGuid();
-        var profile = UserDeliveryProfile.Create(userId, "Nguyễn Văn A", "0901234567", "123 Đường ABC");
+        var profile = UserDeliveryProfile.Create(
+            userId,
+            "Nguyễn Văn A",
+            "0901234567",
+            "123 Đường ABC",
+            79,
+            "Ho Chi Minh",
+            760,
+            "District 1",
+            "26734",
+            "Ben Nghe");
         _profilesRepo.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync(profile);
 
         var result = await _handler.Handle(new GetMyDeliveryProfileQuery(userId), CancellationToken.None);
@@ -45,5 +55,8 @@ public class GetMyDeliveryProfileQueryHandlerTests
         result!.FullName.Should().Be("Nguyễn Văn A");
         result.PhoneNumber.Should().Be("0901234567");
         result.Address.Should().Be("123 Đường ABC");
+        result.ProvinceId.Should().Be(79);
+        result.DistrictName.Should().Be("District 1");
+        result.WardCode.Should().Be("26734");
     }
 }

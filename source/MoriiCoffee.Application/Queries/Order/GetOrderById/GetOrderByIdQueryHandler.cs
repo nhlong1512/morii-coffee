@@ -1,6 +1,7 @@
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
+using MoriiCoffee.Application.SeedWork.DTOs.Shipping;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.SeedWork.Query;
 using MoriiCoffee.Domain.Shared.Settings;
@@ -58,6 +59,7 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDt
         var payments = await _unitOfWork.Payments.ListByOrderIdAsync(order.Id);
         var latestPayment = payments.FirstOrDefault();
         var paymentStatus = PaymentStatusResolver.Resolve(order, payments);
+        var shipment = await _unitOfWork.Shipments.GetByOrderIdAsync(order.Id);
 
         return new OrderDto
         {
@@ -67,6 +69,20 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDt
             DeliveryFullName = order.DeliveryInfo.FullName,
             DeliveryPhoneNumber = order.DeliveryInfo.PhoneNumber,
             DeliveryAddress = order.DeliveryInfo.Address,
+            DeliveryProvinceId = order.DeliveryInfo.ProvinceId,
+            DeliveryProvinceName = order.DeliveryInfo.ProvinceName,
+            DeliveryDistrictId = order.DeliveryInfo.DistrictId,
+            DeliveryDistrictName = order.DeliveryInfo.DistrictName,
+            DeliveryWardCode = order.DeliveryInfo.WardCode,
+            DeliveryWardName = order.DeliveryInfo.WardName,
+            DeliveryMethod = order.DeliveryMethod,
+            ShippingProvider = order.ShippingProvider,
+            ShippingQuoteFingerprint = order.ShippingQuoteFingerprint,
+            ShippingServiceId = order.ShippingServiceId,
+            ShippingServiceTypeId = order.ShippingServiceTypeId,
+            ShippingServiceLabel = order.ShippingServiceLabel,
+            ShippingQuoteExpiresAt = order.ShippingQuoteExpiresAt,
+            ShippingProviderEnvironment = order.ShippingProviderEnvironment,
             Notes = order.Notes,
             PaymentMethod = order.PaymentMethod,
             Subtotal = order.Subtotal,
@@ -89,6 +105,26 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDt
             },
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt,
+            Shipment = shipment is null ? null : new ShipmentSummaryDto
+            {
+                Id = shipment.Id,
+                Provider = shipment.Provider,
+                ProviderEnvironment = shipment.ProviderEnvironment,
+                Status = shipment.Status,
+                StatusLabel = shipment.StatusLabel,
+                ClientOrderCode = shipment.ClientOrderCode,
+                ProviderOrderCode = shipment.ProviderOrderCode,
+                ShopId = shipment.ShopId,
+                ServiceId = shipment.ServiceId,
+                ServiceTypeId = shipment.ServiceTypeId,
+                FeeTotal = shipment.FeeTotal,
+                ExpectedDeliveryAt = shipment.ExpectedDeliveryAt,
+                TrackingUrl = shipment.TrackingUrl,
+                FailureReasonCode = shipment.FailureReasonCode,
+                FailureReason = shipment.FailureReason,
+                Note = shipment.Note,
+                LastSyncedAt = shipment.LastSyncedAt
+            },
             Items = order.Items.Select(i => new OrderItemDto
             {
                 Id = i.Id,

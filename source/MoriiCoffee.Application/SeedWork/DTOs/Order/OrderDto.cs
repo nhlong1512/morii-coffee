@@ -1,5 +1,7 @@
 using MoriiCoffee.Domain.Shared.Enums.Order;
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
+using MoriiCoffee.Application.SeedWork.DTOs.Shipping;
+using MoriiCoffee.Domain.Shared.Enums.Shipping;
 
 namespace MoriiCoffee.Application.SeedWork.DTOs.Order;
 
@@ -26,6 +28,36 @@ public class OrderDto
 
     /// <summary>Full street address for delivery.</summary>
     public string DeliveryAddress { get; set; } = null!;
+
+    public int? DeliveryProvinceId { get; set; }
+
+    public string? DeliveryProvinceName { get; set; }
+
+    public int? DeliveryDistrictId { get; set; }
+
+    public string? DeliveryDistrictName { get; set; }
+
+    public string? DeliveryWardCode { get; set; }
+
+    public string? DeliveryWardName { get; set; }
+
+    public EDeliveryMethod DeliveryMethod { get; set; }
+
+    public EShippingProvider? ShippingProvider { get; set; }
+
+    public string? ShippingQuoteFingerprint { get; set; }
+
+    public int? ShippingServiceId { get; set; }
+
+    public int? ShippingServiceTypeId { get; set; }
+
+    public string? ShippingServiceLabel { get; set; }
+
+    public DateTime? ShippingQuoteExpiresAt { get; set; }
+
+    public string? ShippingProviderEnvironment { get; set; }
+
+    public ShipmentSummaryDto? Shipment { get; set; }
 
     /// <summary>Optional order notes provided by the customer.</summary>
     public string? Notes { get; set; }

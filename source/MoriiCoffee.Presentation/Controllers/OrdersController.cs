@@ -55,8 +55,22 @@ public class OrdersController : ControllerBase
             FullName = dto.FullName,
             PhoneNumber = dto.PhoneNumber,
             Address = dto.Address,
+            ProvinceId = dto.ProvinceId,
+            ProvinceName = dto.ProvinceName,
+            DistrictId = dto.DistrictId,
+            DistrictName = dto.DistrictName,
+            WardCode = dto.WardCode,
+            WardName = dto.WardName,
             Notes = dto.Notes,
             PaymentMethod = dto.PaymentMethod,
+            DeliveryMethod = dto.DeliveryMethod,
+            ShippingQuoteFingerprint = dto.ShippingQuoteFingerprint,
+            ShippingServiceId = dto.ShippingServiceId,
+            ShippingServiceTypeId = dto.ShippingServiceTypeId,
+            ShippingServiceLabel = dto.ShippingServiceLabel,
+            ShippingFee = dto.ShippingFee,
+            ShippingQuoteExpiresAt = dto.ShippingQuoteExpiresAt,
+            ShippingProviderEnvironment = dto.ShippingProviderEnvironment,
             SaveDeliveryProfile = dto.SaveDeliveryProfile
         });
 

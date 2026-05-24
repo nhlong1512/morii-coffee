@@ -26,6 +26,9 @@ public static class SettingsConfiguration
         var orderSettings = configuration.GetSection(nameof(OrderSettings)).Get<OrderSettings>();
         services.AddSingleton<OrderSettings>(orderSettings!);
 
+        var ghnSettings = configuration.GetSection(GhnSettings.SectionName).Get<GhnSettings>();
+        services.AddSingleton(ghnSettings ?? new GhnSettings());
+
         return services;
     }
 }

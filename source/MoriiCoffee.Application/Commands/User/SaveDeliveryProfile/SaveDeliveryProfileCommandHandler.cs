@@ -25,12 +25,31 @@ public class SaveDeliveryProfileCommandHandler : ICommandHandler<SaveDeliveryPro
 
         if (existing is null)
         {
-            var newProfile = UserDeliveryProfile.Create(command.UserId, command.FullName, command.PhoneNumber, command.Address);
+            var newProfile = UserDeliveryProfile.Create(
+                command.UserId,
+                command.FullName,
+                command.PhoneNumber,
+                command.Address,
+                command.ProvinceId,
+                command.ProvinceName,
+                command.DistrictId,
+                command.DistrictName,
+                command.WardCode,
+                command.WardName);
             await _unitOfWork.UserDeliveryProfiles.UpsertAsync(newProfile);
         }
         else
         {
-            existing.Update(command.FullName, command.PhoneNumber, command.Address);
+            existing.Update(
+                command.FullName,
+                command.PhoneNumber,
+                command.Address,
+                command.ProvinceId,
+                command.ProvinceName,
+                command.DistrictId,
+                command.DistrictName,
+                command.WardCode,
+                command.WardName);
             await _unitOfWork.UserDeliveryProfiles.UpsertAsync(existing);
         }
 
@@ -40,7 +59,13 @@ public class SaveDeliveryProfileCommandHandler : ICommandHandler<SaveDeliveryPro
         {
             FullName = command.FullName,
             PhoneNumber = command.PhoneNumber,
-            Address = command.Address
+            Address = command.Address,
+            ProvinceId = command.ProvinceId,
+            ProvinceName = command.ProvinceName,
+            DistrictId = command.DistrictId,
+            DistrictName = command.DistrictName,
+            WardCode = command.WardCode,
+            WardName = command.WardName
         };
     }
 }

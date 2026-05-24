@@ -11,4 +11,16 @@ public class SaveDeliveryProfileDto
 
     /// <summary>Delivery address.</summary>
     public string Address { get; set; } = null!;
+
+    public int? ProvinceId { get; set; }
+
+    public string? ProvinceName { get; set; }
+
+    public int? DistrictId { get; set; }
+
+    public string? DistrictName { get; set; }
+
+    public string? WardCode { get; set; }
+
+    public string? WardName { get; set; }
 }

@@ -26,7 +26,13 @@ public class GetMyDeliveryProfileQueryHandler : IQueryHandler<GetMyDeliveryProfi
         {
             FullName = profile.FullName,
             PhoneNumber = profile.PhoneNumber,
-            Address = profile.Address
+            Address = profile.Address,
+            ProvinceId = profile.ProvinceId,
+            ProvinceName = profile.ProvinceName,
+            DistrictId = profile.DistrictId,
+            DistrictName = profile.DistrictName,
+            WardCode = profile.WardCode,
+            WardName = profile.WardName
         };
     }
 }

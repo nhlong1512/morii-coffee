@@ -4,10 +4,12 @@ using MoriiCoffee.Application.Commands.Order.PlaceOrder;
 using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.DTOs.Cart;
 using MoriiCoffee.Application.SeedWork.Exceptions;
+using MoriiCoffee.Application.Services.Shipping;
 using MoriiCoffee.Domain.Aggregates.UserAggregate.Entities;
 using MoriiCoffee.Domain.Repositories;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Enums.Order;
+using MoriiCoffee.Domain.Shared.Enums.Shipping;
 using MoriiCoffee.Domain.Shared.Settings;
 using MockQueryable;
 using Xunit;
@@ -90,6 +92,8 @@ public class PlaceOrderCommandHandlerTests
         result.OrderNumber.Should().Be("MRC-20260502-001");
         result.PaymentInfo.PaymentStatus.Should().Be(EPaymentStatus.NotRequired);
         result.PaymentInfo.AttemptCount.Should().Be(0);
+        result.DeliveryProvinceId.Should().Be(79);
+        result.DeliveryDistrictName.Should().Be("District 1");
         _cartService.Verify(c => c.ClearCartAsync(userId), Times.Once);
         _unitOfWork.Verify(u => u.ExecuteInTransactionAsync(It.IsAny<Func<Task>>()), Times.Once);
     }
@@ -106,7 +110,7 @@ public class PlaceOrderCommandHandlerTests
         await _handler.Handle(BuildCommand(userId, saveDeliveryProfile: true), CancellationToken.None);
 
         _profilesRepo.Verify(
-            r => r.UpsertAsync(It.Is<UserDeliveryProfile>(p => p.UserId == userId)),
+            r => r.UpsertAsync(It.Is<UserDeliveryProfile>(p => p.UserId == userId && p.WardCode == "26734")),
             Times.Once);
     }
 
@@ -124,7 +128,7 @@ public class PlaceOrderCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         _profilesRepo.Verify(
-            r => r.UpsertAsync(It.Is<UserDeliveryProfile>(p => p.FullName == command.FullName)),
+            r => r.UpsertAsync(It.Is<UserDeliveryProfile>(p => p.FullName == command.FullName && p.ProvinceName == command.ProvinceName)),
             Times.Once);
     }
 
@@ -155,6 +159,31 @@ public class PlaceOrderCommandHandlerTests
         result.Items.Single().ImageUrl.Should().Be("https://cdn.test/products/abc/123-photo.png");
     }
 
+    [Fact]
+    public async Task Handle_GhnDeliveryWithValidQuote_PersistsShippingSnapshot()
+    {
+        var userId = Guid.NewGuid();
+        _cartService.Setup(c => c.GetCartAsync(userId)).ReturnsAsync(BuildCart());
+        _orderIdGenerator.Setup(g => g.GenerateAsync()).ReturnsAsync("MRC-20260502-001");
+
+        OrderEntity? createdOrder = null;
+        _ordersRepo.Setup(r => r.CreateAsync(It.IsAny<OrderEntity>()))
+            .Callback<OrderEntity>(order => createdOrder = order)
+            .Returns(Task.CompletedTask);
+
+        var command = BuildGhnCommand(userId);
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        createdOrder.Should().NotBeNull();
+        createdOrder!.DeliveryMethod.Should().Be(EDeliveryMethod.GHN_DELIVERY);
+        createdOrder.ShippingProvider.Should().Be(EShippingProvider.GHN);
+        createdOrder.ShippingQuoteFingerprint.Should().Be(command.ShippingQuoteFingerprint);
+        createdOrder.ShippingServiceId.Should().Be(command.ShippingServiceId);
+        createdOrder.Shipping.Should().Be(command.ShippingFee);
+        result.Shipping.Should().Be(command.ShippingFee!.Value);
+        result.ShippingServiceId.Should().Be(command.ShippingServiceId);
+    }
+
     private static CartDto BuildCart(Guid? productId = null, string? imageUrl = null) => new()
     {
         Items =
@@ -176,7 +205,48 @@ public class PlaceOrderCommandHandlerTests
         FullName = "Nguyễn Văn A",
         PhoneNumber = "0901234567",
         Address = "123 Đường ABC, Quận 1",
+        ProvinceId = 79,
+        ProvinceName = "Ho Chi Minh",
+        DistrictId = 760,
+        DistrictName = "District 1",
+        WardCode = "26734",
+        WardName = "Ben Nghe",
+        DeliveryMethod = MoriiCoffee.Domain.Shared.Enums.Shipping.EDeliveryMethod.PICKUP,
         PaymentMethod = EPaymentMethod.COD,
         SaveDeliveryProfile = saveDeliveryProfile
     };
+
+    private static PlaceOrderCommand BuildGhnCommand(Guid userId)
+    {
+        var command = BuildCommand(userId);
+        command.DeliveryMethod = EDeliveryMethod.GHN_DELIVERY;
+        command.ShippingServiceId = 53320;
+        command.ShippingServiceTypeId = 2;
+        command.ShippingServiceLabel = "GHN Chuẩn";
+        command.ShippingFee = 15_000m;
+        command.ShippingQuoteExpiresAt = DateTime.UtcNow.AddMinutes(15);
+        command.ShippingProviderEnvironment = "sandbox";
+
+        var metrics = new ShippingPackageMetricsService().BuildFromCart(BuildCart().Items);
+        command.ShippingQuoteFingerprint = new ShippingQuoteFingerprintService().Generate(
+            command.DeliveryMethod,
+            command.PaymentMethod,
+            new MoriiCoffee.Application.SeedWork.DTOs.Shipping.ShippingAddressDto
+            {
+                FullName = command.FullName,
+                PhoneNumber = command.PhoneNumber,
+                AddressLine = command.Address,
+                ProvinceId = command.ProvinceId,
+                ProvinceName = command.ProvinceName,
+                DistrictId = command.DistrictId,
+                DistrictName = command.DistrictName,
+                WardCode = command.WardCode,
+                WardName = command.WardName
+            },
+            metrics,
+            command.ShippingServiceId.Value,
+            command.ShippingServiceTypeId,
+            command.ShippingQuoteExpiresAt.Value);
+        return command;
+    }
 }

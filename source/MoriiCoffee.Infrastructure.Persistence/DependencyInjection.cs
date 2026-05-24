@@ -43,6 +43,9 @@ public static class DependencyInjection
             .AddScoped<IBannersRepository, BannersRepository>()
             .AddScoped<IOrderRepository, OrdersRepository>()
             .AddScoped<IUserDeliveryProfileRepository, UserDeliveryProfilesRepository>()
+            .AddScoped<IShippingMasterDataRepository, ShippingMasterDataRepository>()
+            .AddScoped<IShipmentRepository, ShipmentRepository>()
+            .AddScoped<IShipmentWebhookEventRepository, ShipmentWebhookEventRepository>()
             .AddScoped<IAdminReportsReadRepository, AdminReportsReadRepository>()
             .AddScoped<IStoresRepository, StoresRepository>();
 

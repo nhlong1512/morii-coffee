@@ -14,11 +14,18 @@ public class GetAllOrdersQueryHandlerTests
 {
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IOrderRepository> _ordersRepo = new();
+    private readonly Mock<IShipmentRepository> _shipmentsRepo = new();
     private readonly GetAllOrdersQueryHandler _handler;
 
     public GetAllOrdersQueryHandlerTests()
     {
         _unitOfWork.Setup(u => u.Orders).Returns(_ordersRepo.Object);
+        _unitOfWork.Setup(u => u.Shipments).Returns(_shipmentsRepo.Object);
+        _shipmentsRepo.Setup(r => r.FindByCondition(
+                It.IsAny<System.Linq.Expressions.Expression<Func<MoriiCoffee.Domain.Aggregates.ShippingAggregate.Shipment, bool>>>(),
+                false))
+            .Returns((System.Linq.Expressions.Expression<Func<MoriiCoffee.Domain.Aggregates.ShippingAggregate.Shipment, bool>> predicate, bool _) =>
+                new List<MoriiCoffee.Domain.Aggregates.ShippingAggregate.Shipment>().BuildMock().Where(predicate));
         _handler = new GetAllOrdersQueryHandler(_unitOfWork.Object);
     }
 

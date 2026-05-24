@@ -121,6 +121,7 @@ public class PlaceOrderCodNonRegressionTests
         FullName = "Test User",
         PhoneNumber = "0900000000",
         Address = "1 Test St",
+        DeliveryMethod = MoriiCoffee.Domain.Shared.Enums.Shipping.EDeliveryMethod.PICKUP,
         PaymentMethod = EPaymentMethod.COD,
         SaveDeliveryProfile = false
     };

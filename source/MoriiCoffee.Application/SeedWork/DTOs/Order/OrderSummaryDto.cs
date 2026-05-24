@@ -1,4 +1,5 @@
 using MoriiCoffee.Domain.Shared.Enums.Order;
+using MoriiCoffee.Domain.Shared.Enums.Shipping;
 
 namespace MoriiCoffee.Application.SeedWork.DTOs.Order;
 
@@ -22,6 +23,14 @@ public class OrderSummaryDto
 
     /// <summary>Payment method selected when the order was placed.</summary>
     public EPaymentMethod PaymentMethod { get; set; }
+
+    public EDeliveryMethod DeliveryMethod { get; set; }
+
+    public EShippingProvider? ShippingProvider { get; set; }
+
+    public EShipmentStatus? ShipmentStatus { get; set; }
+
+    public string? ShipmentStatusLabel { get; set; }
 
     /// <summary>UTC timestamp when the order was created.</summary>
     public DateTime CreatedAt { get; set; }
