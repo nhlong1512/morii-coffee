@@ -55,7 +55,7 @@ public class CreateCheckoutSessionCommandHandler
 
         var storefrontUrl = _emailSettings.StorefrontUrl?.TrimEnd('/') ?? string.Empty;
         var draftId = Guid.NewGuid();
-        var amount = cart.Items.Sum(item => item.UnitPrice * item.Quantity);
+        var amount = cart.Items.Sum(item => item.UnitPrice * item.Quantity) + (command.ShippingFee ?? 0m);
 
         var request = new CreateCheckoutSessionRequest
         {

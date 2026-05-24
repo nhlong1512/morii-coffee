@@ -115,6 +115,46 @@ public class CreateCheckoutSessionCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WithShippingFee_IncludesShippingInTotal()
+    {
+        var userId = Guid.NewGuid();
+        var cart = BuildCart();
+        _cartService.Setup(c => c.GetCartAsync(userId)).ReturnsAsync(cart);
+
+        _gateway
+            .Setup(g => g.CreateCheckoutSessionAsync(
+                It.IsAny<CreateCheckoutSessionRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CheckoutSessionResult
+            {
+                SessionId = "cs_test_shipping",
+                Url = "https://checkout.stripe.com/c/pay/cs_test_shipping",
+                ExpiresAtUtc = DateTime.UtcNow.AddHours(24)
+            });
+
+        StripeCheckoutDraftCacheDto? storedDraft = null;
+        _draftService
+            .Setup(s => s.StoreAsync(It.IsAny<StripeCheckoutDraftCacheDto>()))
+            .Callback<StripeCheckoutDraftCacheDto>(draft => storedDraft = draft)
+            .Returns(Task.CompletedTask);
+
+        var command = BuildCommand(userId);
+        command.ShippingFee = 42_900m;
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Total should be: (49k*2 + 39k) + 42.9k = 137k + 42.9k = 179.9k
+        result.Amount.Should().Be(179_900);
+        storedDraft.Should().NotBeNull();
+        storedDraft!.Amount.Should().Be(179_900m);
+
+        _gateway.Verify(g => g.CreateCheckoutSessionAsync(
+            It.Is<CreateCheckoutSessionRequest>(request =>
+                request.TotalAmount == 179_900),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_GatewayThrows_DoesNotStoreDraft()
     {
         var userId = Guid.NewGuid();
