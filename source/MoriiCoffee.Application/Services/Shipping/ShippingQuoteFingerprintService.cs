@@ -17,6 +17,10 @@ public class ShippingQuoteFingerprintService
         int? serviceTypeId,
         DateTime quoteExpiresAtUtc)
     {
+        var utcExpiry = quoteExpiresAtUtc.ToUniversalTime();
+        var expirySeconds = new DateTime(utcExpiry.Year, utcExpiry.Month, utcExpiry.Day,
+            utcExpiry.Hour, utcExpiry.Minute, utcExpiry.Second, DateTimeKind.Utc);
+
         var payload = string.Join('|',
             deliveryMethod,
             paymentMethod,
@@ -33,7 +37,7 @@ public class ShippingQuoteFingerprintService
             packageMetrics.ItemCount,
             serviceId,
             serviceTypeId?.ToString() ?? string.Empty,
-            quoteExpiresAtUtc.ToUniversalTime().Ticks);
+            expirySeconds.Ticks);
 
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
         return Convert.ToHexString(hash).ToLowerInvariant();
