@@ -67,16 +67,7 @@ public class CreateCheckoutSessionCommandHandler
             },
             TotalAmount = (long)amount,
             Currency = _stripeSettings.Currency,
-            Items = cart.Items
-                .Select(i => new CheckoutLineItem
-                {
-                    Name = string.IsNullOrWhiteSpace(i.VariantLabel)
-                        ? i.ProductName
-                        : $"{i.ProductName} — {i.VariantLabel}",
-                    UnitAmount = (long)i.UnitPrice,
-                    Quantity = i.Quantity
-                })
-                .ToList(),
+            Items = BuildCheckoutLineItems(cart, command.ShippingFee),
             SuccessUrl = $"{storefrontUrl}{_stripeSettings.SuccessUrlTemplate}",
             CancelUrl = $"{storefrontUrl}{_stripeSettings.CancelUrlPath}"
         };
@@ -126,6 +117,32 @@ public class CreateCheckoutSessionCommandHandler
             Currency = _stripeSettings.Currency,
             PublishableKey = _gateway.PublishableKey
         };
+    }
+
+    private static List<CheckoutLineItem> BuildCheckoutLineItems(CartDto cart, decimal? shippingFee)
+    {
+        var items = cart.Items
+            .Select(i => new CheckoutLineItem
+            {
+                Name = string.IsNullOrWhiteSpace(i.VariantLabel)
+                    ? i.ProductName
+                    : $"{i.ProductName} — {i.VariantLabel}",
+                UnitAmount = (long)i.UnitPrice,
+                Quantity = i.Quantity
+            })
+            .ToList();
+
+        if (shippingFee.HasValue && shippingFee.Value > 0)
+        {
+            items.Add(new CheckoutLineItem
+            {
+                Name = "Phí vận chuyển",
+                UnitAmount = (long)shippingFee.Value,
+                Quantity = 1
+            });
+        }
+
+        return items;
     }
 
     private static CartItemDto CloneCartItem(CartItemDto item)

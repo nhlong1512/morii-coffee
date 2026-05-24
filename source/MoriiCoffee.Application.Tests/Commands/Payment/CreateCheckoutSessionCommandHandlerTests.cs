@@ -115,7 +115,7 @@ public class CreateCheckoutSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithShippingFee_IncludesShippingInTotal()
+    public async Task Handle_WithShippingFee_IncludesShippingAsLineItem()
     {
         var userId = Guid.NewGuid();
         var cart = BuildCart();
@@ -143,14 +143,17 @@ public class CreateCheckoutSessionCommandHandlerTests
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Total should be: (49k*2 + 39k) + 42.9k = 137k + 42.9k = 179.9k
+        // Total: (49k*2 + 39k) + 42.9k = 137k + 42.9k = 179.9k
         result.Amount.Should().Be(179_900);
         storedDraft.Should().NotBeNull();
         storedDraft!.Amount.Should().Be(179_900m);
 
         _gateway.Verify(g => g.CreateCheckoutSessionAsync(
             It.Is<CreateCheckoutSessionRequest>(request =>
-                request.TotalAmount == 179_900),
+                request.TotalAmount == 179_900 &&
+                request.Items.Count == 3 && // 2 products + 1 shipping
+                request.Items[2].Name == "Phí vận chuyển" &&
+                request.Items[2].UnitAmount == 42_900),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
