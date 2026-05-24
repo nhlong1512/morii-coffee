@@ -119,7 +119,7 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
             {
                 var packageMetrics = _packageMetricsService.BuildFromCart(draft.Items);
                 _quoteValidationService.EnsureValid(
-                    BuildQuoteFromDraft(draft),
+                    BuildQuoteFromDraft(draft, packageMetrics),
                     draft.DeliveryMethod,
                     EPaymentMethod.STRIPE,
                     BuildAddress(draft),
@@ -334,7 +334,7 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
         WardName = draft.WardName
     };
 
-    private static ShippingQuoteDto BuildQuoteFromDraft(StripeCheckoutDraftCacheDto draft) => new()
+    private static ShippingQuoteDto BuildQuoteFromDraft(StripeCheckoutDraftCacheDto draft, ShippingPackageMetricsDto packageMetrics) => new()
     {
         Provider = EShippingProvider.GHN,
         Environment = draft.ShippingProviderEnvironment ?? "sandbox",
@@ -346,7 +346,7 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
             DisplayName = draft.ShippingServiceLabel ?? $"GHN Service {draft.ShippingServiceId}",
             ShortName = draft.ShippingServiceLabel ?? $"GHN Service {draft.ShippingServiceId}"
         },
-        PackageMetrics = new ShippingPackageMetricsDto(),
+        PackageMetrics = packageMetrics,
         QuoteExpiresAt = draft.ShippingQuoteExpiresAt ?? DateTime.UtcNow,
         QuoteFingerprint = draft.ShippingQuoteFingerprint ?? string.Empty
     };
