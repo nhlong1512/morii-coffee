@@ -29,6 +29,9 @@ public static class SettingsConfiguration
         var ghnSettings = configuration.GetSection(GhnSettings.SectionName).Get<GhnSettings>();
         services.AddSingleton(ghnSettings ?? new GhnSettings());
 
+        var rsaSettings = configuration.GetSection(RsaSettings.SectionName).Get<RsaSettings>();
+        services.AddSingleton(rsaSettings ?? new RsaSettings());
+
         return services;
     }
 }

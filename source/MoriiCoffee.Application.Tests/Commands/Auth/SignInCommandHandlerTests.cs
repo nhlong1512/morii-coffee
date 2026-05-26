@@ -18,12 +18,15 @@ public class SignInCommandHandlerTests
     private readonly Mock<UserManager<UserEntity>> _userManager;
     private readonly Mock<ITokenService> _tokenService = new();
     private readonly Mock<IMapper> _mapper = new();
+    private readonly Mock<IRsaDecryptionService> _rsaDecryption = new();
     private readonly SignInCommandHandler _handler;
 
     public SignInCommandHandlerTests()
     {
         _userManager = UserManagerHelper.Create();
-        _handler = new SignInCommandHandler(_userManager.Object, _tokenService.Object, _mapper.Object);
+        _rsaDecryption.Setup(r => r.Decrypt(It.IsAny<string>())).Returns<string>(s => s);
+        _handler = new SignInCommandHandler(
+            _userManager.Object, _tokenService.Object, _mapper.Object, _rsaDecryption.Object);
     }
 
     private static SignInCommand ValidCommand() => new()

@@ -54,7 +54,7 @@ public class SignUpCommandValidatorTests
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.PhoneNumber);
     }
 
-    // ── Password ───────────────────────────────────────────────────────
+    // ── Password (RSA-encrypted ciphertext — only presence is validated) ──
 
     [Fact]
     public void Validate_EmptyPassword_ReturnsError()
@@ -65,43 +65,12 @@ public class SignUpCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_PasswordTooShort_ReturnsError()
+    public void Validate_NonEmptyEncryptedPassword_NoError()
     {
+        // Represents a Base64 RSA-OAEP ciphertext — complexity is enforced client-side and by Identity.
         var cmd = ValidCommand();
-        cmd.Password = "Ab1!";
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Password);
-    }
-
-    [Fact]
-    public void Validate_PasswordMissingUppercase_ReturnsError()
-    {
-        var cmd = ValidCommand();
-        cmd.Password = "lowercase1!";
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Password);
-    }
-
-    [Fact]
-    public void Validate_PasswordMissingLowercase_ReturnsError()
-    {
-        var cmd = ValidCommand();
-        cmd.Password = "UPPERCASE1!";
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Password);
-    }
-
-    [Fact]
-    public void Validate_PasswordMissingDigit_ReturnsError()
-    {
-        var cmd = ValidCommand();
-        cmd.Password = "NoDigits!!A";
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Password);
-    }
-
-    [Fact]
-    public void Validate_PasswordMissingSpecialChar_ReturnsError()
-    {
-        var cmd = ValidCommand();
-        cmd.Password = "NoSpecial1A";
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Password);
+        cmd.Password = new string('A', 344);
+        _validator.TestValidate(cmd).ShouldNotHaveValidationErrorFor(x => x.Password);
     }
 
     // ── UserName (optional) ────────────────────────────────────────────

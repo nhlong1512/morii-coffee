@@ -78,6 +78,7 @@ public static class DependencyInjection
     {
         services.AddTransient<IDateTimeProvider, DateTimeProvider>();
         services.AddSingleton<ISerializeService, JsonSerializeService>();
+        services.AddSingleton<IRsaDecryptionService, RsaDecryptionService>();
         services.AddScoped<ICacheService, CacheService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IEmailService, BrevoEmailService>();

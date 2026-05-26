@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 using MoriiCoffee.Application.Commands.Auth.ResetPassword;
+using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Application.Tests.Helpers;
 using Xunit;
@@ -12,12 +13,14 @@ namespace MoriiCoffee.Application.Tests.Commands.Auth;
 public class ResetPasswordCommandHandlerTests
 {
     private readonly Mock<UserManager<UserEntity>> _userManager;
+    private readonly Mock<IRsaDecryptionService> _rsaDecryption = new();
     private readonly ResetPasswordCommandHandler _handler;
 
     public ResetPasswordCommandHandlerTests()
     {
         _userManager = UserManagerHelper.Create();
-        _handler = new ResetPasswordCommandHandler(_userManager.Object);
+        _rsaDecryption.Setup(r => r.Decrypt(It.IsAny<string>())).Returns<string>(s => s);
+        _handler = new ResetPasswordCommandHandler(_userManager.Object, _rsaDecryption.Object);
     }
 
     private static ResetPasswordCommand ValidCommand(string email = "user@example.com") => new()

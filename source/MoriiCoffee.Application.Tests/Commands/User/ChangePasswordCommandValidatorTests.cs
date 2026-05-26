@@ -23,10 +23,11 @@ public class ChangePasswordCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_NewPasswordTooShort_ReturnsError()
+    public void Validate_NonEmptyEncryptedNewPassword_NoError()
     {
-        var cmd = new ChangePasswordCommand { UserId = Guid.NewGuid(), CurrentPassword = "OldPass1!", NewPassword = "Ab1!" };
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.NewPassword);
+        // Represents a Base64 RSA-OAEP ciphertext — complexity is enforced client-side and by Identity.
+        var cmd = new ChangePasswordCommand { UserId = Guid.NewGuid(), CurrentPassword = "OldPass1!", NewPassword = new string('A', 344) };
+        _validator.TestValidate(cmd).ShouldNotHaveValidationErrorFor(x => x.NewPassword);
     }
 
     [Fact]

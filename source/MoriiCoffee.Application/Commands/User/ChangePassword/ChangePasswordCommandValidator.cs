@@ -7,7 +7,9 @@ public class ChangePasswordCommandValidator : AbstractValidator<ChangePasswordCo
 {
     public ChangePasswordCommandValidator()
     {
+        // Both passwords arrive RSA-OAEP encrypted — only presence is validated here.
+        // Complexity is enforced on the client and by ASP.NET Identity after decryption.
         RuleFor(x => x.CurrentPassword).NotEmpty();
-        RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(8);
+        RuleFor(x => x.NewPassword).NotEmpty();
     }
 }

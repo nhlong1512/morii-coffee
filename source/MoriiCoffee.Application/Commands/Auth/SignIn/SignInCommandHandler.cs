@@ -11,21 +11,24 @@ using MoriiCoffee.Domain.Shared.Enums.User;
 
 namespace MoriiCoffee.Application.Commands.Auth.SignIn;
 
-/// <summary>Handles sign-in: resolves the user by email only, validates the password and account status, then issues new tokens.</summary>
+/// <summary>Handles sign-in: decrypts the RSA-encrypted password, resolves the user by email, validates credentials, then issues tokens.</summary>
 public class SignInCommandHandler : ICommandHandler<SignInCommand, AuthResponseDto>
 {
     private readonly UserManager<UserEntity> _userManager;
     private readonly ITokenService _tokenService;
     private readonly IMapper _mapper;
+    private readonly IRsaDecryptionService _rsaDecryption;
 
     public SignInCommandHandler(
         UserManager<UserEntity> userManager,
         ITokenService tokenService,
-        IMapper mapper)
+        IMapper mapper,
+        IRsaDecryptionService rsaDecryption)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _mapper = mapper;
+        _rsaDecryption = rsaDecryption;
     }
 
     public async Task<AuthResponseDto> Handle(SignInCommand request, CancellationToken cancellationToken)
@@ -43,7 +46,8 @@ public class SignInCommandHandler : ICommandHandler<SignInCommand, AuthResponseD
             throw new UnauthorizedException("Your account has been deactivated.");
         }
 
-        var passwordValid = await _userManager.CheckPasswordAsync(user, request.Password);
+        var plainPassword = _rsaDecryption.Decrypt(request.Password);
+        var passwordValid = await _userManager.CheckPasswordAsync(user, plainPassword);
         if (!passwordValid)
         {
             throw new UnauthorizedException("Invalid credentials.");

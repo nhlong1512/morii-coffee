@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 using MoriiCoffee.Application.Commands.User.ChangePassword;
+using MoriiCoffee.Application.SeedWork.Abstractions;
 using MoriiCoffee.Application.SeedWork.Exceptions;
 using MoriiCoffee.Application.Tests.Helpers;
 using Xunit;
@@ -12,12 +13,14 @@ namespace MoriiCoffee.Application.Tests.Commands.User;
 public class ChangePasswordCommandHandlerTests
 {
     private readonly Mock<UserManager<UserEntity>> _userManager;
+    private readonly Mock<IRsaDecryptionService> _rsaDecryption = new();
     private readonly ChangePasswordCommandHandler _handler;
 
     public ChangePasswordCommandHandlerTests()
     {
         _userManager = UserManagerHelper.Create();
-        _handler = new ChangePasswordCommandHandler(_userManager.Object);
+        _rsaDecryption.Setup(r => r.Decrypt(It.IsAny<string>())).Returns<string>(s => s);
+        _handler = new ChangePasswordCommandHandler(_userManager.Object, _rsaDecryption.Object);
     }
 
     [Fact]

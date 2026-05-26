@@ -19,13 +19,15 @@ public class SignUpCommandHandlerTests
     private readonly Mock<ITokenService> _tokenService = new();
     private readonly Mock<IEmailService> _emailService = new();
     private readonly Mock<IMapper> _mapper = new();
+    private readonly Mock<IRsaDecryptionService> _rsaDecryption = new();
     private readonly SignUpCommandHandler _handler;
 
     public SignUpCommandHandlerTests()
     {
         _userManager = UserManagerHelper.Create();
+        _rsaDecryption.Setup(r => r.Decrypt(It.IsAny<string>())).Returns<string>(s => s);
         _handler = new SignUpCommandHandler(
-            _userManager.Object, _tokenService.Object, _emailService.Object, _mapper.Object);
+            _userManager.Object, _tokenService.Object, _emailService.Object, _mapper.Object, _rsaDecryption.Object);
     }
 
     private static SignUpCommand ValidCommand() => new(new SignUpDto

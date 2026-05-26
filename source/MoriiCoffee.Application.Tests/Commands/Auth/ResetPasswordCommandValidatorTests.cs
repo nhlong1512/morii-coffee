@@ -40,27 +40,20 @@ public class ResetPasswordCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_PasswordTooShort_ReturnsError()
+    public void Validate_EmptyNewPassword_ReturnsError()
     {
         var cmd = ValidCommand();
-        cmd.NewPassword = "Ab1!";
+        cmd.NewPassword = "";
         _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.NewPassword);
     }
 
     [Fact]
-    public void Validate_PasswordMissingUppercase_ReturnsError()
+    public void Validate_NonEmptyEncryptedNewPassword_NoError()
     {
+        // Represents a Base64 RSA-OAEP ciphertext — complexity is enforced client-side and by Identity.
         var cmd = ValidCommand();
-        cmd.NewPassword = "lowercase1!";
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.NewPassword);
-    }
-
-    [Fact]
-    public void Validate_PasswordMissingSpecialChar_ReturnsError()
-    {
-        var cmd = ValidCommand();
-        cmd.NewPassword = "NoSpecial1A";
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.NewPassword);
+        cmd.NewPassword = new string('A', 344);
+        _validator.TestValidate(cmd).ShouldNotHaveValidationErrorFor(x => x.NewPassword);
     }
 
     [Fact]

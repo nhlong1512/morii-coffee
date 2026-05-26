@@ -11,24 +11,27 @@ using UserEntity = MoriiCoffee.Domain.Aggregates.UserAggregate.User;
 
 namespace MoriiCoffee.Application.Commands.Auth.SignUp;
 
-/// <summary>Handles user registration: creates the account, assigns the CUSTOMER role, generates tokens, and sends a welcome email.</summary>
+/// <summary>Handles user registration: decrypts the RSA-encrypted password, creates the account, assigns the CUSTOMER role, generates tokens, and sends a welcome email.</summary>
 public class SignUpCommandHandler : ICommandHandler<SignUpCommand, AuthResponseDto>
 {
     private readonly UserManager<UserEntity> _userManager;
     private readonly ITokenService _tokenService;
     private readonly IEmailService _emailService;
     private readonly IMapper _mapper;
+    private readonly IRsaDecryptionService _rsaDecryption;
 
     public SignUpCommandHandler(
         UserManager<UserEntity> userManager,
         ITokenService tokenService,
         IEmailService emailService,
-        IMapper mapper)
+        IMapper mapper,
+        IRsaDecryptionService rsaDecryption)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _emailService = emailService;
         _mapper = mapper;
+        _rsaDecryption = rsaDecryption;
     }
 
     public async Task<AuthResponseDto> Handle(SignUpCommand request, CancellationToken cancellationToken)
@@ -48,7 +51,8 @@ public class SignUpCommandHandler : ICommandHandler<SignUpCommand, AuthResponseD
             UserName = userName
         };
 
-        var createResult = await _userManager.CreateAsync(user, request.Password);
+        var plainPassword = _rsaDecryption.Decrypt(request.Password);
+        var createResult = await _userManager.CreateAsync(user, plainPassword);
         if (!createResult.Succeeded)
         {
             var errors = string.Join("; ", createResult.Errors.Select(e => e.Description));
