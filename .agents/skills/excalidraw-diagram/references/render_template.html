@@ -13,7 +13,18 @@
   <div id="root"></div>
 
   <script type="module">
-    import { exportToSvg } from "https://esm.sh/@excalidraw/excalidraw?bundle";
+    window.__moduleReady = false;
+    window.__moduleError = null;
+    window.__renderComplete = false;
+    let exportToSvg;
+
+    try {
+      const mod = await import("https://esm.sh/@excalidraw/excalidraw@0.18.1?bundle");
+      exportToSvg = mod.exportToSvg;
+      window.__moduleReady = true;
+    } catch (err) {
+      window.__moduleError = err?.message || String(err);
+    }
 
     window.renderDiagram = async function(jsonData) {
       try {
@@ -50,8 +61,6 @@
       }
     };
 
-    // Signal that the module is loaded and ready
-    window.__moduleReady = true;
   </script>
 </body>
 </html>

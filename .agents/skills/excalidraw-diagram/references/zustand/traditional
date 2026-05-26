@@ -1,0 +1,5 @@
+/* esm.sh - zustand@5.0.13/traditional */
+import "/react@>=18.0.0?target=es2022";
+import "/use-sync-external-store@>=1.2.0/shim/with-selector?target=es2022";
+import "/zustand@5.0.13/es2022/vanilla.mjs";
+export * from "/zustand@5.0.13/es2022/traditional.mjs";

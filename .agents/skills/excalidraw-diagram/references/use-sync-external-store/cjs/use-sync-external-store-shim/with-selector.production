@@ -1,0 +1,5 @@
+/* esm.sh - use-sync-external-store@1.6.0/cjs/use-sync-external-store-shim/with-selector.production */
+import "/react@^19.2.4?target=es2022";
+import "/use-sync-external-store@1.6.0/es2022/shim.mjs";
+export * from "/use-sync-external-store@1.6.0/es2022/cjs/use-sync-external-store-shim/with-selector.production.mjs";
+export { default } from "/use-sync-external-store@1.6.0/es2022/cjs/use-sync-external-store-shim/with-selector.production.mjs";

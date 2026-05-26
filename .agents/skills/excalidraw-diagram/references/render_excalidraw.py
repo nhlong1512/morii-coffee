@@ -120,7 +120,7 @@ def render(
         print(f"ERROR: Template not found at {template_path}", file=sys.stderr)
         sys.exit(1)
 
-    template_url = template_path.as_uri()
+    template_url = "http://127.0.0.1:8765/render_template.html"
 
     with sync_playwright() as p:
         try:
@@ -140,8 +140,16 @@ def render(
         # Load the template
         page.goto(template_url)
 
-        # Wait for the ES module to load (imports from esm.sh)
-        page.wait_for_function("window.__moduleReady === true", timeout=30000)
+        # Wait for the ES module to load (imports from esm.sh) or fail explicitly.
+        page.wait_for_function(
+            "window.__moduleReady === true || window.__moduleError !== null",
+            timeout=60000,
+        )
+        module_error = page.evaluate("window.__moduleError")
+        if module_error:
+            print(f"ERROR: Failed to load Excalidraw module: {module_error}", file=sys.stderr)
+            browser.close()
+            sys.exit(1)
 
         # Inject the diagram data and render
         json_str = json.dumps(data)
