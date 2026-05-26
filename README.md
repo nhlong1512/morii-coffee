@@ -1,422 +1,258 @@
-<h1 align="center">☕ Morii Coffee API</h1>
+# Morii Coffee API
 
-<p align="center">
-  A production-ready RESTful backend for a coffee shop platform — built with Clean Architecture, CQRS, and Domain-Driven Design on .NET 10.
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white" alt=".NET 10" />
-  <img src="https://img.shields.io/badge/C%23-13.0-239120?logo=csharp&logoColor=white" alt="C#" />
-  <img src="https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white" alt="Redis" />
-  <img src="https://img.shields.io/badge/MinIO-Object%20Storage-C72E49?logo=minio&logoColor=white" alt="MinIO" />
-  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker" />
-</p>
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Running with Docker](#running-with-docker)
-  - [Configuration](#configuration)
-- [API Reference](#api-reference)
-- [Order Lifecycle](#order-lifecycle)
-- [Payment System (Stripe)](#payment-system-stripe)
-- [Cart System](#cart-system)
-- [Background Jobs](#background-jobs)
-- [Testing](#testing)
-- [CI/CD](#cicd)
-- [Project Structure](#project-structure)
-
----
+Backend API for Morii Coffee, built on .NET 10 with Clean Architecture, CQRS, EF Core, PostgreSQL, Redis, Stripe, Hangfire, and a GHN shipping integration.
 
 ## Overview
 
-Morii Coffee API powers a full-featured coffee shop platform — from browsing the menu and managing a shopping cart to placing orders and tracking their lifecycle. It handles authentication (JWT + Google OAuth), file uploads, transactional emails, and admin operations, all deployed as a containerised service on AWS.
+- `source/MoriiCoffee.Presentation` hosts the ASP.NET Core API, middleware, Swagger, health checks, and Hangfire dashboard.
+- `source/MoriiCoffee.Application` contains MediatR commands/queries, validators, DTOs, and application services.
+- `source/MoriiCoffee.Domain` and `source/MoriiCoffee.Domain.Shared` hold aggregates, enums, and business rules.
+- `source/MoriiCoffee.Infrastructure` and `source/MoriiCoffee.Infrastructure.Persistence` implement external integrations, repositories, caching, background jobs, and migrations.
 
----
+## Core Capabilities
 
-## Features
-
-| Domain | Capabilities |
-|--------|-------------|
-| **Auth** | Email/password registration & login, Google OAuth, JWT access tokens, refresh tokens, password reset via email |
-| **Products** | CRUD for products, product variants (size/type), categories, and promotional banners |
-| **Cart** | Redis-backed cart with 24-hour TTL, guest-to-user merge on login |
-| **Orders** | Place orders from cart, rank-based status lifecycle, admin status management, customer cancellation |
-| **Payments** | Stripe online card payment, full/partial refunds, webhook-driven async settlement, idempotent processing |
-| **Users** | Profile management, saved delivery profiles |
-| **Files** | Presigned upload/download URLs via MinIO (primary) and AWS S3 (fallback) |
-| **Email** | Transactional emails via Brevo (password reset, order confirmations) |
-| **Admin** | Full order management, product catalog management, user listing, refund management |
-
----
+- Authentication with JWT and Google OAuth.
+- Catalog, category, banner, store, wishlist, and blog management.
+- Redis-backed cart for authenticated users.
+- Order lifecycle management for pickup and GHN delivery.
+- Stripe payment-first checkout, reconciliation, refunds, and audited webhooks.
+- GHN shipping quote, shipment creation, requote, sync, cancel, and webhook ingestion.
+- File upload/download through MinIO and AWS S3-backed services.
+- Admin reports and scheduled order auto-completion through Hangfire.
 
 ## Architecture
 
-The codebase follows **Clean Architecture** with strict dependency rules — outer layers depend on inner layers, never the reverse.
-
-```
-┌─────────────────────────────────────────────────────┐
-│                   Presentation                      │
-│         ASP.NET Core Controllers · Middleware       │
-├─────────────────────────────────────────────────────┤
-│                   Infrastructure                    │
-│   Hangfire Jobs · Redis Cart · Email · File Storage │
-├─────────────────────────────────────────────────────┤
-│             Infrastructure.Persistence              │
-│      EF Core · Repositories · Migrations · Cache   │
-├─────────────────────────────────────────────────────┤
-│                    Application                      │
-│       CQRS Handlers (MediatR) · DTOs · Validators  │
-├─────────────────────────────────────────────────────┤
-│                      Domain                         │
-│     Aggregates · Entities · Value Objects · Rules  │
-├─────────────────────────────────────────────────────┤
-│                   Domain.Shared                     │
-│          Enums · Constants · Settings               │
-└─────────────────────────────────────────────────────┘
+```text
+Presentation
+  -> controllers, HTTP pipeline, middleware, Swagger, Hangfire dashboard
+Infrastructure / Infrastructure.Persistence
+  -> payment, shipping, storage, email, Redis, EF Core, repositories, migrations
+Application
+  -> commands, queries, validators, DTOs, orchestration services
+Domain / Domain.Shared
+  -> aggregates, entities, enums, settings contracts, invariants
 ```
 
-**Key patterns:**
-- **CQRS** — every use case is a separate `ICommand` or `IQuery` handled by a dedicated handler via MediatR
-- **Domain aggregates** enforce all business rules (e.g. order status transitions throw `InvalidOperationException` on invalid moves)
-- **Repository pattern** with `IUnitOfWork` — persistence concerns are fully isolated from the domain
-- **Global exception middleware** maps domain exceptions to appropriate HTTP status codes
+The codebase follows a standard inward dependency direction: outer layers depend on inner layers, not the reverse.
 
----
-
-## Tech Stack
-
-| Category | Technology |
-|----------|------------|
-| Runtime | .NET 10 / ASP.NET Core 10 |
-| ORM | Entity Framework Core 10.0.5 (PostgreSQL via Npgsql) |
-| Mediator | MediatR 14.1.0 |
-| Validation | FluentValidation 12.1.1 |
-| Mapping | AutoMapper 16.1.1 |
-| Caching | Redis 7 via StackExchange.Redis 2.8.x |
-| Background jobs | Hangfire 1.8.23 (PostgreSQL storage) |
-| Object storage | MinIO 7.0.0 · AWS S3 SDK 4.0.20.2 |
-| Email | Brevo SDK 1.1.2 |
-| Payments | Stripe.net SDK 47.x (hosted checkout, refunds, webhooks) |
-| Authentication | JWT Bearer 10.0.5 · Google OAuth 10.0.5 |
-| Logging | Serilog 4.3.1 |
-| API docs | Swashbuckle / Swagger 6.7.2 |
-| Testing | xUnit · Moq 4.20.72 · FluentAssertions 8.9.0 |
-
----
-
-## Getting Started
+## Local Development
 
 ### Prerequisites
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- .NET 10 SDK
+- Docker Desktop
 
-### Running with Docker
-
-The development stack (API + PostgreSQL + Redis + MinIO) is fully Dockerised.
+### Start the local stack
 
 ```bash
 cd deploy
 bash run-docker-development.sh
 ```
 
-This brings up:
+This starts:
 
-| Service | Port |
-|---------|------|
-| API | `http://localhost:8002` |
-| Swagger UI | `http://localhost:8002/swagger` |
-| Hangfire Dashboard | `http://localhost:8002/hangfire` |
-| PostgreSQL | `localhost:5432` |
-| Redis | `localhost:6379` |
-| MinIO Console | `http://localhost:9001` |
+- API at `http://localhost:8002`
+- Swagger at `http://localhost:8002/swagger`
+- Hangfire dashboard at `http://localhost:8002/hangfire`
+- PostgreSQL at `localhost:5432`
+- Redis at `localhost:6379`
+- MinIO console at `http://localhost:9001`
 
-The API seeds an admin account on first run using the `AdminSeed` config values.
+The local compose files are:
 
-### Configuration
+- [`deploy/docker-compose.yml`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/deploy/docker-compose.yml:1): PostgreSQL, Redis, MinIO
+- [`deploy/docker-compose.development.yml`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/deploy/docker-compose.development.yml:1): API container overlay
+- [`deploy/run-docker-development.sh`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/deploy/run-docker-development.sh:1): convenience wrapper
 
-Copy `appsettings.json` and fill in the required values. In development, override via `appsettings.Development.json`:
+### Configuration model
 
-```jsonc
-{
-  "ConnectionStrings": {
-    "DefaultConnectionString": "Host=localhost;Port=5432;Database=MoriiCoffeeDb;Username=postgres;Password=postgres",
-    "CachingConnectionString": "localhost:6379,abortConnect=false"
-  },
-  "JwtOptions": {
-    "Secret": "<256-bit secret>",
-    "Issuer": "MoriiCoffee",
-    "Audience": "MoriiCoffee",
-    "AccessTokenExpiryInMinutes": 480,
-    "RefreshTokenExpiryInDays": 7
-  },
-  "Authentication": {
-    "Google": { "ClientId": "...", "ClientSecret": "..." }
-  },
-  "EmailSettings": {
-    "Brevo": { "ApiKey": "..." }
-  },
-  "MinioSettings": {
-    "Endpoint": "localhost:9000",
-    "AccessKey": "minioadmin",
-    "SecretKey": "minioadmin"
-  },
-  "OrderSettings": {
-    "AutoCompleteAfterDays": 3,
-    "AutoCompleteJobRunHour": 2,
-    "AutoCompleteJobRunMinute": 0
-  },
-  "Stripe": {
-    "SecretKey": "sk_test_...",  // ⚠️ Via environment: Stripe__SecretKey
-    "PublishableKey": "pk_test_...",  // Via environment: Stripe__PublishableKey
-    "WebhookSigningSecret": "whsec_...",  // Via environment: Stripe__WebhookSigningSecret
-    "Currency": "vnd",
-    "SuccessUrlTemplate": "/checkout/success?session_id={CHECKOUT_SESSION_ID}",
-    "CancelUrlPath": "/checkout/cancel"
-  }
-}
-```
+The runtime configuration pipeline is defined in [`HostExtensions.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Presentation/Extensions/HostExtensions.cs:5):
 
-> In production, secrets are injected via AWS SSM Parameter Store and pulled at deploy time.
+- base `appsettings.json`
+- environment override `appsettings.{Environment}.json`
+- environment variables
+- user secrets in `Development`
 
----
+Operationally, prefer environment variables and user secrets for sensitive values. `README` intentionally does not duplicate the `appsettings.json` shape.
 
-## API Reference
+## Runtime Startup Behavior
 
-Swagger UI is available at `/swagger` when running in Development mode.
+At startup the API:
 
-| Controller | Prefix | Auth |
-|------------|--------|------|
-| `AuthController` | `POST /api/v1/auth/**` | Public |
-| `ProductsController` | `/api/v1/products` | Public (read) · Admin (write) |
-| `ProductVariantsController` | `/api/v1/product-variants` | Admin |
-| `CategoriesController` | `/api/v1/categories` | Public (read) · Admin (write) |
-| `BannersController` | `/api/v1/banners` | Public (read) · Admin (write) |
-| `CartController` | `/api/v1/cart` | User |
-| `OrdersController` | `/api/v1/orders` | User · Admin |
-| `PaymentsController` | `/api/v1/payments/stripe/**` | User (customer) · Admin (refunds) |
-| `PaymentWebhookController` | `/api/v1/payments/stripe/webhook` | Anonymous (Stripe signature verified) |
-| `UsersController` | `/api/v1/users` | User · Admin |
-| `FilesController` | `/api/v1/files` | User |
+1. registers infrastructure services and Serilog in [`Program.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Presentation/Program.cs:8)
+2. enables Swagger, forwarded headers, CORS, auth, controllers, `/health`, and Hangfire dashboard in [`ApplicationExtensions.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Presentation/Extensions/ApplicationExtensions.cs:13)
+3. auto-applies pending EF Core migrations and runs `ApplicationDbContextSeed.SeedAsync()` on boot in [`ApplicationExtensions.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Presentation/Extensions/ApplicationExtensions.cs:60)
+4. registers the recurring `order-auto-complete` Hangfire job in [`HangfireJobsExtensions.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Presentation/Extensions/HangfireJobsExtensions.cs:13)
 
----
+## Production Deploy Flow
 
-## Order Lifecycle
+The repository contains one production pipeline in [`deploy.yml`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/.github/workflows/deploy.yml:1):
 
-Orders follow a **rank-based forward-only** state machine. Skipping steps is allowed (e.g. `PENDING → IN_DELIVERY`); going backward is not.
+Deployment diagram:
 
-```
-PENDING ──► CONFIRMED ──► READY_TO_PICKUP ──► IN_DELIVERY ──► DELIVERED ──► REVIEWED
-   │              │
-   └──────────────┴──► CANCELLED  (only from PENDING or CONFIRMED)
-```
+- [production-deployment-architecture.excalidraw](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/diagrams/production-deployment-architecture.excalidraw:1)
 
-- Customers can cancel from `PENDING` only
-- Admins can cancel from `PENDING` or `CONFIRMED`
-- `REVIEWED` and `CANCELLED` are terminal states
-- `GET /api/v1/orders/{id}/valid-statuses` returns the valid transitions for a given order
-- `PATCH /api/v1/orders/{id}/status` returns the updated list of valid next statuses after the transition
+![Production deployment architecture](diagrams/production-deployment-architecture.png)
 
----
+1. push to `main`
+2. run `dotnet test` for `MoriiCoffee.Application.Tests` and `MoriiCoffee.Domain.Tests`
+3. build the `final` target from [`source/MoriiCoffee.Presentation/Dockerfile`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Presentation/Dockerfile:26)
+4. push the image to AWS ECR
+5. SSH into EC2
+6. run `bash /app/fetch-ssm-env.sh`
+7. run `bash /app/run-container.sh <image>`
+8. prune old images
 
-## Payment System (Stripe)
+Operational implications of the current production path:
 
-Orders can be placed with two payment methods:
+- The repo documents a remote fetch from AWS SSM, but the scripts invoked on EC2 are not stored in this repository.
+- The application itself also supports checked-in environment JSON files plus environment variables; the deploy pipeline does not remove that behavior.
+- Database migrations and seeding happen inside application startup, not in a separate release step.
+- The Hangfire dashboard is mounted by default; this repo does not add a dashboard authorization filter.
+- `/health` is available as a simple runtime health endpoint.
 
-### Cash on Delivery (COD)
-- Traditional payment method: `PaymentStatus = NotRequired`
-- Order can be confirmed immediately
-- No interaction with Stripe API
+## Business Flows
 
-### Online Card Payment (Stripe)
-- Customer redirected to **Stripe-hosted checkout page** (PCI-DSS compliant)
-- Flow: `POST /api/v1/payments/stripe/checkout-session` → Stripe redirect → `GET /api/v1/payments/by-order/{orderId}`
+Cart, order checkout, payment, and shipping flow:
 
-#### Payment Lifecycle
+- [cart-order-checkout-payment-shipping-flow.excalidraw](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/diagrams/cart-order-checkout-payment-shipping-flow.excalidraw:1)
 
-```
-PENDING ──► PAID ──► (PARTIALLY_REFUNDED) ──► REFUNDED
-   │
-   └──► FAILED (customer can retry or cancel)
-```
+![Cart, order checkout, payment, shipping flow](diagrams/cart-order-checkout-payment-shipping-flow.png)
 
-**Key constraints:**
-- ✅ Only **PAID** orders can be confirmed for fulfillment (Stripe orders)
-- ✅ COD orders bypass payment checks
-- ✅ Refunds are asynchronous (initiated locally, settled via webhook)
-- ✅ All webhook events are verified with HMAC-SHA256 signature
-- ✅ Webhook processing is idempotent (same event processed only once)
+### Cart
 
-#### API Endpoints
+The cart is implemented by [`RedisCartService.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Infrastructure/Services/Cart/RedisCartService.cs:12).
 
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /api/v1/payments/stripe/checkout-session` | Create Stripe Checkout Session, returns redirect URL |
-| `GET /api/v1/payments/by-order/{orderId}` | Get payment status & refund history for an order |
-| `POST /api/v1/payments/{orderId}/refund` | Issue full/partial refund (admin only) |
-| `POST /api/v1/payments/stripe/webhook` | Receive Stripe webhooks (anonymous, signature-verified) |
+- Storage key: `cart:{userId}`
+- Value: serialized `CartDto`
+- TTL: `CacheTtlConstants.Cart`
+- Duplicate product/variant pairs are merged by incrementing quantity.
+- Guest cart merge is handled through `POST /api/v1/cart/merge`.
 
-#### Configuration
+Controller surface:
 
-```bash
-# Required environment variables for Stripe
-export Stripe__SecretKey="sk_live_..."  # or sk_test_... for development
-export Stripe__PublishableKey="pk_live_..."
-export Stripe__WebhookSigningSecret="whsec_..."
-```
+- `GET /api/v1/cart`
+- `POST /api/v1/cart/items`
+- `PUT /api/v1/cart/items`
+- `DELETE /api/v1/cart/items`
+- `DELETE /api/v1/cart`
+- `POST /api/v1/cart/merge`
 
-The `IsLiveMode` property is automatically detected from the secret key prefix (`sk_live_` vs `sk_test_`). A startup health check emits a log line indicating the mode.
+### Orders
 
-#### Frontend Integration
+Order entry points live in [`OrdersController.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Presentation/Controllers/OrdersController.cs:22).
 
-Comprehensive integration guide: **[FRONTEND_INTEGRATION_GUIDE.md](specs/011-stripe-payment/FRONTEND_INTEGRATION_GUIDE.md)**
+- `POST /api/v1/orders` is for immediate order creation flows such as COD.
+- Stripe orders are not created here; they are finalized only after payment confirmation.
+- GHN delivery orders require a shipping quote fingerprint, service selection, fee, expiry, and provider environment.
+- Admins can fetch all orders, update status, and inspect valid next statuses.
 
-Quick reference:
-```typescript
-// 1. Create checkout session
-const res = await fetch("/api/v1/payments/stripe/checkout-session", {
-  method: "POST",
-  body: JSON.stringify({ orderId })
-});
-const { checkoutUrl } = await res.json();
+`PlaceOrderCommandHandler` in [`PlaceOrderCommandHandler.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Application/Commands/Order/PlaceOrder/PlaceOrderCommandHandler.cs:25) does the main orchestration:
 
-// 2. Redirect to Stripe
-window.location.href = checkoutUrl;
+1. load cart from Redis
+2. create an order snapshot from cart items
+3. validate the GHN quote fingerprint for delivery orders
+4. persist the order and optionally upsert the saved delivery profile
+5. attempt shipment creation for GHN orders
+6. clear the cart
 
-// 3. After redirect back, check payment status
-const payment = await fetch(`/api/v1/payments/by-order/${orderId}`).then(r => r.json());
-console.log(payment.paymentStatus); // "Paid" | "Failed" | "Pending"
-```
+### Payments
 
-#### Testing in Development
+Payment HTTP endpoints live in [`PaymentsController.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Presentation/Controllers/PaymentsController.cs:19) and [`PaymentWebhookController.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Presentation/Controllers/PaymentWebhookController.cs:11).
 
-**Stripe test cards:**
-- ✅ Success: `4242 4242 4242 4242`
-- ❌ Declined: `4000 0000 0000 0002`
-- 3D Secure: `4000 0025 0000 3155`
+Implemented flow:
 
-Use `exp: 12/26` and any 3-digit CVC. All test payments succeed instantly; webhooks are delivered to the registered webhook URL.
+1. `POST /api/v1/payments/stripe/checkout-session` snapshots the current cart and checkout data into a cached draft.
+2. Stripe-hosted checkout completes payment.
+3. `POST /api/v1/payments/stripe/webhook` verifies the Stripe signature and finalizes or reconciles state.
+4. `POST /api/v1/payments/stripe/reconcile` lets the frontend self-heal when the success redirect arrives before webhook processing.
 
----
+Relevant implementation points:
 
-## Cart System
+- Draft caching and order finalization: [`StripeCheckoutDraftService.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Application/Services/StripeCheckoutDraftService.cs:19)
+- Stripe gateway implementation: [`StripePaymentGateway.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Infrastructure/Services/Payment/StripePaymentGateway.cs:27)
+- Webhook auditing and idempotency: [`HandleWebhookEventCommandHandler.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Application/Commands/Payment/HandleWebhookEvent/HandleWebhookEventCommandHandler.cs:28)
 
-The cart is stored entirely in **Redis** — there is no cart table in the database.
+### Shipping
 
-```
-Redis key:   cart:{userId}
-Value:       CartDto (JSON)
-TTL:         24 hours (reset on each write)
-```
+Shipping endpoints live in [`ShippingController.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Presentation/Controllers/ShippingController.cs:24) and [`ShippingWebhookController.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Presentation/Controllers/ShippingWebhookController.cs:9).
 
-**Flow:**
-1. `POST /cart/items` — validates product/variant exists in DB, snapshots the price at add-time, writes to Redis
-2. `PUT /cart/items` — updates quantity (quantity `0` removes the item)
-3. `DELETE /cart/items` — removes a specific product/variant
-4. `DELETE /cart` — deletes the Redis key entirely
-5. `POST /cart/merge` — merges a guest cart (from `localStorage`) into the user's Redis cart after login; quantities are summed for duplicate items
-6. `POST /orders` — reads the cart from Redis, creates an `Order` in the database, then clears the cart
+Implemented GHN flow:
 
----
+1. fetch provinces, districts, and wards
+2. quote shipping from the current cart
+3. place a COD order or finalize a Stripe-paid order
+4. create a GHN shipment using the stored order snapshot
+5. sync, requote, cancel, or update shipment note through admin endpoints
+6. accept GHN webhook updates and persist shipment audit rows
 
-## Background Jobs
+Core orchestration lives in:
 
-Hangfire manages recurring jobs with PostgreSQL as the storage backend. The dashboard is available at `/hangfire` (admin-only in production).
+- quote creation: [`CreateShippingQuoteCommandHandler.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Application/Commands/Shipping/CreateShippingQuote/CreateShippingQuoteCommandHandler.cs:11)
+- shipment lifecycle: [`ShipmentLifecycleService.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Application/Services/Shipping/ShipmentLifecycleService.cs:14)
+- webhook processing: [`HandleShippingWebhookEventCommandHandler.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Application/Commands/Shipping/HandleShippingWebhookEvent/HandleShippingWebhookEventCommandHandler.cs:11)
 
-### Order Auto-Complete
+## Background Jobs And Operations
 
-Runs daily at `AutoCompleteJobRunHour:AutoCompleteJobRunMinute` UTC. Finds all `IN_DELIVERY` orders whose `CreatedAt` is older than `AutoCompleteAfterDays` days and marks them `DELIVERED`.
+Hangfire is configured in [`HangfireConfiguration.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Infrastructure/Configurations/HangfireConfiguration.cs:12) with PostgreSQL storage.
 
-```jsonc
-"OrderSettings": {
-  "AutoCompleteAfterDays": 3,  // orders older than this are auto-completed
-  "AutoCompleteJobRunHour": 2,  // 2 AM UTC
-  "AutoCompleteJobRunMinute": 0
-}
-```
+The recurring job currently registered is:
 
-The job is decorated with `[DisableConcurrentExecution(600s)]` to prevent overlapping runs. Each order transition is wrapped in a `try/catch` so a single bad order cannot abort the entire batch.
+- `order-auto-complete`: runs daily at `0 {AutoCompleteJobRunHour} * * *` and executes [`OrderAutoCompleteJob.cs`](/Users/zephyr.nguyen/dev-space/projects/morii/morii-coffee/source/MoriiCoffee.Infrastructure/BackgroundJobs/OrderAutoCompleteJob.cs:1)
 
----
+## API Surface
+
+Main route groups:
+
+- `/api/v1/auth`
+- `/api/v1/products`
+- `/api/v1/categories`
+- `/api/v1/banners`
+- `/api/v1/stores`
+- `/api/v1/cart`
+- `/api/v1/orders`
+- `/api/v1/payments`
+- `/api/v1/shipping`
+- `/api/v1/users`
+- `/api/v1/files`
+- `/api/v1/admin-reports`
+
+Swagger is available in development at `/swagger`.
 
 ## Testing
 
-The project has two test projects covering the domain and application layers.
+Run the main backend test suites with:
 
 ```bash
-# Run all tests
-dotnet test source/MoriiCoffee.Domain.Tests
-dotnet test source/MoriiCoffee.Application.Tests
+dotnet test source/MoriiCoffee.Domain.Tests --configuration Release
+dotnet test source/MoriiCoffee.Application.Tests --configuration Release
+```
 
-# Generate HTML coverage report (Domain + Application)
+Coverage helper:
+
+```bash
 bash coverage.sh
-# → opens coverage-report/index.html
 ```
-
-| Project | Tests | Focus |
-|---------|-------|-------|
-| `MoriiCoffee.Domain.Tests` | 68 | Aggregate rules, status transitions, business invariants |
-| `MoriiCoffee.Application.Tests` | 225 | Command/query handlers, background jobs |
-
-Test stack: **xUnit** · **Moq** · **FluentAssertions** · **MockQueryable** (for async EF IQueryable)
-
----
-
-## CI/CD
-
-GitHub Actions pipeline on every push to `main`:
-
-```
-push to main
-    │
-    ├─► unit-test job
-    │       dotnet test (Domain + Application)
-    │
-    └─► build job  (needs: unit-test)
-            docker build → push to AWS ECR
-                │
-                └─► deploy job
-                        SSH into EC2
-                        pull image from ECR
-                        fetch secrets from AWS SSM
-                        restart container
-```
-
-Secrets (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `EC2_HOST`, `EC2_SSH_KEY`) are stored in GitHub repository secrets.
-
----
 
 ## Project Structure
 
-```
+```text
 morii-coffee/
-├── source/
-│   ├── MoriiCoffee.Domain/              # Aggregates, entities, value objects, domain rules
-│   ├── MoriiCoffee.Domain.Shared/       # Enums, constants, settings (no dependencies)
-│   ├── MoriiCoffee.Application/         # CQRS handlers, DTOs, validators, abstractions
-│   ├── MoriiCoffee.Infrastructure/      # Background jobs, cart service, email, file storage
-│   ├── MoriiCoffee.Infrastructure.Persistence/ # EF Core DbContext, repositories, migrations
-│   ├── MoriiCoffee.Presentation/        # ASP.NET Core host, controllers, middleware, DI setup
-│   ├── MoriiCoffee.Domain.Tests/        # Domain layer unit tests
-│   └── MoriiCoffee.Application.Tests/   # Application layer unit tests
+├── .github/workflows/
 ├── deploy/
-│   ├── docker-compose.yml               # Base services (PostgreSQL, Redis, MinIO)
-│   ├── docker-compose.development.yml   # Development overrides (API container)
-│   └── run-docker-development.sh        # One-command dev startup
-├── docs/
-│   └── features/                        # Feature specification documents
-├── specs/                               # API / domain specs
-├── .github/workflows/deploy.yml         # CI/CD pipeline
-├── coverage.sh                          # Coverage report generator
-├── global.json                          # .NET SDK version pin (10.0.102)
-└── Directory.Build.props                # Solution-wide MSBuild properties
+├── specs/
+├── source/
+│   ├── MoriiCoffee.Application/
+│   ├── MoriiCoffee.Application.Tests/
+│   ├── MoriiCoffee.DbMigrator/
+│   ├── MoriiCoffee.Domain/
+│   ├── MoriiCoffee.Domain.Shared/
+│   ├── MoriiCoffee.Domain.Tests/
+│   ├── MoriiCoffee.Infrastructure/
+│   ├── MoriiCoffee.Infrastructure.Persistence/
+│   └── MoriiCoffee.Presentation/
+├── coverage.sh
+├── Directory.Build.props
+├── global.json
+└── MoriiCoffee.slnx
 ```
