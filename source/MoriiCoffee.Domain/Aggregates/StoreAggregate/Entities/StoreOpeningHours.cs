@@ -58,4 +58,16 @@ public class StoreOpeningHours : EntityBase
             CloseTime = closeTime,
             IsClosed = isClosed,
         };
+
+    /// <summary>Updates the operating window for this day without replacing the row.</summary>
+    public StoreOpeningHours Update(
+        string openTime,
+        string closeTime,
+        bool isClosed)
+    {
+        OpenTime = openTime;
+        CloseTime = closeTime;
+        IsClosed = isClosed;
+        return this;
+    }
 }

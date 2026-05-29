@@ -132,6 +132,40 @@ public class Store : AggregateRoot
         DisplayOrder = order;
         return this;
     }
+
+    /// <summary>
+    /// Synchronizes opening hours by day, preserving existing child rows when possible.
+    /// This avoids transient duplicate (StoreId, DayOfWeek) records during full updates.
+    /// </summary>
+    public Store ReplaceOpeningHours(IEnumerable<StoreOpeningHoursData> openingHours)
+    {
+        var requestedHours = openingHours.ToList();
+        var requestedDays = requestedHours.Select(hours => hours.DayOfWeek).ToHashSet();
+
+        foreach (var staleHours in OpeningHours.Where(hours => !requestedDays.Contains(hours.DayOfWeek)).ToList())
+        {
+            OpeningHours.Remove(staleHours);
+        }
+
+        foreach (var hours in requestedHours)
+        {
+            var existingHours = OpeningHours.FirstOrDefault(existing => existing.DayOfWeek == hours.DayOfWeek);
+            if (existingHours is null)
+            {
+                OpeningHours.Add(StoreOpeningHours.Create(
+                    Id,
+                    hours.DayOfWeek,
+                    hours.OpenTime,
+                    hours.CloseTime,
+                    hours.IsClosed));
+                continue;
+            }
+
+            existingHours.Update(hours.OpenTime, hours.CloseTime, hours.IsClosed);
+        }
+
+        return this;
+    }
 }
 
 /// <summary>
@@ -152,4 +186,12 @@ public record CreateStoreData(
     string? CoverImageUrl,
     bool IsActive,
     int DisplayOrder
+);
+
+/// <summary>Opening-hours data used to synchronize a store's weekly schedule.</summary>
+public record StoreOpeningHoursData(
+    int DayOfWeek,
+    string OpenTime,
+    string CloseTime,
+    bool IsClosed
 );

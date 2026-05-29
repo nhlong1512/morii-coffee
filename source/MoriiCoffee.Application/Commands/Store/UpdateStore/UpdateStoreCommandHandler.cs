@@ -47,12 +47,8 @@ public class UpdateStoreCommandHandler : ICommandHandler<UpdateStoreCommand, Sto
 
         store.Update(data, slug);
 
-        // Replace-all strategy: clear existing hours then add fresh ones
-        store.OpeningHours.Clear();
-        foreach (var h in request.OpeningHours)
-        {
-            store.OpeningHours.Add(StoreOpeningHours.Create(store.Id, h.DayOfWeek, h.OpenTime, h.CloseTime, h.IsClosed));
-        }
+        store.ReplaceOpeningHours(request.OpeningHours.Select(h =>
+            new StoreOpeningHoursData(h.DayOfWeek, h.OpenTime, h.CloseTime, h.IsClosed)));
 
         await _unitOfWork.Stores.Update(store);
         await _unitOfWork.CommitAsync();
