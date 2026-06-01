@@ -28,6 +28,7 @@ public class UpdateBlogPostStatusCommandHandler : ICommandHandler<UpdateBlogPost
         var post = await _unitOfWork.BlogPosts
             .FindByCondition(x => x.Id == request.Id, true)
             .Include(x => x.BlogPostCategories)
+                .ThenInclude(x => x.BlogCategory)
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("BlogPost", request.Id);
 

@@ -11,7 +11,9 @@ public class BlogCategoryConfiguration : IEntityTypeConfiguration<BlogCategory>
 {
     public void Configure(EntityTypeBuilder<BlogCategory> builder)
     {
-        builder.HasIndex(x => x.Slug).IsUnique();
+        builder.HasIndex(x => x.Slug)
+            .IsUnique()
+            .HasFilter("\"DeletedAt\" IS NULL");
 
         builder.HasMany(x => x.BlogPostCategories)
             .WithOne(x => x.BlogCategory)
