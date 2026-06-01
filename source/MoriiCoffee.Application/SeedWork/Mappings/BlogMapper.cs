@@ -21,7 +21,7 @@ public class BlogMapper : Profile
         CreateMap<BlogPost, BlogPostSummaryDto>()
             .ForMember(dest => dest.CoverImageUrl, opt => opt.MapFrom(src => CdnUrlHelper.Resolve(src.CoverImageUrl, cdn)))
             .ForMember(dest => dest.Categories, opt => opt.MapFrom(src => src.BlogPostCategories
-                .Where(x => !x.IsDeleted && !x.BlogCategory.IsDeleted)
+                .Where(x => !x.IsDeleted && x.BlogCategory != null && !x.BlogCategory.IsDeleted)
                 .Select(x => x.BlogCategory)));
 
         CreateMap<BlogPost, BlogPostDetailDto>()

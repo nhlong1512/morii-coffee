@@ -33,7 +33,6 @@ public class UpdateBlogPostCommandHandlerTests
         var posts = new List<BlogPostEntity>().BuildMock();
         _postsRepo.Setup(x => x.FindByCondition(It.IsAny<System.Linq.Expressions.Expression<Func<BlogPostEntity, bool>>>(), true))
             .Returns(posts);
-
         var command = new UpdateBlogPostCommand(Guid.NewGuid(), new UpdateBlogPostDto { Title = "Post", ContentHtml = "<p>x</p>" });
 
         await _handler.Invoking(x => x.Handle(command, CancellationToken.None))
@@ -49,8 +48,9 @@ public class UpdateBlogPostCommandHandlerTests
 
         _postsRepo.Setup(x => x.FindByCondition(It.IsAny<System.Linq.Expressions.Expression<Func<BlogPostEntity, bool>>>(), true))
             .Returns(posts);
+        _postsRepo.Setup(x => x.FindByCondition(It.IsAny<System.Linq.Expressions.Expression<Func<BlogPostEntity, bool>>>(), false))
+            .Returns(posts);
         _postsRepo.Setup(x => x.SlugExistsAsync("new-title", post.Id)).ReturnsAsync(false);
-        _postsRepo.Setup(x => x.Update(post)).Returns(Task.CompletedTask);
         _categoriesRepo.Setup(x => x.GetByIdAsync(categoryId))
             .ReturnsAsync(MoriiCoffee.Domain.Aggregates.BlogCategoryAggregate.BlogCategory.Create("Guides", "guides", null, 1, true));
         _unitOfWork.Setup(x => x.CommitAsync()).ReturnsAsync(1);
@@ -71,5 +71,7 @@ public class UpdateBlogPostCommandHandlerTests
         post.Slug.Should().Be("new-title");
         post.BlogPostCategories.Should().ContainSingle(x => x.BlogCategoryId == categoryId);
         _unitOfWork.Verify(x => x.CommitAsync(), Times.Once);
+        _postsRepo.Verify(x => x.Update(It.IsAny<BlogPostEntity>()), Times.Never);
+        _postsRepo.Verify(x => x.FindByCondition(It.IsAny<System.Linq.Expressions.Expression<Func<BlogPostEntity, bool>>>(), false), Times.Once);
     }
 }

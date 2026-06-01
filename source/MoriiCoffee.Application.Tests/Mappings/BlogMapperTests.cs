@@ -89,4 +89,20 @@ public class BlogMapperTests
         dto.Categories.Should().ContainSingle();
         dto.Categories[0].Name.Should().Be("Guides");
     }
+
+    [Fact]
+    public void BlogPostToSummaryDto_SkipsLinksWithoutLoadedCategory()
+    {
+        var post = BlogPostEntity.Create("Story", "story", null, "{\"type\":\"doc\"}", "<p>x</p>", null, null, null, null, false, 0, EBlogPostStatus.Published);
+        post.BlogPostCategories.Add(new BlogPostCategory
+        {
+            Id = Guid.NewGuid(),
+            BlogPostId = post.Id,
+            BlogCategoryId = Guid.NewGuid()
+        });
+
+        var dto = _mapper.Map<BlogPostSummaryDto>(post);
+
+        dto.Categories.Should().BeEmpty();
+    }
 }
