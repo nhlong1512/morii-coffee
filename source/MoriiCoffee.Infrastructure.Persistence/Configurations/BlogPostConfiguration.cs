@@ -11,7 +11,9 @@ public class BlogPostConfiguration : IEntityTypeConfiguration<BlogPost>
 {
     public void Configure(EntityTypeBuilder<BlogPost> builder)
     {
-        builder.HasIndex(x => x.Slug).IsUnique();
+        builder.HasIndex(x => x.Slug)
+            .IsUnique()
+            .HasFilter("\"DeletedAt\" IS NULL");
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.PublishedAt);
         builder.HasIndex(x => x.DisplayOrder);

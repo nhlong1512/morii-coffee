@@ -1,10 +1,10 @@
 using AutoMapper;
 using MoriiCoffee.Application.SeedWork.DTOs.Blog;
 using MoriiCoffee.Application.SeedWork.Exceptions;
+using MoriiCoffee.Application.SeedWork.Helpers;
 using MoriiCoffee.Domain.SeedWork.Command;
 using MoriiCoffee.Domain.SeedWork.Persistence;
 using MoriiCoffee.Domain.Shared.Enums.Blog;
-using System.Text.RegularExpressions;
 using BlogPostEntity = MoriiCoffee.Domain.Aggregates.BlogPostAggregate.BlogPost;
 
 namespace MoriiCoffee.Application.Commands.BlogPost.CreateBlogPost;
@@ -98,9 +98,7 @@ public class CreateBlogPostCommandHandler : ICommandHandler<CreateBlogPostComman
 
     internal static string GenerateSlug(string value)
     {
-        var slug = Regex.Replace(value.ToLowerInvariant().Trim(), @"[^a-z0-9\s-]", string.Empty)
-            .Replace(" ", "-")
-            .Trim('-');
+        var slug = SlugHelper.Generate(value);
 
         return string.IsNullOrWhiteSpace(slug) ? Guid.NewGuid().ToString("N")[..8] : slug;
     }
