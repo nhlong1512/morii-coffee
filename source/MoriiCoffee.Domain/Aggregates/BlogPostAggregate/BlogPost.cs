@@ -149,8 +149,21 @@ public class BlogPost : AggregateRoot
     /// <summary>Replaces category assignments with the provided category ids.</summary>
     public void ReplaceCategories(IEnumerable<Guid> categoryIds)
     {
-        BlogPostCategories.Clear();
-        foreach (var categoryId in categoryIds.Distinct())
+        var nextCategoryIds = categoryIds.Distinct().ToHashSet();
+        var removedCategories = BlogPostCategories
+            .Where(link => !nextCategoryIds.Contains(link.BlogCategoryId))
+            .ToList();
+
+        foreach (var removedCategory in removedCategories)
+        {
+            BlogPostCategories.Remove(removedCategory);
+        }
+
+        var existingCategoryIds = BlogPostCategories
+            .Select(link => link.BlogCategoryId)
+            .ToHashSet();
+
+        foreach (var categoryId in nextCategoryIds.Except(existingCategoryIds))
         {
             BlogPostCategories.Add(BlogPostCategory.Create(Id, categoryId));
         }
