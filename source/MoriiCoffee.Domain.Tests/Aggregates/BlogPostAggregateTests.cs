@@ -65,4 +65,14 @@ public class BlogPostAggregateTests
 
         post.BlogPostCategories.Should().ContainSingle(link => link.BlogCategoryId == categoryId);
     }
+
+    [Fact]
+    public void ReplaceCategories_NewAssignmentsLeaveIdentifierForPersistence()
+    {
+        var post = CreatePost();
+
+        post.ReplaceCategories([Guid.NewGuid()]);
+
+        post.BlogPostCategories.Single().Id.Should().BeEmpty();
+    }
 }

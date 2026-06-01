@@ -65,9 +65,15 @@ public class UpdateBlogPostCommandHandler : ICommandHandler<UpdateBlogPostComman
 
         post.ReplaceCategories(request.CategoryIds);
 
-        await _unitOfWork.BlogPosts.Update(post);
         await _unitOfWork.CommitAsync();
 
-        return _mapper.Map<BlogPostDetailDto>(post);
+        var updated = await _unitOfWork.BlogPosts
+            .FindByCondition(x => x.Id == request.Id)
+            .Include(x => x.BlogPostCategories)
+                .ThenInclude(x => x.BlogCategory)
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("BlogPost", request.Id);
+
+        return _mapper.Map<BlogPostDetailDto>(updated);
     }
 }

@@ -32,7 +32,6 @@ public class BlogPostCategory : EntityBase
     {
         return new BlogPostCategory
         {
-            Id = Guid.NewGuid(),
             BlogPostId = blogPostId,
             BlogCategoryId = blogCategoryId
         };
