@@ -28,6 +28,9 @@ public class PaymentWebhookEvent : EntityBase
     [Key]
     public Guid Id { get; private set; }
 
+    [Required]
+    public EPaymentProvider Provider { get; private set; } = EPaymentProvider.Stripe;
+
     /// <summary>
     /// The Stripe event identifier (e.g. <c>evt_1Mw...</c>). UNIQUE — the database constraint is
     /// the source of truth for idempotency.
@@ -93,7 +96,8 @@ public class PaymentWebhookEvent : EntityBase
         string stripeEventId,
         string eventType,
         string payloadFingerprint,
-        bool signatureVerified)
+        bool signatureVerified,
+        EPaymentProvider provider = EPaymentProvider.Stripe)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(stripeEventId);
         ArgumentException.ThrowIfNullOrWhiteSpace(eventType);
@@ -102,6 +106,7 @@ public class PaymentWebhookEvent : EntityBase
         return new PaymentWebhookEvent
         {
             Id = Guid.NewGuid(),
+            Provider = provider,
             StripeEventId = stripeEventId.Trim(),
             EventType = eventType.Trim(),
             PayloadFingerprint = payloadFingerprint.Trim(),

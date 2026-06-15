@@ -8,6 +8,9 @@ namespace MoriiCoffee.Application.SeedWork.DTOs.Payment;
 /// </summary>
 public class RefundDto
 {
+    public EPaymentProvider Provider { get; set; }
+
+    public string ProviderRefundId => StripeRefundId;
     /// <summary>Internal refund record id.</summary>
     public Guid Id { get; set; }
 

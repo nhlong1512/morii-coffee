@@ -97,6 +97,7 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDt
                 AttemptCount = payments.Count,
                 LatestPaymentId = latestPayment?.Id,
                 LatestAttemptStatus = latestPayment?.Status,
+                Provider = latestPayment?.Provider,
                 StripeSessionId = latestPayment?.StripeSessionId,
                 StripePaymentIntentId = latestPayment?.StripePaymentIntentId ?? order.StripePaymentIntentId,
                 StripeChargeId = latestPayment?.StripeChargeId ?? order.StripeChargeId,

@@ -3,8 +3,10 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoriiCoffee.Application.Commands.Payment.CreateCheckoutSession;
+using MoriiCoffee.Application.Commands.Payment.CreateVnpayPaymentUrl;
 using MoriiCoffee.Application.Commands.Payment.ReconcileRefundPayment;
 using MoriiCoffee.Application.Commands.Payment.ReconcileStripePayment;
+using MoriiCoffee.Application.Commands.Payment.ReconcileVnpayPayment;
 using MoriiCoffee.Application.Commands.Payment.RefundPayment;
 using MoriiCoffee.Application.Queries.Payment.GetPaymentByOrderId;
 using MoriiCoffee.Application.SeedWork.DTOs.Payment;
@@ -74,6 +76,40 @@ public class PaymentsController : ControllerBase
         return StatusCode(201, new ApiCreatedResponse(result));
     }
 
+    /// <summary>Create a signed VNPAY sandbox payment URL from the authenticated cart.</summary>
+    [HttpPost("vnpay/payment-url")]
+    [SwaggerOperation(Summary = "[VNPAY] Create a hosted payment URL from cart")]
+    [SwaggerResponse(201, SwaggerResponseMessages.CreatedSuccessfully, typeof(VnpayPaymentUrlResponseDto))]
+    public async Task<IActionResult> CreateVnpayPaymentUrl([FromBody] CreateCheckoutSessionDto dto)
+    {
+        var result = await _mediator.Send(new CreateVnpayPaymentUrlCommand
+        {
+            UserId = GetCurrentUserId(),
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+            FullName = dto.FullName,
+            PhoneNumber = dto.PhoneNumber,
+            Address = dto.Address,
+            ProvinceId = dto.ProvinceId,
+            ProvinceName = dto.ProvinceName,
+            DistrictId = dto.DistrictId,
+            DistrictName = dto.DistrictName,
+            WardCode = dto.WardCode,
+            WardName = dto.WardName,
+            Notes = dto.Notes,
+            SaveDeliveryProfile = dto.SaveDeliveryProfile,
+            DeliveryMethod = dto.DeliveryMethod,
+            ShippingQuoteFingerprint = dto.ShippingQuoteFingerprint,
+            ShippingServiceId = dto.ShippingServiceId,
+            ShippingServiceTypeId = dto.ShippingServiceTypeId,
+            ShippingServiceLabel = dto.ShippingServiceLabel,
+            ShippingFee = dto.ShippingFee,
+            ShippingQuoteExpiresAt = dto.ShippingQuoteExpiresAt,
+            ShippingProviderEnvironment = dto.ShippingProviderEnvironment
+        });
+
+        return StatusCode(201, new ApiCreatedResponse(result));
+    }
+
     /// <summary>
     /// Re-checks the Stripe Checkout Session against Stripe and synchronizes local state when the
     /// success redirect returns before the webhook updates the order.
@@ -94,6 +130,21 @@ public class PaymentsController : ControllerBase
             IsAdmin = IsAdmin()
         });
 
+        return Ok(new ApiOkResponse(result));
+    }
+
+    [HttpPost("vnpay/reconcile")]
+    [SwaggerOperation(Summary = "[VNPAY] Reconcile a pending payment using QueryDR")]
+    [SwaggerResponse(200, SwaggerResponseMessages.RetrievedSuccessfully, typeof(ReconcileVnpayPaymentResponseDto))]
+    public async Task<IActionResult> ReconcileVnpayPayment([FromBody] ReconcileVnpayPaymentDto dto)
+    {
+        var result = await _mediator.Send(new ReconcileVnpayPaymentCommand
+        {
+            CheckoutDraftId = dto.CheckoutDraftId,
+            TxnRef = dto.TxnRef,
+            RequestingUserId = GetCurrentUserId(),
+            IsAdmin = IsAdmin()
+        });
         return Ok(new ApiOkResponse(result));
     }
 

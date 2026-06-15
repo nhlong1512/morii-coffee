@@ -32,6 +32,9 @@ public class RefundRecord : EntityBase
     [Required]
     public Guid PaymentId { get; private set; }
 
+    [Required]
+    public EPaymentProvider Provider { get; private set; } = EPaymentProvider.Stripe;
+
     /// <summary>
     /// Stripe Refund identifier (e.g. <c>re_3OZB...</c>). Stored to correlate the <c>charge.refunded</c>
     /// webhook event back to this local row. UNIQUE across the table.
@@ -79,7 +82,8 @@ public class RefundRecord : EntityBase
         string stripeRefundId,
         decimal amount,
         Guid initiatedByAdminUserId,
-        string? reason = null)
+        string? reason = null,
+        EPaymentProvider provider = EPaymentProvider.Stripe)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(stripeRefundId);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount);
@@ -88,6 +92,7 @@ public class RefundRecord : EntityBase
         {
             Id = Guid.NewGuid(),
             PaymentId = paymentId,
+            Provider = provider,
             StripeRefundId = stripeRefundId.Trim(),
             Amount = amount,
             Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(),

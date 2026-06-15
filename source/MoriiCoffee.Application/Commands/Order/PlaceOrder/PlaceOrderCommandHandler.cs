@@ -55,9 +55,10 @@ public class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand, Order
     /// <inheritdoc />
     public async Task<OrderDto> Handle(PlaceOrderCommand command, CancellationToken cancellationToken)
     {
-        if (command.PaymentMethod == MoriiCoffee.Domain.Shared.Enums.Order.EPaymentMethod.STRIPE)
+        if (command.PaymentMethod is MoriiCoffee.Domain.Shared.Enums.Order.EPaymentMethod.STRIPE
+            or MoriiCoffee.Domain.Shared.Enums.Order.EPaymentMethod.VNPAY)
             throw new BadRequestException(
-                "Stripe checkout now uses a payment-first flow. Use POST /api/v1/payments/stripe/checkout-session instead of creating an order directly.");
+                "Prepaid checkout uses a payment-first flow. Use the provider payment endpoint instead of creating an order directly.");
 
         // 1. Load current cart
         var cart = await _cartService.GetCartAsync(command.UserId);

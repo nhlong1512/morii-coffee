@@ -12,7 +12,7 @@ public class PaymentWebhookEventConfiguration : IEntityTypeConfiguration<Payment
     {
         // UNIQUE: the primary idempotency gate. A duplicate-insert race is rejected at the DB
         // and the application interprets the violation as EPaymentWebhookProcessingResult.Duplicate.
-        builder.HasIndex(e => e.StripeEventId).IsUnique();
+        builder.HasIndex(e => new { e.Provider, e.StripeEventId }).IsUnique();
 
         // Descending index for "what happened most recently" diagnostic queries.
         builder.HasIndex(e => e.ReceivedAt).IsDescending();

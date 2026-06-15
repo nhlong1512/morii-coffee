@@ -75,6 +75,8 @@ public class CreateCheckoutSessionCommandHandler
         var sessionResult = await _gateway.CreateCheckoutSessionAsync(request, cancellationToken);
         await _draftService.StoreAsync(new StripeCheckoutDraftCacheDto
         {
+            PaymentMethod = Domain.Shared.Enums.Order.EPaymentMethod.STRIPE,
+            Provider = Domain.Shared.Enums.Order.EPaymentProvider.Stripe,
             DraftId = draftId,
             UserId = command.UserId,
             FullName = command.FullName.Trim(),

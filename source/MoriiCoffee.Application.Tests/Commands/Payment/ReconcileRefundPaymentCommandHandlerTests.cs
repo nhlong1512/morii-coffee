@@ -32,7 +32,14 @@ public class ReconcileRefundPaymentCommandHandlerTests
 
         _handler = new ReconcileRefundPaymentCommandHandler(
             _unitOfWork.Object,
-            _gateway.Object);
+            BuildResolver());
+    }
+
+    private IPaymentGatewayResolver BuildResolver()
+    {
+        var resolver = new Mock<IPaymentGatewayResolver>();
+        resolver.Setup(r => r.Resolve(It.IsAny<EPaymentProvider>())).Returns(_gateway.Object);
+        return resolver.Object;
     }
 
     [Fact]

@@ -1,5 +1,28 @@
 # Stripe Payment Todo
 
+## VNPAY integration (018)
+
+### Implementation checklist
+
+- [x] Pin active Spec Kit feature to `018-vnpay-integration` because the working branch name is stale.
+- [x] Capture clean pre-change baseline.
+- [x] Add provider ownership, provider-scoped indexes, gateway resolver, and Stripe/COD compatibility.
+- [x] Add VNPAY sandbox configuration, signing, clock, payment URL, IPN, return, QueryDR, and refund capability gate.
+- [x] Add provider-neutral history fields and provider-routed refund handling.
+- [x] Generate provider ownership migration and frontend handoff.
+- [ ] Complete live VNPAY sandbox acceptance with merchant credentials/public HTTPS IPN.
+
+### Verification evidence
+
+- Baseline: `rtk dotnet build MoriiCoffee.slnx` passed with 0 errors/0 warnings.
+- Baseline: `rtk dotnet test MoriiCoffee.slnx --no-build` passed 547 tests.
+- Provider migration: `20260615023337_AddPaymentProviderOwnership` adds provider columns with Stripe defaults and provider-scoped unique indexes.
+- Final: `rtk dotnet build MoriiCoffee.slnx` passed with 0 errors/0 warnings.
+- Final: `rtk dotnet test MoriiCoffee.slnx` passed 548 tests.
+- Final: `rtk git diff --check` passed.
+- Code-review-graph: incremental graph updated; change risk 0.60 and high two-hop blast radius (500 nodes / 462 files). Compatibility aliases, provider-scoped routing, full regression suite, and Stripe-default migration backfill address the primary regression risks. Remaining gaps are explicit controller/IPN/reconcile integration tests and live sandbox acceptance.
+- Live sandbox success/failure/cancellation/duplicate-IPN/refund evidence is deferred because no merchant credentials or public callback are available in this workspace.
+
 ## Completed
 
 - Reviewed the Stripe payment implementation end-to-end instead of only trusting the stale checklist.

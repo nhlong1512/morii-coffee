@@ -8,6 +8,11 @@ namespace MoriiCoffee.Application.SeedWork.DTOs.Payment;
 /// </summary>
 public class OrderPaymentInfoDto
 {
+    public EPaymentProvider? Provider { get; set; }
+
+    public string? ProviderSessionId => StripeSessionId;
+    public string? ProviderPaymentId => StripePaymentIntentId;
+    public string? ProviderChargeId => StripeChargeId;
     /// <summary>Order-level payment lifecycle (Pending / Paid / Failed / Refunded...).</summary>
     public EPaymentStatus PaymentStatus { get; set; }
 

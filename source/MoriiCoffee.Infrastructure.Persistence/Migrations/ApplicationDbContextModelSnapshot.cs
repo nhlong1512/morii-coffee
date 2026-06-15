@@ -592,6 +592,9 @@ namespace MoriiCoffee.Infrastructure.Persistence.Migrations
                     b.Property<int>("ProcessingResult")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Provider")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("ReceivedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -616,7 +619,7 @@ namespace MoriiCoffee.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("RelatedPaymentId");
 
-                    b.HasIndex("StripeEventId")
+                    b.HasIndex("Provider", "StripeEventId")
                         .IsUnique();
 
                     b.ToTable("PaymentWebhookEvents");
@@ -646,6 +649,9 @@ namespace MoriiCoffee.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("PaymentId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Provider")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -667,7 +673,7 @@ namespace MoriiCoffee.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PaymentId");
 
-                    b.HasIndex("StripeRefundId")
+                    b.HasIndex("Provider", "StripeRefundId")
                         .IsUnique();
 
                     b.ToTable("Refunds");
@@ -703,6 +709,9 @@ namespace MoriiCoffee.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Provider")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -726,9 +735,9 @@ namespace MoriiCoffee.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.HasIndex("StripePaymentIntentId");
+                    b.HasIndex("Provider", "StripePaymentIntentId");
 
-                    b.HasIndex("StripeSessionId")
+                    b.HasIndex("Provider", "StripeSessionId")
                         .IsUnique();
 
                     b.ToTable("Payments");
