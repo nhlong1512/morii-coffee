@@ -18,7 +18,7 @@ public class VnpaySignatureServiceTests
             ["vnp_SecureHash"] = "secret"
         });
 
-        result.Should().Be("vnp_Amount=100000&vnp_TxnRef=draft%201");
+        result.Should().Be("vnp_Amount=100000&vnp_TxnRef=draft+1");
     }
 
     [Fact]

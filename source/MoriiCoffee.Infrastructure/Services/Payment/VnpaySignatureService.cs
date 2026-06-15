@@ -46,6 +46,7 @@ public sealed class VnpaySignatureService
             Encoding.UTF8.GetBytes(secret),
             Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
-    public static string Encode(string value) =>
-        WebUtility.UrlEncode(value).Replace("+", "%20", StringComparison.Ordinal);
+    // VNPAY signs application/x-www-form-urlencoded values, where spaces are encoded as "+".
+    // Replacing "+" with "%20" produces a different HMAC and VNPAY rejects the URL with code 70.
+    public static string Encode(string value) => WebUtility.UrlEncode(value);
 }
