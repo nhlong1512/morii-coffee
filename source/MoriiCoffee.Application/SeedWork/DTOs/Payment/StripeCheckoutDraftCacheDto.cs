@@ -9,6 +9,9 @@ namespace MoriiCoffee.Application.SeedWork.DTOs.Payment;
 /// </summary>
 public class StripeCheckoutDraftCacheDto
 {
+    public EPaymentMethod PaymentMethod { get; set; } = EPaymentMethod.STRIPE;
+
+    public EPaymentProvider Provider { get; set; } = EPaymentProvider.Stripe;
     public Guid DraftId { get; set; }
 
     public Guid UserId { get; set; }

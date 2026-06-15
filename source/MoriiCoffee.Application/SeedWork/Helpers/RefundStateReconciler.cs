@@ -48,7 +48,8 @@ public static class RefundStateReconciler
                     providerRefund.RefundId,
                     providerRefund.Amount,
                     adminUserId,
-                    BuildImportedRefundReason(providerRefund.Status));
+                    BuildImportedRefundReason(providerRefund.Status),
+                    payment.Provider);
 
                 payment.AddRefund(localRefund);
                 await unitOfWork.Payments.CreateRefundAsync(localRefund);

@@ -44,6 +44,7 @@ public class GetPaymentByOrderIdQueryHandler
             Payments = payments.Select(p => new PaymentDto
             {
                 Id = p.Id,
+                Provider = p.Provider,
                 StripeSessionId = p.StripeSessionId,
                 StripePaymentIntentId = p.StripePaymentIntentId,
                 Amount = p.Amount,
@@ -56,6 +57,7 @@ public class GetPaymentByOrderIdQueryHandler
                     .Select(r => new RefundDto
                     {
                         Id = r.Id,
+                        Provider = r.Provider,
                         StripeRefundId = r.StripeRefundId,
                         Amount = r.Amount,
                         Reason = r.Reason,

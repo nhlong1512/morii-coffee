@@ -1,6 +1,7 @@
 using MoriiCoffee.Domain.Aggregates.PaymentAggregate;
 using MoriiCoffee.Domain.Aggregates.PaymentAggregate.Entities;
 using MoriiCoffee.Domain.SeedWork.Persistence;
+using MoriiCoffee.Domain.Shared.Enums.Order;
 
 namespace MoriiCoffee.Domain.Repositories;
 
@@ -16,14 +17,14 @@ public interface IPaymentRepository : IRepositoryBase<Payment>
     /// Used by the webhook handler to find the local Payment from a <c>checkout.session.*</c> event.
     /// Returns <c>null</c> when no matching, non-deleted Payment exists.
     /// </summary>
-    Task<Payment?> GetBySessionIdAsync(string stripeSessionId);
+    Task<Payment?> GetBySessionIdAsync(string stripeSessionId, EPaymentProvider provider = EPaymentProvider.Stripe);
 
     /// <summary>
     /// Loads a Payment by its Stripe PaymentIntent id, eagerly including its refund children.
     /// Used by the webhook handler for <c>payment_intent.*</c> and <c>charge.refunded</c> events.
     /// Returns <c>null</c> when no matching, non-deleted Payment exists.
     /// </summary>
-    Task<Payment?> GetByPaymentIntentIdAsync(string stripePaymentIntentId);
+    Task<Payment?> GetByPaymentIntentIdAsync(string stripePaymentIntentId, EPaymentProvider provider = EPaymentProvider.Stripe);
 
     /// <summary>
     /// Loads the most recent Payment for the given <c>OrderId</c> that is still in

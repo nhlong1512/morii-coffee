@@ -26,16 +26,16 @@ public class RefundPaymentCommandHandler
     : ICommandHandler<RefundPaymentCommand, RefundResponseDto>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IPaymentGateway _gateway;
+    private readonly IPaymentGatewayResolver _gatewayResolver;
     private readonly ILogger<RefundPaymentCommandHandler> _logger;
 
     public RefundPaymentCommandHandler(
         IUnitOfWork unitOfWork,
-        IPaymentGateway gateway,
+        IPaymentGatewayResolver gatewayResolver,
         ILogger<RefundPaymentCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
-        _gateway = gateway;
+        _gatewayResolver = gatewayResolver;
         _logger = logger;
     }
 
@@ -54,9 +54,11 @@ public class RefundPaymentCommandHandler
             throw new BadRequestException(
                 "This order has no successful Stripe payment to refund.");
 
+        var gateway = _gatewayResolver.Resolve(payment.Provider);
+
         var reconciledBeforeRefund = await RefundStateReconciler.ReconcileAsync(
             _unitOfWork,
-            _gateway,
+            gateway,
             order,
             payment,
             command.AdminUserId,
@@ -85,10 +87,12 @@ public class RefundPaymentCommandHandler
         RefundResult refundResult;
         try
         {
-            refundResult = await _gateway.CreateRefundAsync(new RefundRequest
+            refundResult = await gateway.CreateRefundAsync(new RefundRequest
             {
+                ProviderSessionId = payment.StripeSessionId,
                 PaymentIntentId = payment.StripePaymentIntentId!,
                 Amount = (long)requestedAmount,
+                IsFullRefund = requestedAmount == payment.Amount,
                 OrderId = order.Id,
                 InitiatedByAdminUserId = command.AdminUserId,
                 Reason = command.Reason
@@ -98,7 +102,7 @@ public class RefundPaymentCommandHandler
         {
             var reconciledAfterProviderConflict = await RefundStateReconciler.ReconcileAsync(
                 _unitOfWork,
-                _gateway,
+                gateway,
                 order,
                 payment,
                 command.AdminUserId,
@@ -128,7 +132,8 @@ public class RefundPaymentCommandHandler
                 refundResult.RefundId,
                 requestedAmount,
                 command.AdminUserId,
-                command.Reason);
+                command.Reason,
+                payment.Provider);
 
             payment.AddRefund(persistedRefund);
             await _unitOfWork.Payments.CreateRefundAsync(persistedRefund);

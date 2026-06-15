@@ -15,14 +15,14 @@ public class ReconcileRefundPaymentCommandHandler
     : ICommandHandler<ReconcileRefundPaymentCommand, RefundReconcileResponseDto>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IPaymentGateway _gateway;
+    private readonly IPaymentGatewayResolver _gatewayResolver;
 
     public ReconcileRefundPaymentCommandHandler(
         IUnitOfWork unitOfWork,
-        IPaymentGateway gateway)
+        IPaymentGatewayResolver gatewayResolver)
     {
         _unitOfWork = unitOfWork;
-        _gateway = gateway;
+        _gatewayResolver = gatewayResolver;
     }
 
     public async Task<RefundReconcileResponseDto> Handle(
@@ -38,9 +38,11 @@ public class ReconcileRefundPaymentCommandHandler
             throw new BadRequestException(
                 "This order has no successful Stripe payment to reconcile.");
 
+        var gateway = _gatewayResolver.Resolve(payment.Provider);
+
         var reconciliation = await RefundStateReconciler.ReconcileAsync(
             _unitOfWork,
-            _gateway,
+            gateway,
             order,
             payment,
             command.AdminUserId,

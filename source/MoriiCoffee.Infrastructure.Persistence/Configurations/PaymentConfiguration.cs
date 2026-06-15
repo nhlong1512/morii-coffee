@@ -18,13 +18,13 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             .OnDelete(DeleteBehavior.Restrict);
 
         // UNIQUE: webhook handler uses Stripe session id as the natural key.
-        builder.HasIndex(p => p.StripeSessionId).IsUnique();
+        builder.HasIndex(p => new { p.Provider, p.StripeSessionId }).IsUnique();
 
         // Non-unique: list payments per order.
         builder.HasIndex(p => p.OrderId);
 
         // Non-unique: refund lookups by PI id (nullable column, but EF understands).
-        builder.HasIndex(p => p.StripePaymentIntentId);
+        builder.HasIndex(p => new { p.Provider, p.StripePaymentIntentId });
 
         // Children: encapsulated through the aggregate root only (field-backed collection).
         builder.HasMany(p => p.Refunds)

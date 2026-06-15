@@ -460,6 +460,9 @@ source/MoriiCoffee.Presentation/appsettings.Production.json
 
 # Ignore everything in docs/ except these files and folders:
 docs/**
+!docs/features/
+!docs/features/vnpay-integration/
+!docs/features/vnpay-integration/*.md
 # !docs/features/
 # !docs/features/**
 # !docs/explainations/

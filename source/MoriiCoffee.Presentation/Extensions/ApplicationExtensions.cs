@@ -24,10 +24,9 @@ internal static class ApplicationExtensions
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
             RequireHeaderSymmetry = false
         };
-        // Production runs behind nginx/container networking, so clearing defaults
-        // allows the app to honor X-Forwarded-Proto=https and preserve HTTPS scheme for OAuth.
-        forwardedHeadersOptions.KnownIPNetworks.Clear();
-        forwardedHeadersOptions.KnownProxies.Clear();
+        // Keep ASP.NET's trusted-proxy defaults. Production deployments must explicitly add
+        // their reverse-proxy addresses; accepting forwarded headers from every client would
+        // allow forged customer IPs to be sent to payment providers.
         app.UseForwardedHeaders(forwardedHeadersOptions);
 
         // 3. HTTPS redirect (production only)

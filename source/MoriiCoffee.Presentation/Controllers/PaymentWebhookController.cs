@@ -40,11 +40,11 @@ public class PaymentWebhookController : ControllerBase
 
     public PaymentWebhookController(
         IMediator mediator,
-        IPaymentGateway gateway,
+        IPaymentGatewayResolver gatewayResolver,
         ILogger<PaymentWebhookController> logger)
     {
         _mediator = mediator;
-        _gateway = gateway;
+        _gateway = gatewayResolver.Resolve(EPaymentProvider.Stripe);
         _logger = logger;
     }
 

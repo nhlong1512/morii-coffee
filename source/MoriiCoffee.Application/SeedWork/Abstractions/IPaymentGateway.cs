@@ -10,6 +10,8 @@ namespace MoriiCoffee.Application.SeedWork.Abstractions;
 /// </summary>
 public interface IPaymentGateway
 {
+    EPaymentProvider Provider { get; }
+
     /// <summary>
     /// Creates a hosted-Checkout session at the provider and returns the URL the customer should
     /// be redirected to. Idempotent at the provider via Stripe's own deduplication of the request
@@ -27,6 +29,12 @@ public interface IPaymentGateway
     Task<CheckoutSessionStatusResult> GetCheckoutSessionStatusAsync(
         string sessionId,
         CancellationToken cancellationToken = default);
+
+    Task<CheckoutSessionStatusResult> GetCheckoutSessionStatusAsync(
+        string sessionId,
+        DateTime transactionDateUtc,
+        CancellationToken cancellationToken = default) =>
+        GetCheckoutSessionStatusAsync(sessionId, cancellationToken);
 
     /// <summary>
     /// Verifies the cryptographic signature on a raw webhook body and returns a strongly-typed
@@ -156,11 +164,16 @@ public class CheckoutSessionStatusResult
 /// <summary>Input for <see cref="IPaymentGateway.CreateRefundAsync"/>.</summary>
 public class RefundRequest
 {
+    /// <summary>Provider checkout/merchant transaction reference.</summary>
+    public string? ProviderSessionId { get; set; }
+
     /// <summary>Stripe PaymentIntent id of the original successful charge (e.g. <c>pi_3OZA...</c>).</summary>
     public string PaymentIntentId { get; set; } = null!;
 
     /// <summary>Refund amount in the currency's smallest unit (for VND, equals đồng).</summary>
     public long Amount { get; set; }
+
+    public bool IsFullRefund { get; set; }
 
     /// <summary>Internal Order id, attached to Stripe's metadata for cross-system search.</summary>
     public Guid OrderId { get; set; }
@@ -231,6 +244,10 @@ public class PaymentGatewayAlreadyRefundedException : Exception
 /// </summary>
 public class WebhookEventEnvelope
 {
+    public EPaymentProvider Provider { get; set; } = EPaymentProvider.Stripe;
+
+    public EPaymentProviderEventKind EventKind { get; set; }
+
     /// <summary>Provider-supplied event id (e.g. Stripe: <c>evt_1Mw...</c>). Unique per event.</summary>
     public string EventId { get; set; } = null!;
 
@@ -299,6 +316,9 @@ public class WebhookEventEnvelope
     /// <para>Stripe example: Charge.AmountRefunded on <c>charge.refunded</c></para>
     /// </summary>
     public long? AmountRefunded { get; set; }
+
+    /// <summary>Provider-reported transaction amount in local currency units.</summary>
+    public long? Amount { get; set; }
 
     /// <summary>Best-effort failure reason for failed-payment events; null otherwise.</summary>
     public string? FailureReason { get; set; }

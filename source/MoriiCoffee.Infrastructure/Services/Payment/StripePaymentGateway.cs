@@ -26,6 +26,7 @@ namespace MoriiCoffee.Infrastructure.Services.Payment;
 /// </remarks>
 public class StripePaymentGateway : IPaymentGateway
 {
+    public EPaymentProvider Provider => EPaymentProvider.Stripe;
     private readonly StripeSettings _settings;
     private readonly ILogger<StripePaymentGateway> _logger;
     private readonly StripeClient _client;
@@ -307,6 +308,7 @@ public class StripePaymentGateway : IPaymentGateway
     {
         var envelope = new WebhookEventEnvelope
         {
+            Provider = EPaymentProvider.Stripe,
             EventId = stripeEvent.Id,
             EventType = stripeEvent.Type,
             RawBody = rawBody
@@ -315,7 +317,11 @@ public class StripePaymentGateway : IPaymentGateway
         switch (stripeEvent.Type)
         {
             case "checkout.session.completed":
+                envelope.EventKind = EPaymentProviderEventKind.PaymentSucceeded;
+                goto case "checkout.session.expired";
             case "checkout.session.expired":
+                if (stripeEvent.Type == "checkout.session.expired")
+                    envelope.EventKind = EPaymentProviderEventKind.PaymentExpired;
                 if (stripeEvent.Data.Object is Session session)
                 {
                     envelope.ProviderSessionId = session.Id;
@@ -336,6 +342,7 @@ public class StripePaymentGateway : IPaymentGateway
                 break;
 
             case "payment_intent.payment_failed":
+                envelope.EventKind = EPaymentProviderEventKind.PaymentFailed;
                 if (stripeEvent.Data.Object is PaymentIntent intent)
                 {
                     envelope.ProviderPaymentId = intent.Id;
@@ -356,6 +363,7 @@ public class StripePaymentGateway : IPaymentGateway
                 break;
 
             case "charge.refunded":
+                envelope.EventKind = EPaymentProviderEventKind.RefundUpdated;
                 if (stripeEvent.Data.Object is Charge charge)
                 {
                     envelope.ProviderChargeId = charge.Id;

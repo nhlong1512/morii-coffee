@@ -19,5 +19,8 @@ public enum EPaymentMethod
     /// the Stripe-hosted Checkout page; the order is confirmed as paid only when Stripe
     /// emits a <c>checkout.session.completed</c> webhook event (see feature 011-stripe-payment).
     /// </summary>
-    STRIPE = 4
+    STRIPE = 4,
+
+    /// <summary>VNPAY hosted payment, confirmed only by a verified server callback.</summary>
+    VNPAY = 5
 }

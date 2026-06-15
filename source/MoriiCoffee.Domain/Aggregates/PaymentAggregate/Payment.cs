@@ -34,6 +34,9 @@ public class Payment : AggregateRoot
     [Required]
     public Guid OrderId { get; private set; }
 
+    [Required]
+    public EPaymentProvider Provider { get; private set; } = EPaymentProvider.Stripe;
+
     /// <summary>
     /// Stripe Checkout Session id (e.g. <c>cs_test_...</c>). UNIQUE across the table — the webhook
     /// handler uses this as the natural key to find a Payment from an incoming event.
@@ -92,7 +95,8 @@ public class Payment : AggregateRoot
         string stripeSessionId,
         decimal amount,
         string currency,
-        Guid? id = null)
+        Guid? id = null,
+        EPaymentProvider provider = EPaymentProvider.Stripe)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(stripeSessionId);
         ArgumentException.ThrowIfNullOrWhiteSpace(currency);
@@ -102,6 +106,7 @@ public class Payment : AggregateRoot
         {
             Id = id ?? Guid.NewGuid(),
             OrderId = orderId,
+            Provider = provider,
             StripeSessionId = stripeSessionId.Trim(),
             Amount = amount,
             Currency = currency.Trim().ToLowerInvariant(),

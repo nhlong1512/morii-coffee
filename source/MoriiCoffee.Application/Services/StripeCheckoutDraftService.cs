@@ -100,7 +100,7 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
         ArgumentException.ThrowIfNullOrWhiteSpace(paymentIntentId);
         ArgumentException.ThrowIfNullOrWhiteSpace(chargeId);
 
-        var existingPayment = await _unitOfWork.Payments.GetBySessionIdAsync(draft.SessionId);
+        var existingPayment = await _unitOfWork.Payments.GetBySessionIdAsync(draft.SessionId, draft.Provider);
         if (existingPayment is not null)
             return await BuildExistingResultAsync(existingPayment);
 
@@ -133,7 +133,7 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
                         draft.WardCode,
                         draft.WardName),
                     orderItems,
-                    EPaymentMethod.STRIPE,
+                    draft.PaymentMethod,
                     draft.Notes,
                     deliveryMethod: draft.DeliveryMethod);
 
@@ -157,7 +157,8 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
                     order.Id,
                     draft.SessionId,
                     draft.Amount,
-                    draft.Currency);
+                    draft.Currency,
+                    provider: draft.Provider);
                 payment.MarkSucceeded(paymentIntentId, chargeId);
                 await _unitOfWork.Payments.CreateAsync(payment);
 
@@ -192,7 +193,7 @@ public class StripeCheckoutDraftService : IStripeCheckoutDraftService
                 draft.DraftId,
                 draft.SessionId);
 
-            var committedPayment = await _unitOfWork.Payments.GetBySessionIdAsync(draft.SessionId);
+            var committedPayment = await _unitOfWork.Payments.GetBySessionIdAsync(draft.SessionId, draft.Provider);
             if (committedPayment is not null)
             {
                 await CleanupAfterSuccessAsync(draft);

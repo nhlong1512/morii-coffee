@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.ConfigurePersistenceServices();
         services.ConfigureHangfire(configuration);
         services.ConfigureStripe(configuration);
+        services.ConfigureVnpay(configuration);
         services.ConfigureShippingGateway();
         services.ConfigureDependencyInjection();
 
@@ -86,7 +87,12 @@ public static class DependencyInjection
         services.AddScoped<ICartService, RedisCartService>();
         services.AddScoped<IOrderIdGenerator, OrderIdGenerator>();
         services.AddScoped<IStripeCheckoutDraftService, StripeCheckoutDraftService>();
-        services.AddScoped<IPaymentGateway, StripePaymentGateway>();
+        services.AddScoped<StripePaymentGateway>();
+        services.AddScoped<IPaymentGateway>(sp => sp.GetRequiredService<StripePaymentGateway>());
+        services.AddScoped<IPaymentGateway>(sp => sp.GetRequiredService<VnpayPaymentGateway>());
+        services.AddScoped<IPaymentGatewayResolver, PaymentGatewayResolver>();
+        services.AddSingleton<VnpaySignatureService>();
+        services.AddScoped<VnpayClock>();
         services.AddScoped<ShippingPackageMetricsService>();
         services.AddScoped<ShippingQuoteFingerprintService>();
         services.AddScoped<ShippingQuoteValidationService>();

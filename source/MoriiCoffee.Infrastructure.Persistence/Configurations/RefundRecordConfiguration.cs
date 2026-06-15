@@ -11,7 +11,7 @@ public class RefundRecordConfiguration : IEntityTypeConfiguration<RefundRecord>
     public void Configure(EntityTypeBuilder<RefundRecord> builder)
     {
         // UNIQUE: Stripe refund id is the natural key webhook handler uses to find a refund row.
-        builder.HasIndex(r => r.StripeRefundId).IsUnique();
+        builder.HasIndex(r => new { r.Provider, r.StripeRefundId }).IsUnique();
 
         // FK to AspNetUsers — RESTRICT so we never lose audit trail by deleting an admin user.
         builder.HasOne<User>()

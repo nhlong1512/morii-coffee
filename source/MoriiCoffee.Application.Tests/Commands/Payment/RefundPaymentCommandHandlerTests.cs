@@ -37,7 +37,7 @@ public class RefundPaymentCommandHandlerTests
 
         _handler = new RefundPaymentCommandHandler(
             _unitOfWork.Object,
-            _gateway.Object,
+            BuildResolver(),
             NullLogger<RefundPaymentCommandHandler>.Instance);
 
         _gateway
@@ -49,6 +49,13 @@ public class RefundPaymentCommandHandlerTests
                 AmountRefunded = 0,
                 Refunds = []
             });
+    }
+
+    private IPaymentGatewayResolver BuildResolver()
+    {
+        var resolver = new Mock<IPaymentGatewayResolver>();
+        resolver.Setup(r => r.Resolve(It.IsAny<EPaymentProvider>())).Returns(_gateway.Object);
+        return resolver.Object;
     }
 
     [Fact]

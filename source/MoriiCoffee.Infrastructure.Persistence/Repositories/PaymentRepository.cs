@@ -18,20 +18,20 @@ public class PaymentRepository : RepositoryBase<Payment>, IPaymentRepository
     }
 
     /// <inheritdoc />
-    public async Task<Payment?> GetBySessionIdAsync(string stripeSessionId)
+    public async Task<Payment?> GetBySessionIdAsync(string stripeSessionId, Domain.Shared.Enums.Order.EPaymentProvider provider = Domain.Shared.Enums.Order.EPaymentProvider.Stripe)
     {
         return await _context.Payments
             .Include(p => p.Refunds)
-            .Where(p => !p.IsDeleted && p.StripeSessionId == stripeSessionId)
+            .Where(p => !p.IsDeleted && p.Provider == provider && p.StripeSessionId == stripeSessionId)
             .FirstOrDefaultAsync();
     }
 
     /// <inheritdoc />
-    public async Task<Payment?> GetByPaymentIntentIdAsync(string stripePaymentIntentId)
+    public async Task<Payment?> GetByPaymentIntentIdAsync(string stripePaymentIntentId, Domain.Shared.Enums.Order.EPaymentProvider provider = Domain.Shared.Enums.Order.EPaymentProvider.Stripe)
     {
         return await _context.Payments
             .Include(p => p.Refunds)
-            .Where(p => !p.IsDeleted && p.StripePaymentIntentId == stripePaymentIntentId)
+            .Where(p => !p.IsDeleted && p.Provider == provider && p.StripePaymentIntentId == stripePaymentIntentId)
             .FirstOrDefaultAsync();
     }
 

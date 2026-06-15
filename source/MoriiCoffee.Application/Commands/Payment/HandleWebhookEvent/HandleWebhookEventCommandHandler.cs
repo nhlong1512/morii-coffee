@@ -67,7 +67,8 @@ public class HandleWebhookEventCommandHandler
             envelope.EventId,
             envelope.EventType,
             ComputeFingerprint(envelope.RawBody),
-            signatureVerified: true);
+            signatureVerified: true,
+            envelope.Provider);
 
         var inserted = await _unitOfWork.PaymentWebhookEvents.TryInsertAsync(auditRow);
 
@@ -130,13 +131,20 @@ public class HandleWebhookEventCommandHandler
     private async Task<(EPaymentWebhookProcessingResult outcome, Guid? relatedPaymentId)>
         DispatchAsync(WebhookEventEnvelope envelope)
     {
-        return envelope.EventType switch
+        return envelope.EventKind switch
         {
-            "checkout.session.completed" => await HandleSessionCompletedAsync(envelope),
-            "checkout.session.expired" => await HandleSessionExpiredAsync(envelope),
-            "payment_intent.payment_failed" => await HandlePaymentFailedAsync(envelope),
-            "charge.refunded" => await HandleChargeRefundedAsync(envelope),
-            _ => (EPaymentWebhookProcessingResult.UnhandledEventType, (Guid?)null)
+            EPaymentProviderEventKind.PaymentSucceeded => await HandleSessionCompletedAsync(envelope),
+            EPaymentProviderEventKind.PaymentExpired => await HandleSessionExpiredAsync(envelope),
+            EPaymentProviderEventKind.PaymentFailed => await HandlePaymentFailedAsync(envelope),
+            EPaymentProviderEventKind.RefundUpdated => await HandleChargeRefundedAsync(envelope),
+            _ => envelope.EventType switch
+            {
+                "checkout.session.completed" => await HandleSessionCompletedAsync(envelope),
+                "checkout.session.expired" => await HandleSessionExpiredAsync(envelope),
+                "payment_intent.payment_failed" => await HandlePaymentFailedAsync(envelope),
+                "charge.refunded" => await HandleChargeRefundedAsync(envelope),
+                _ => (EPaymentWebhookProcessingResult.UnhandledEventType, (Guid?)null)
+            }
         };
     }
 
@@ -155,7 +163,7 @@ public class HandleWebhookEventCommandHandler
             return (EPaymentWebhookProcessingResult.OrderNotFound, null);
         }
 
-        var payment = await _unitOfWork.Payments.GetBySessionIdAsync(envelope.ProviderSessionId);
+        var payment = await _unitOfWork.Payments.GetBySessionIdAsync(envelope.ProviderSessionId, envelope.Provider);
         if (payment is null)
         {
             var draft = await ResolveDraftAsync(envelope);
@@ -165,6 +173,14 @@ public class HandleWebhookEventCommandHandler
                     "checkout.session.completed event {EventId} refers to unknown session {SessionId}",
                     envelope.EventId, envelope.ProviderSessionId);
                 return (EPaymentWebhookProcessingResult.OrderNotFound, null);
+            }
+
+            if (envelope.Amount.HasValue && envelope.Amount.Value != (long)draft.Amount)
+            {
+                _logger.LogWarning(
+                    "Provider callback {EventId} amount mismatch for draft {DraftId}",
+                    envelope.EventId, draft.DraftId);
+                return (EPaymentWebhookProcessingResult.Failed, null);
             }
 
             var chargeIdFromDraftFlow = envelope.ProviderChargeId ?? envelope.ProviderPaymentId;
@@ -218,7 +234,7 @@ public class HandleWebhookEventCommandHandler
         if (string.IsNullOrWhiteSpace(envelope.ProviderSessionId))
             return (EPaymentWebhookProcessingResult.OrderNotFound, null);
 
-        var payment = await _unitOfWork.Payments.GetBySessionIdAsync(envelope.ProviderSessionId);
+        var payment = await _unitOfWork.Payments.GetBySessionIdAsync(envelope.ProviderSessionId, envelope.Provider);
         if (payment is null)
         {
             var draft = await ResolveDraftAsync(envelope);
@@ -267,7 +283,7 @@ public class HandleWebhookEventCommandHandler
         if (string.IsNullOrWhiteSpace(envelope.ProviderPaymentId))
             return (EPaymentWebhookProcessingResult.OrderNotFound, null);
 
-        var payment = await _unitOfWork.Payments.GetByPaymentIntentIdAsync(envelope.ProviderPaymentId);
+        var payment = await _unitOfWork.Payments.GetByPaymentIntentIdAsync(envelope.ProviderPaymentId, envelope.Provider);
         if (payment is null)
         {
             var draft = await ResolveDraftAsync(envelope);
@@ -314,7 +330,7 @@ public class HandleWebhookEventCommandHandler
         if (string.IsNullOrWhiteSpace(envelope.ProviderPaymentId))
             return (EPaymentWebhookProcessingResult.OrderNotFound, null);
 
-        var payment = await _unitOfWork.Payments.GetByPaymentIntentIdAsync(envelope.ProviderPaymentId);
+        var payment = await _unitOfWork.Payments.GetByPaymentIntentIdAsync(envelope.ProviderPaymentId, envelope.Provider);
         if (payment is null)
             return (EPaymentWebhookProcessingResult.OrderNotFound, null);
 

@@ -5,6 +5,11 @@ namespace MoriiCoffee.Application.SeedWork.DTOs.Payment;
 /// <summary>One Payment attempt + its refund children, used by <c>GET /payments/by-order/{orderId}</c>.</summary>
 public class PaymentDto
 {
+    public EPaymentProvider Provider { get; set; }
+
+    public string ProviderSessionId => StripeSessionId;
+
+    public string? ProviderPaymentId => StripePaymentIntentId;
     /// <summary>Internal Payment id.</summary>
     public Guid Id { get; set; }
 
